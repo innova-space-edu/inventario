@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Laboratorio de Ciencias – Innova Space Education</title>
+    <link rel="stylesheet" href="style.css" />
+    <script defer src="script.js"></script>
+  </head>
+  <body data-page="science">
+    <div class="background"></div>
+    <header>
+      <h1 class="title rainbow">Innova Space Education – Track</h1>
+      <nav class="navbar">
+        <a href="science.html">Laboratorio de Ciencias</a>
+        <a href="computer.html">Laboratorio de Computación</a>
+        <a href="library.html">Biblioteca</a>
+        <a href="index.html">Cerrar Sesión</a>
+      </nav>
+    </header>
+    <main>
+      <h2 class="section-title">Laboratorio de Ciencias</h2>
+      <!-- Formulario para agregar producto -->
+      <section class="form-card">
+        <h3>Agregar producto</h3>
+        <form id="addScienceForm" class="styled-form">
+          <div class="grid-2">
+            <div>
+              <label for="scienceCode">Código</label>
+              <input
+                id="scienceCode"
+                type="text"
+                placeholder="Código del producto"
+                data-message="Ingresa el código del producto"
+                required
+              />
+            </div>
+            <div>
+              <label for="scienceName">Nombre</label>
+              <input
+                id="scienceName"
+                type="text"
+                placeholder="Nombre del producto"
+                data-message="Ingresa el nombre del producto"
+                required
+              />
+            </div>
+            <div>
+              <label for="scienceQuantity">Cantidad</label>
+              <input
+                id="scienceQuantity"
+                type="number"
+                min="1"
+                placeholder="1"
+                data-message="Ingresa la cantidad disponible"
+                required
+              />
+            </div>
+            <div>
+              <label for="scienceDate">Fecha de ingreso</label>
+              <input
+                id="scienceDate"
+                type="date"
+                data-message="Selecciona la fecha de ingreso del producto"
+                required
+              />
+            </div>
+            <div>
+              <label for="sciencePhoto">Fotografía</label>
+              <input
+                id="sciencePhoto"
+                type="file"
+                accept="image/*"
+                data-message="Selecciona una imagen del producto"
+              />
+            </div>
+            <div>
+              <label for="scienceDescription">Descripción</label>
+              <textarea
+                id="scienceDescription"
+                rows="3"
+                placeholder="Descripción opcional"
+                data-message="Agrega una descripción del producto"
+              ></textarea>
+            </div>
+          </div>
+          <button type="submit" class="primary-button">Guardar</button>
+        </form>
+      </section>
+      <!-- Inventario actual -->
+      <section class="table-section">
+        <h3>Inventario actual</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Código</th>
+              <th>Nombre</th>
+              <th>Descripción</th>
+              <th>Cantidad</th>
+              <th>Fecha</th>
+              <th>Foto</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="scienceTableBody"></tbody>
+        </table>
+      </section>
+      <!-- Reservar laboratorio -->
+      <section class="form-card">
+        <h3>Reservar laboratorio</h3>
+        <form id="scienceReservationForm" class="styled-form">
+          <div class="grid-2">
+            <div>
+              <label for="scienceReserveDate">Fecha y hora</label>
+              <input
+                id="scienceReserveDate"
+                type="datetime-local"
+                data-message="Selecciona la fecha y hora de la reserva"
+                required
+              />
+            </div>
+            <div>
+              <label for="scienceReserveDesc">Descripción/Actividad</label>
+              <input
+                id="scienceReserveDesc"
+                type="text"
+                placeholder="Actividad prevista"
+                data-message="Describe la actividad que se realizará"
+                required
+              />
+            </div>
+          </div>
+          <button type="submit" class="primary-button">Reservar</button>
+        </form>
+      </section>
+      <!-- Tabla de reservas -->
+      <section class="table-section">
+        <h3>Reservas de laboratorio de ciencias</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Fecha y hora</th>
+              <th>Descripción</th>
+            </tr>
+          </thead>
+          <tbody id="scienceReservationBody"></tbody>
+        </table>
+      </section>
+    </main>
+  </body>
+</html>

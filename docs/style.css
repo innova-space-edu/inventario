@@ -1,0 +1,318 @@
+/*
+  Estilos globales para Innova Space Education - Track
+  La paleta de colores y los componentes se inspiran en un diseño futurista con
+  tonos oscuros y degradados brillantes. Todas las páginas comparten este
+  archivo para mantener coherencia en la experiencia de usuario.
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
+
+/* Paleta de colores base */
+:root {
+  --bg-color: #050d1f; /* fondo profundo similar a un cielo nocturno */
+  --card-bg: rgba(255, 255, 255, 0.06); /* tarjetas semitransparentes */
+  --input-bg: rgba(255, 255, 255, 0.1);
+  --primary-grad: linear-gradient(90deg, #ff0080, #7928ca, #2afadf, #00c8ff);
+  --button-grad: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+  --nav-item-bg: rgba(255, 255, 255, 0.08);
+  --nav-item-hover: linear-gradient(90deg, #a855f7, #3b82f6);
+  --text-color: #ffffff;
+  --placeholder-color: #cccccc;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: 'Poppins', sans-serif;
+  background: var(--bg-color);
+  color: var(--text-color);
+  overflow-x: hidden;
+}
+
+/* Fondo animado */
+.background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  overflow: hidden;
+}
+
+.background .star {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  background: white;
+  border-radius: 50%;
+  opacity: 0.8;
+  animation: twinkle 3s infinite ease-in-out;
+}
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.background .shooting-star {
+  position: absolute;
+  width: 180px;
+  height: 2px;
+  background: linear-gradient(90deg, white, rgba(255, 255, 255, 0));
+  opacity: 0.8;
+  transform: rotate(-45deg);
+  animation: shooting 4s linear infinite;
+}
+
+@keyframes shooting {
+  0% {
+    transform: translate(0, 0) rotate(-45deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-1300px, 1300px) rotate(-45deg);
+    opacity: 0;
+  }
+}
+
+/* Texto con animación arcoíris */
+.title {
+  font-size: 2.5rem;
+  font-weight: 600;
+  text-align: center;
+  margin: 0 0 0.3rem 0;
+  background: linear-gradient(
+    90deg,
+    #ff0080,
+    #7928ca,
+    #2afadf,
+    #ba00ff,
+    #2afadf,
+    #7928ca,
+    #ff0080
+  );
+  background-size: 600% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: rainbow 8s linear infinite;
+}
+
+@keyframes rainbow {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+.subtitle {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  font-size: 1rem;
+  opacity: 0.8;
+}
+
+/* Contenedor de inicio de sesión */
+.login-container {
+  width: 90%;
+  max-width: 420px;
+  margin: 6% auto;
+  padding: 2.5rem;
+  background: var(--card-bg);
+  border-radius: 20px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+/* Formularios comunes */
+.styled-form label {
+  display: block;
+  margin: 0.8rem 0 0.3rem 0;
+  font-weight: 500;
+}
+
+.styled-form input,
+.styled-form textarea,
+.styled-form select {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  border: none;
+  border-radius: 10px;
+  background: var(--input-bg);
+  color: var(--text-color);
+  font-size: 0.95rem;
+  resize: vertical;
+}
+
+.styled-form input::placeholder,
+.styled-form textarea::placeholder {
+  color: var(--placeholder-color);
+}
+
+.primary-button,
+.styled-form button {
+  display: inline-block;
+  padding: 0.8rem 1.2rem;
+  margin-top: 1.2rem;
+  border: none;
+  border-radius: 12px;
+  background: var(--button-grad);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  text-align: center;
+}
+
+.primary-button:hover,
+.styled-form button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Navegación */
+header {
+  padding: 1rem;
+  text-align: center;
+}
+
+.navbar {
+  display: inline-flex;
+  gap: 1rem;
+  padding: 0.4rem 0.6rem;
+  background: var(--card-bg);
+  border-radius: 50px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.navbar a {
+  padding: 0.5rem 1.2rem;
+  border-radius: 30px;
+  background: var(--nav-item-bg);
+  color: #fff;
+  text-decoration: none;
+  font-weight: 500;
+  transition: background 0.3s, transform 0.3s;
+}
+
+.navbar a.active,
+.navbar a:hover {
+  background: var(--nav-item-hover);
+  transform: translateY(-2px);
+}
+
+/* Secciones y tarjetas */
+main {
+  padding: 0 1rem 2rem;
+}
+
+.section-title {
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin: 1.2rem 0 0.8rem 0;
+  text-align: center;
+}
+
+.form-card {
+  background: var(--card-bg);
+  padding: 1.5rem;
+  border-radius: 20px;
+  margin: 1rem auto;
+  max-width: 1100px;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.4);
+}
+
+.form-card h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+/* Grilla para formularios con múltiples columnas */
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+/* Tablas */
+.table-section {
+  background: var(--card-bg);
+  padding: 1.2rem;
+  border-radius: 20px;
+  margin: 1rem auto;
+  max-width: 1100px;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.4);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #fff;
+}
+
+table thead {
+  background: var(--nav-item-bg);
+}
+
+table th,
+table td {
+  padding: 0.6rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+table th {
+  font-weight: 600;
+}
+
+table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+table img {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+/* Botones pequeños para acciones en tablas */
+.action-button {
+  padding: 0.4rem 0.8rem;
+  border: none;
+  border-radius: 8px;
+  background: var(--button-grad);
+  color: #fff;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.action-button:hover {
+  transform: translateY(-2px);
+}
+
+/* Mensaje de bienvenida en dashboard */
+.welcome-section {
+  margin-top: 2rem;
+  text-align: center;
+}
+
+.welcome-section p {
+  font-size: 1rem;
+  opacity: 0.9;
+}
