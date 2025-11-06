@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Biblioteca – Innova Space Education</title>
+    <link rel="stylesheet" href="style.css" />
+    <script defer src="script.js"></script>
+  </head>
+  <body data-page="library">
+    <div class="background"></div>
+    <header>
+      <h1 class="title rainbow">Innova Space Education – Track</h1>
+      <nav class="navbar">
+        <a href="science.html">Laboratorio de Ciencias</a>
+        <a href="computer.html">Laboratorio de Computación</a>
+        <a href="library.html">Biblioteca</a>
+        <a href="index.html">Cerrar Sesión</a>
+      </nav>
+    </header>
+    <main>
+      <h2 class="section-title">Biblioteca</h2>
+      <!-- Formulario para agregar libros/productos -->
+      <section class="form-card">
+        <h3>Agregar libro o producto</h3>
+        <form id="addLibraryForm" class="styled-form">
+          <div class="grid-2">
+            <div>
+              <label for="libCode">Código</label>
+              <input
+                id="libCode"
+                type="text"
+                placeholder="Ej. LIB001"
+                data-message="Ingresa el código único del libro"
+                required
+              />
+            </div>
+            <div>
+              <label for="libTitle">Título</label>
+              <input
+                id="libTitle"
+                type="text"
+                placeholder="Nombre del libro"
+                data-message="Ingresa el título del libro"
+                required
+              />
+            </div>
+            <div>
+              <label for="libAuthor">Autor(es)</label>
+              <input
+                id="libAuthor"
+                type="text"
+                placeholder="Autor o autores"
+                data-message="Ingresa el autor o autores del libro"
+                required
+              />
+            </div>
+            <div>
+              <label for="libYear">Año</label>
+              <input
+                id="libYear"
+                type="number"
+                placeholder="2025"
+                data-message="Ingresa el año de publicación"
+                required
+              />
+            </div>
+            <div>
+              <label for="libSeries">Serie/ISBN</label>
+              <input
+                id="libSeries"
+                type="text"
+                placeholder="Serie o ISBN"
+                data-message="Ingresa la serie o ISBN si aplica"
+              />
+            </div>
+            <div>
+              <label for="libQuantity">Cantidad</label>
+              <input
+                id="libQuantity"
+                type="number"
+                min="1"
+                placeholder="1"
+                data-message="Ingresa la cantidad de ejemplares"
+                required
+              />
+            </div>
+            <div>
+              <label for="libPhoto">Fotografía</label>
+              <input
+                id="libPhoto"
+                type="file"
+                accept="image/*"
+                data-message="Selecciona una imagen representativa del libro"
+              />
+            </div>
+            <div>
+              <label for="libDescription">Descripción</label>
+              <textarea
+                id="libDescription"
+                rows="3"
+                placeholder="Descripción opcional"
+                data-message="Ingresa una breve descripción del libro"
+              ></textarea>
+            </div>
+          </div>
+          <button type="submit" class="primary-button">Guardar</button>
+        </form>
+      </section>
+      <!-- Inventario -->
+      <section class="table-section">
+        <h3>Inventario de Biblioteca</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Código</th>
+              <th>Título</th>
+              <th>Autor</th>
+              <th>Año</th>
+              <th>Serie</th>
+              <th>Cantidad</th>
+              <th>Descripción</th>
+              <th>Foto</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="libraryTableBody"></tbody>
+        </table>
+      </section>
+      <!-- Formulario de préstamos -->
+      <section class="form-card">
+        <h3>Registrar préstamo</h3>
+        <form id="libraryLoanForm" class="styled-form">
+          <div class="grid-2">
+            <div>
+              <label for="loanBookId">ID del libro</label>
+              <input
+                id="loanBookId"
+                type="text"
+                placeholder="ID asignado"
+                data-message="Ingresa el ID del libro a prestar"
+                required
+              />
+            </div>
+            <div>
+              <label for="loanUser">Usuario (correo)</label>
+              <input
+                id="loanUser"
+                type="email"
+                placeholder="usuario@ejemplo.com"
+                data-message="Ingresa el correo del usuario que realiza el préstamo"
+                required
+              />
+            </div>
+          </div>
+          <button type="submit" class="primary-button">Registrar Préstamo</button>
+        </form>
+      </section>
+      <!-- Tabla de préstamos -->
+      <section class="table-section">
+        <h3>Registro de préstamos</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>ID del préstamo</th>
+              <th>ID del libro</th>
+              <th>Usuario</th>
+              <th>Fecha</th>
+            </tr>
+          </thead>
+          <tbody id="libraryLoanBody"></tbody>
+        </table>
+      </section>
+    </main>
+  </body>
+</html>

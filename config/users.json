@@ -1,0 +1,22 @@
+[
+  {
+    "email": "admin@example.com",
+    "password": "admin123",
+    "role": "admin"
+  },
+  {
+    "email": "profesor@example.com",
+    "password": "prof123",
+    "role": "docente"
+  },
+  {
+    "email": "estudiante@example.com",
+    "password": "est123",
+    "role": "estudiante"
+  },
+  {
+    "email": "Emorales@colprovidencia.cl",
+    "password": "123456",
+    "role": "admin"
+  }
+]

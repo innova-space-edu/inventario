@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Inventario – Colegio Providencia</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body class="body-space">
+  <div class="space-bg"></div>
+
+  <div class="app-shell">
+    <% include('partials/header'); %>
+
+    <main class="main-content">
+      <section class="welcome-card glass-panel">
+        <h2>Bienvenido/a al sistema de inventario</h2>
+        <p>
+          Desde aquí puedes gestionar los inventarios de biblioteca,
+          ciencias, computación y otros recursos del colegio.
+        </p>
+
+        <div class="inventory-links">
+          <a href="/library" class="card-link">Inventario Biblioteca</a>
+          <a href="/science" class="card-link">Inventario Ciencias</a>
+          <a href="/computing" class="card-link">Inventario Computación</a>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

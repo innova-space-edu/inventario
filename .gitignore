@@ -1,0 +1,6 @@
+node_modules/
+uploads/
+# Ignorar archivos temporales de configuración si no se desean versionar
+# config/*_items.json
+# config/*_reservations.json
+# config/library_loans.json

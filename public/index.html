@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Inventario – Colegio Providencia</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link rel="stylesheet" href="/css/app.css" />
+</head>
+<body class="body-space">
+  <div class="space-bg"></div>
+
+  <div class="app-shell">
+    <!-- HEADER con logo y botón Agendar hora -->
+    <header class="main-header glass-panel">
+      <div class="header-left">
+        <img
+          src="/img/logo-colegio.png"
+          alt="Logo Colegio Providencia"
+          class="header-logo"
+        />
+        <div class="header-title">
+          <h1>Inventario Colegio Providencia</h1>
+          <span class="header-subtitle">Innova Space Track</span>
+        </div>
+      </div>
+
+      <nav class="header-right">
+        <!-- Botón Agendar hora EN TODAS LAS PÁGINAS -->
+        <a
+          href="https://sites.google.com/colprovidencia.cl/agenda-hora/inicio"
+          class="btn-secondary"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Agendar hora
+        </a>
+
+        <!-- Botón de cierre de sesión -->
+        <form action="/logout" method="get" class="logout-form">
+          <button type="submit" class="btn-ghost">Cerrar sesión</button>
+        </form>
+      </nav>
+    </header>
+
+    <!-- NAV de secciones -->
+    <nav class="tabs glass-panel">
+      <button class="tab-button active" data-target="#tab-science">Laboratorio de Ciencias</button>
+      <button class="tab-button" data-target="#tab-computing">Sala de Computación</button>
+      <button class="tab-button" data-target="#tab-library">Biblioteca</button>
+    </nav>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="main-content">
+
+      <!-- SCIENCE -->
+      <section id="tab-science" class="tab-panel active glass-panel">
+        <h2>Inventario – Laboratorio de Ciencias</h2>
+        <p class="section-description">
+          Registra materiales de laboratorio y genera reservas de uso para cursos y docentes.
+        </p>
+
+        <div class="panel-grid">
+          <!-- Formulario de ingreso -->
+          <div class="panel-block">
+            <h3>Agregar material de ciencias</h3>
+            <form id="scienceForm" enctype="multipart/form-data">
+              <div class="form-grid">
+                <label>
+                  Código
+                  <input type="text" name="codigo" required />
+                </label>
+                <label>
+                  Nombre
+                  <input type="text" name="nombre" required />
+                </label>
+                <label>
+                  Descripción
+                  <input type="text" name="descripcion" />
+                </label>
+                <label>
+                  Cantidad
+                  <input type="number" name="cantidad" min="0" required />
+                </label>
+                <label>
+                  Fecha de ingreso
+                  <input type="date" name="fecha" required />
+                </label>
+                <label>
+                  Foto
+                  <input type="file" name="photo" accept="image/*" />
+                </label>
+              </div>
+
+              <button type="submit" class="btn-primary">
+                Guardar material
+              </button>
+            </form>
+          </div>
+
+          <!-- Tabla de elementos -->
+          <div class="panel-block">
+            <h3>Listado de materiales</h3>
+            <div class="table-wrapper">
+              <table id="scienceTable" class="inventory-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th>Descripción</th>
+                    <th>Cantidad</th>
+                    <th>Fecha</th>
+                    <th>Foto</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- science.js llenará aquí -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reserva de laboratorio ciencias -->
+        <div class="panel-block">
+          <h3>Reserva de laboratorio de ciencias</h3>
+          <form id="scienceReservationForm">
+            <div class="form-grid">
+              <label>
+                Nombre del solicitante
+                <input type="text" name="solicitante" required />
+              </label>
+              <label>
+                Curso
+                <input type="text" name="curso" required />
+              </label>
+              <label>
+                Fecha de uso
+                <input type="date" name="fechaUso" required />
+              </label>
+              <label>
+                Horario
+                <input type="text" name="horario" placeholder="Ej: 08:00 - 09:30" />
+              </label>
+              <label>
+                Observaciones
+                <input type="text" name="observaciones" />
+              </label>
+            </div>
+            <button type="submit" class="btn-secondary">
+              Registrar reserva
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <!-- COMPUTING -->
+      <section id="tab-computing" class="tab-panel glass-panel">
+        <h2>Inventario – Sala de Computación</h2>
+        <p class="section-description">
+          Controla equipos de computación, periféricos y reservas de uso de la sala.
+        </p>
+
+        <div class="panel-grid">
+          <div class="panel-block">
+            <h3>Agregar equipo de computación</h3>
+            <form id="computingForm" enctype="multipart/form-data">
+              <div class="form-grid">
+                <label>
+                  ID equipo
+                  <input type="text" name="idEquip" required />
+                </label>
+                <label>
+                  Código
+                  <input type="text" name="codigo" required />
+                </label>
+                <label>
+                  Marca
+                  <input type="text" name="marca" />
+                </label>
+                <label>
+                  Modelo
+                  <input type="text" name="modelo" />
+                </label>
+                <label>
+                  Año
+                  <input type="number" name="anio" min="1900" max="2100" />
+                </label>
+                <label>
+                  Serie
+                  <input type="text" name="serie" />
+                </label>
+                <label>
+                  Descripción
+                  <input type="text" name="descripcion" />
+                </label>
+                <label>
+                  Foto
+                  <input type="file" name="photo" accept="image/*" />
+                </label>
+              </div>
+
+              <button type="submit" class="btn-primary">
+                Guardar equipo
+              </button>
+            </form>
+          </div>
+
+          <div class="panel-block">
+            <h3>Listado de equipos</h3>
+            <div class="table-wrapper">
+              <table id="computingTable" class="inventory-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>ID Equipo</th>
+                    <th>Código</th>
+                    <th>Marca</th>
+                    <th>Modelo</th>
+                    <th>Año</th>
+                    <th>Serie</th>
+                    <th>Descripción</th>
+                    <th>Foto</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- computing.js llenará aquí -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reserva sala computación -->
+        <div class="panel-block">
+          <h3>Reserva de sala de computación</h3>
+          <form id="computingReservationForm">
+            <div class="form-grid">
+              <label>
+                Nombre del solicitante
+                <input type="text" name="solicitante" required />
+              </label>
+              <label>
+                Curso
+                <input type="text" name="curso" required />
+              </label>
+              <label>
+                Fecha de uso
+                <input type="date" name="fechaUso" required />
+              </label>
+              <label>
+                Horario
+                <input type="text" name="horario" placeholder="Ej: 10:00 - 11:30" />
+              </label>
+              <label>
+                Observaciones
+                <input type="text" name="observaciones" />
+              </label>
+            </div>
+            <button type="submit" class="btn-secondary">
+              Registrar reserva
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <!-- LIBRARY -->
+      <section id="tab-library" class="tab-panel glass-panel">
+        <h2>Inventario – Biblioteca</h2>
+        <p class="section-description">
+          Registra libros, controla préstamos y devoluciones de forma centralizada.
+        </p>
+
+        <div class="panel-grid">
+          <div class="panel-block">
+            <h3>Agregar libro a la biblioteca</h3>
+            <form id="libraryForm" enctype="multipart/form-data">
+              <div class="form-grid">
+                <label>
+                  Código
+                  <input type="text" name="codigo" required />
+                </label>
+                <label>
+                  Título
+                  <input type="text" name="titulo" required />
+                </label>
+                <label>
+                  Autor
+                  <input type="text" name="autor" />
+                </label>
+                <label>
+                  Año
+                  <input type="number" name="anio" min="1900" max="2100" />
+                </label>
+                <label>
+                  Serie
+                  <input type="text" name="serie" />
+                </label>
+                <label>
+                  Cantidad
+                  <input type="number" name="cantidad" min="0" required />
+                </label>
+                <label>
+                  Descripción
+                  <input type="text" name="descripcion" />
+                </label>
+                <label>
+                  Foto
+                  <input type="file" name="photo" accept="image/*" />
+                </label>
+              </div>
+
+              <button type="submit" class="btn-primary">
+                Guardar libro
+              </button>
+            </form>
+          </div>
+
+          <div class="panel-block">
+            <h3>Listado de libros</h3>
+            <div class="table-wrapper">
+              <table id="libraryTable" class="inventory-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Código</th>
+                    <th>Título</th>
+                    <th>Autor</th>
+                    <th>Año</th>
+                    <th>Serie</th>
+                    <th>Cantidad</th>
+                    <th>Descripción</th>
+                    <th>Foto</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- library.js llenará aquí -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Préstamos -->
+        <div class="panel-grid">
+          <div class="panel-block">
+            <h3>Registrar préstamo</h3>
+            <form id="loanForm">
+              <div class="form-grid">
+                <label>
+                  Código del libro
+                  <input type="text" name="codigo" required />
+                </label>
+                <label>
+                  Nombre de quien pide
+                  <input type="text" name="nombre" required />
+                </label>
+                <label>
+                  Curso / Funcionario
+                  <input type="text" name="curso" />
+                </label>
+                <label>
+                  Observaciones
+                  <input type="text" name="observaciones" />
+                </label>
+              </div>
+              <button type="submit" class="btn-secondary">
+                Registrar préstamo
+              </button>
+            </form>
+          </div>
+
+          <div class="panel-block">
+            <h3>Registrar devolución</h3>
+            <form id="returnForm">
+              <div class="form-grid">
+                <label>
+                  ID del préstamo
+                  <input type="text" name="loanId" required />
+                </label>
+              </div>
+              <button type="submit" class="btn-ghost">
+                Registrar devolución
+              </button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/js/tabs.js"></script>
+  <script src="/js/science.js"></script>
+  <script src="/js/computing.js"></script>
+  <script src="/js/library.js"></script>
+</body>
+</html>

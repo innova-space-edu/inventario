@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventario - Laboratorio de Ciencias</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <script defer src="/js/science.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Laboratorio de Ciencias</h1>
+        <nav>
+            <a href="/">Inicio</a>
+        </nav>
+    </header>
+
+    <section class="form-section">
+        <h2>Agregar Producto</h2>
+        <form id="scienceForm">
+            <label>Código:</label>
+            <input type="text" name="codigo" required>
+            <label>Nombre:</label>
+            <input type="text" name="nombre" required>
+            <label>Descripción:</label>
+            <textarea name="descripcion" required></textarea>
+            <label>Cantidad:</label>
+            <input type="number" name="cantidad" required>
+            <label>Fecha de Ingreso:</label>
+            <input type="date" name="fecha" required>
+            <label>Fotografía:</label>
+            <input type="file" name="photo" accept="image/*">
+            <button type="submit" class="button">Guardar</button>
+        </form>
+    </section>
+
+    <section class="inventory-section">
+        <h2>Inventario Actual</h2>
+        <table id="scienceTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th>Descripción</th>
+                    <th>Cantidad</th>
+                    <th>Fecha</th>
+                    <th>Foto</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Items se llenarán dinámicamente -->
+            </tbody>
+        </table>
+    </section>
+
+    <section class="reservations-section">
+        <h2>Reservar Laboratorio</h2>
+        <form id="scienceReservationForm">
+            <label>Fecha de Reserva:</label>
+            <input type="datetime-local" name="date" required>
+            <label>Descripción/Actividad:</label>
+            <input type="text" name="activity" required>
+            <button type="submit" class="button">Reservar</button>
+        </form>
+    </section>
+
+</body>
+</html>

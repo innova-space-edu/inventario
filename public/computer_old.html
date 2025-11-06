@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Laboratorio de Computación – Innova Space Education</title>
+    <link rel="stylesheet" href="style.css" />
+    <script defer src="script.js"></script>
+  </head>
+  <body data-page="computer">
+    <div class="background"></div>
+    <header>
+      <h1 class="title rainbow">Innova Space Education – Track</h1>
+      <nav class="navbar">
+        <a href="science.html">Laboratorio de Ciencias</a>
+        <a href="computer.html">Laboratorio de Computación</a>
+        <a href="library.html">Biblioteca</a>
+        <a href="index.html">Cerrar Sesión</a>
+      </nav>
+    </header>
+    <main>
+      <h2 class="section-title">Laboratorio de Computación</h2>
+      <!-- Formulario para agregar equipo -->
+      <section class="form-card">
+        <h3>Agregar equipo</h3>
+        <form id="addComputerForm" class="styled-form">
+          <div class="grid-2">
+            <div>
+              <label for="compEquipId">ID del equipo</label>
+              <input
+                id="compEquipId"
+                type="text"
+                placeholder="Ej. EQ001"
+                data-message="Ingresa el ID interno del equipo"
+                required
+              />
+            </div>
+            <div>
+              <label for="compCode">Código</label>
+              <input
+                id="compCode"
+                type="text"
+                placeholder="Código patrimonial"
+                data-message="Ingresa el código patrimonial del equipo"
+                required
+              />
+            </div>
+            <div>
+              <label for="compBrand">Marca</label>
+              <input
+                id="compBrand"
+                type="text"
+                placeholder="Marca"
+                data-message="Ingresa la marca del equipo"
+                required
+              />
+            </div>
+            <div>
+              <label for="compModel">Modelo</label>
+              <input
+                id="compModel"
+                type="text"
+                placeholder="Modelo"
+                data-message="Ingresa el modelo del equipo"
+                required
+              />
+            </div>
+            <div>
+              <label for="compYear">Año</label>
+              <input
+                id="compYear"
+                type="number"
+                placeholder="2025"
+                data-message="Ingresa el año de adquisición"
+                required
+              />
+            </div>
+            <div>
+              <label for="compSeries">Serie</label>
+              <input
+                id="compSeries"
+                type="text"
+                placeholder="Número de serie"
+                data-message="Ingresa el número de serie"
+              />
+            </div>
+            <div>
+              <label for="compPhoto">Fotografía</label>
+              <input
+                id="compPhoto"
+                type="file"
+                accept="image/*"
+                data-message="Selecciona una foto del equipo"
+              />
+            </div>
+            <div>
+              <label for="compDescription">Descripción</label>
+              <textarea
+                id="compDescription"
+                rows="3"
+                placeholder="Descripción opcional"
+                data-message="Escribe una descripción del equipo"
+              ></textarea>
+            </div>
+          </div>
+          <button type="submit" class="primary-button">Guardar</button>
+        </form>
+      </section>
+      <!-- Inventario de equipos -->
+      <section class="table-section">
+        <h3>Inventario de equipos</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Equipo</th>
+              <th>Código</th>
+              <th>Marca</th>
+              <th>Modelo</th>
+              <th>Año</th>
+              <th>Serie</th>
+              <th>Descripción</th>
+              <th>Foto</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="compTableBody"></tbody>
+        </table>
+      </section>
+      <!-- Reservar laboratorio -->
+      <section class="form-card">
+        <h3>Reservar laboratorio de computación</h3>
+        <form id="compReservationForm" class="styled-form">
+          <div class="grid-2">
+            <div>
+              <label for="compReserveDate">Fecha y hora</label>
+              <input
+                id="compReserveDate"
+                type="datetime-local"
+                data-message="Selecciona la fecha y hora de la reserva"
+                required
+              />
+            </div>
+            <div>
+              <label for="compReserveDesc">Descripción/Actividad</label>
+              <input
+                id="compReserveDesc"
+                type="text"
+                placeholder="Actividad prevista"
+                data-message="Describe la actividad que se realizará"
+                required
+              />
+            </div>
+          </div>
+          <button type="submit" class="primary-button">Reservar</button>
+        </form>
+      </section>
+      <!-- Tabla de reservas -->
+      <section class="table-section">
+        <h3>Reservas de laboratorio de computación</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Fecha y hora</th>
+              <th>Descripción</th>
+            </tr>
+          </thead>
+          <tbody id="compReservationBody"></tbody>
+        </table>
+      </section>
+    </main>
+  </body>
+</html>
