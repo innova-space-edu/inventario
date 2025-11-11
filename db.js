@@ -1,7 +1,7 @@
 // db.js
 const { Pool } = require('pg');
 
-// En local puedes usar dotenv para leer DATABASE_URL desde .env
+// En local usamos dotenv para cargar DATABASE_URL desde .env
 if (process.env.NODE_ENV !== 'production') {
   try {
     require('dotenv').config();
@@ -10,19 +10,23 @@ if (process.env.NODE_ENV !== 'production') {
   }
 }
 
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL no está definida. Configúrala en .env (local) o en las variables de entorno de Render.');
+}
+
+// Render Postgres SIEMPRE requiere SSL, incluso desde tu PC.
+// Así que dejamos ssl: { rejectUnauthorized: false } siempre.
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production'
-    ? { rejectUnauthorized: false }
-    : false
+  ssl: { rejectUnauthorized: false }
 });
 
-// Función para ejecutar consultas normales
+// Ejecutar consultas normales
 function query(text, params) {
   return pool.query(text, params);
 }
 
-// 🔹 Función que crea las tablas si no existen (se llama desde server.js)
+// Crear tablas si no existen (lo llamamos desde server.js)
 async function initDb() {
   console.log('Inicializando base de datos...');
 
