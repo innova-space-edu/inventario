@@ -6,6 +6,10 @@
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Poppins", sans-serif;
@@ -172,7 +176,7 @@ body {
   gap: 0.3rem;
   text-decoration: none;
   white-space: nowrap;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
 }
 
 .btn-primary {
@@ -202,6 +206,15 @@ body {
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.7);
 }
 
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-ghost:disabled {
+  opacity: 0.6;
+  cursor: default;
+  transform: none;
+  box-shadow: none;
+}
+
 @keyframes buttonGradient {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
@@ -228,6 +241,11 @@ body {
   transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
 }
 
+.tab-button:hover {
+  background: rgba(51, 65, 85, 0.8);
+  transform: translateY(-1px);
+}
+
 .tab-button.active {
   background: radial-gradient(circle at 0 0, #4f46e5, #0f172a);
   color: #f9fafb;
@@ -250,6 +268,19 @@ body {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+.main-content h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.panel-block h3 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #e5e7eb;
 }
 
 .section-description {
@@ -304,8 +335,30 @@ body {
   font-size: 0.85rem;
 }
 
+.form-grid textarea {
+  border-radius: 0.7rem;
+  border: 1px solid rgba(148, 163, 184, 0.7);
+  padding: 0.5rem 0.7rem;
+  background: rgba(15, 23, 42, 0.95);
+  color: #f9fafb;
+  font-size: 0.85rem;
+  min-height: 80px;
+  resize: vertical;
+}
+
+.form-grid input::file-selector-button {
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.7);
+  background: rgba(15, 23, 42, 0.9);
+  color: #e5e7eb;
+  padding: 0.25rem 0.7rem;
+  margin-right: 0.5rem;
+  cursor: pointer;
+}
+
 .form-grid input:focus,
-.form-grid select:focus {
+.form-grid select:focus,
+.form-grid textarea:focus {
   outline: none;
   border-color: #6366f1;
   box-shadow: 0 0 0 1px #6366f1;
@@ -316,22 +369,30 @@ body {
 .table-wrapper {
   width: 100%;
   overflow-x: auto;
+  border-radius: 0.9rem;
+  border: 1px solid rgba(30, 64, 175, 0.65);
+  background: rgba(15, 23, 42, 0.98);
 }
 
 .inventory-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.8rem;
+  min-width: 600px;
 }
 
 .inventory-table thead {
-  background: rgba(30, 64, 175, 0.7);
+  background: rgba(30, 64, 175, 0.9);
 }
 
 .inventory-table th,
 .inventory-table td {
-  padding: 0.4rem 0.5rem;
+  padding: 0.45rem 0.55rem;
   border-bottom: 1px solid rgba(30, 64, 175, 0.6);
+}
+
+.inventory-table th {
+  font-weight: 600;
 }
 
 .inventory-table tbody tr:nth-child(even) {
@@ -344,6 +405,9 @@ body {
 
 .inventory-table img {
   border-radius: 0.4rem;
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
 }
 
 /* Botón eliminar simple */
@@ -361,6 +425,23 @@ body {
 
 .delete-button:hover {
   background: rgba(220, 38, 38, 0.95);
+  transform: translateY(-1px);
+}
+
+/* Botón para acciones pequeñas (si lo usas en otras tablas) */
+.action-button {
+  border-radius: 999px;
+  border: 1px solid rgba(59, 130, 246, 0.7);
+  background: rgba(37, 99, 235, 0.85);
+  color: #eff6ff;
+  padding: 0.25rem 0.8rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.action-button:hover {
+  background: rgba(37, 99, 235, 1);
   transform: translateY(-1px);
 }
 
@@ -434,4 +515,54 @@ body {
   outline: none;
   border-color: #6366f1;
   box-shadow: 0 0 0 1px #6366f1;
+}
+
+/* ====== RESPONSIVE HEADER ====== */
+
+@media (max-width: 800px) {
+  .main-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .header-right {
+    align-self: stretch;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .app-shell {
+    padding: 1rem;
+  }
+
+  .main-header {
+    padding: 0.8rem 1rem;
+  }
+
+  .header-title h1 {
+    font-size: 1rem;
+  }
+
+  .header-subtitle {
+    font-size: 0.75rem;
+  }
+
+  .tabs {
+    overflow-x: auto;
+  }
+
+  .tabs::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .tabs::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.7);
+    border-radius: 999px;
+  }
+
+  .tab-panel {
+    padding: 1.1rem 1.2rem;
+  }
 }
