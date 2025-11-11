@@ -25,6 +25,10 @@ app.use(session({
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// *** NUEVO: servir la carpeta /config para que el frontend pueda cargar los *.json ***
+// Esto permite que las rutas como /config/library_items.json funcionen en el navegador.
+app.use('/config', express.static(path.join(__dirname, 'config')));
+
 // Configure file upload
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -107,7 +111,7 @@ app.get('/logout', (req, res) => {
     });
 });
 
-// Example API endpoints for adding and removing items (placeholder)
+// API endpoints for adding and removing items
 app.post('/api/:lab/items', requireLogin, upload.single('photo'), (req, res) => {
     const lab = req.params.lab; // 'science', 'computing', 'library'
     const itemsFile = path.join(__dirname, 'config', `${lab}_items.json`);
@@ -136,7 +140,7 @@ app.delete('/api/:lab/items/:id', requireLogin, (req, res) => {
     res.json({ message: 'Item eliminado', item: removed });
 });
 
-// Endpoint for scheduling/reservations (placeholder)
+// Endpoint for scheduling/reservations
 app.post('/api/:lab/reservations', requireLogin, (req, res) => {
     const lab = req.params.lab;
     const reservationsFile = path.join(__dirname, 'config', `${lab}_reservations.json`);

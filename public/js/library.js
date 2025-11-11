@@ -4,12 +4,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const loanForm = document.getElementById('loanForm');
     const returnForm = document.getElementById('returnForm');
 
+    // Cargar inventario existente
     fetch('/config/library_items.json')
         .then(resp => resp.json().catch(() => []))
         .then(items => {
             if (Array.isArray(items)) items.forEach(addRow);
         });
 
+    // Envío de formulario
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const formData = new FormData(form);
@@ -22,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
         form.reset();
     });
 
+    // Agregar fila a la tabla
     function addRow(item) {
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -31,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <td>${item.autor}</td>
             <td>${item.anio}</td>
             <td>${item.serie}</td>
+            <td>${item.categoria || ''}</td>
             <td>${item.cantidad}</td>
             <td>${item.descripcion}</td>
             <td>${item.photo ? `<img src="/uploads/${item.photo}" width="50">` : ''}</td>
@@ -43,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tableBody.appendChild(tr);
     }
 
-    // Loan
+    // Registrar préstamo
     loanForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const data = Object.fromEntries(new FormData(loanForm));
@@ -57,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loanForm.reset();
     });
 
-    // Return
+    // Registrar devolución
     returnForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const loanId = new FormData(returnForm).get('loanId');

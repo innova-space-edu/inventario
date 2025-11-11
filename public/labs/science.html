@@ -24,6 +24,19 @@
             <input type="text" name="nombre" required>
             <label>Descripción:</label>
             <textarea name="descripcion" required></textarea>
+
+            <!-- CATEGORÍA AÑADIDA -->
+            <label>Categoría:</label>
+            <select name="categoria" required>
+                <option value="instrumento">Instrumento de Laboratorio</option>
+                <option value="material químico">Material Químico</option>
+                <option value="material biológico">Material Biológico</option>
+                <option value="instrumento electrónico">Instrumento Electrónico</option>
+                <option value="modelo educativo">Modelo o Material Didáctico</option>
+                <option value="seguridad">Elemento de Seguridad</option>
+                <option value="otro">Otro</option>
+            </select>
+
             <label>Cantidad:</label>
             <input type="number" name="cantidad" required>
             <label>Fecha de Ingreso:</label>
@@ -43,6 +56,7 @@
                     <th>Código</th>
                     <th>Nombre</th>
                     <th>Descripción</th>
+                    <th>Categoría</th>
                     <th>Cantidad</th>
                     <th>Fecha</th>
                     <th>Foto</th>

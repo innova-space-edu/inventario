@@ -30,6 +30,18 @@
             <input type="number" name="anio" required>
             <label>Serie:</label>
             <input type="text" name="serie" required>
+
+            <!-- CATEGORÍA AÑADIDA -->
+            <label>Categoría:</label>
+            <select name="categoria" required>
+                <option value="equipo de cómputo">Equipo de Cómputo</option>
+                <option value="audiovisual">Material Audiovisual</option>
+                <option value="electrónico">Material Electrónico</option>
+                <option value="periférico">Periférico</option>
+                <option value="cableado o adaptador">Cableado o Adaptador</option>
+                <option value="varios">Otros Materiales</option>
+            </select>
+
             <label>Descripción:</label>
             <textarea name="descripcion" required></textarea>
             <label>Fotografía:</label>
@@ -50,6 +62,7 @@
                     <th>Modelo</th>
                     <th>Año</th>
                     <th>Serie</th>
+                    <th>Categoría</th>
                     <th>Descripción</th>
                     <th>Foto</th>
                     <th>Acciones</th>

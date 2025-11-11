@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const scienceTableBody = document.querySelector('#scienceTable tbody');
     const scienceReservationForm = document.getElementById('scienceReservationForm');
 
-    // Load existing items
+    // Cargar elementos existentes
     fetch('/config/science_items.json')
         .then(resp => resp.json().catch(() => []))
         .then(items => {
@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+    // Envío del formulario
     scienceForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const formData = new FormData(scienceForm);
@@ -24,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
         scienceForm.reset();
     });
 
+    // Agregar fila a la tabla
     function addRow(item) {
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -31,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <td>${item.codigo}</td>
             <td>${item.nombre}</td>
             <td>${item.descripcion}</td>
+            <td>${item.categoria || ''}</td>
             <td>${item.cantidad}</td>
             <td>${item.fecha}</td>
             <td>${item.photo ? `<img src="/uploads/${item.photo}" width="50">` : ''}</td>
@@ -43,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
         scienceTableBody.appendChild(tr);
     }
 
-    // Reservation form
+    // Formulario de reserva
     scienceReservationForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const data = Object.fromEntries(new FormData(scienceReservationForm));

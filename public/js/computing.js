@@ -3,12 +3,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const tableBody = document.querySelector('#computingTable tbody');
     const reservationForm = document.getElementById('computingReservationForm');
 
+    // Cargar elementos existentes
     fetch('/config/computing_items.json')
         .then(resp => resp.json().catch(() => []))
         .then(items => {
             if (Array.isArray(items)) items.forEach(addRow);
         });
 
+    // Envío de formulario
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const formData = new FormData(form);
@@ -21,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
         form.reset();
     });
 
+    // Agregar fila a la tabla
     function addRow(item) {
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -31,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <td>${item.modelo}</td>
             <td>${item.anio}</td>
             <td>${item.serie}</td>
+            <td>${item.categoria || ''}</td>
             <td>${item.descripcion}</td>
             <td>${item.photo ? `<img src="/uploads/${item.photo}" width="50">` : ''}</td>
             <td><button class="delete-button" data-id="${item.id}">Eliminar</button></td>
@@ -42,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tableBody.appendChild(tr);
     }
 
-    // Reservation
+    // Reservas
     reservationForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const data = Object.fromEntries(new FormData(reservationForm));
