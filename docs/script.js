@@ -229,6 +229,11 @@
 
   /* ================= Página de biblioteca ================= */
   function initLibraryPage() {
+    // Si el body declara data-lib-mode="api", no usamos el modo local (se usa library.js)
+    if (document.body && document.body.dataset.libMode === 'api') {
+      return;
+    }
+
     speak('Estás en la biblioteca. Puedes agregar libros y materiales, registrar préstamos y devoluciones.');
     // Cargar datos
     let inventory = getData('libraryInventory');
@@ -834,4 +839,3 @@
   };
 
 })();
-
