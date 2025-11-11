@@ -1,68 +1,116 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inventario - Biblioteca</title>
-    <link rel="stylesheet" href="/css/styles.css">
-    <script defer src="/js/script.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventario - Biblioteca</title>
+  <link rel="stylesheet" href="/css/app.css">
 </head>
-<body data-page="library">
-    <header>
-        <h1>Biblioteca</h1>
-        <nav>
-            <a href="/">Inicio</a>
-        </nav>
+<body class="body-space" data-page="library" data-lib-mode="api">
+  <div class="background"></div>
+
+  <div class="app-shell">
+    <header class="main-header glass-panel">
+      <div class="header-left">
+        <img src="/img/logo-colegio.png" alt="Logo Colegio Providencia" class="header-logo">
+        <div class="header-title">
+          <h1>Inventario Colegio Providencia</h1>
+          <span class="header-subtitle">Biblioteca</span>
+        </div>
+      </div>
+      <nav class="header-right">
+        <a
+          href="https://sites.google.com/colprovidencia.cl/agenda-hora/inicio"
+          class="btn-secondary"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Agendar hora
+        </a>
+        <a href="/" class="btn-ghost">Panel principal</a>
+        <form action="/logout" method="get" class="logout-form">
+          <button type="submit" class="btn-ghost">Cerrar sesión</button>
+        </form>
+      </nav>
     </header>
 
-    <section class="form-section">
-        <h2>Agregar Libro o Material</h2>
-        <form id="libraryForm">
-            <label>Código:</label>
-            <input type="text" name="codigo" id="libCode" required>
+    <main class="main-content">
+      <section class="glass-panel" style="padding: 1.2rem 1.3rem 1.4rem;">
+        <h2>Biblioteca</h2>
+        <p class="section-description">
+          Agrega libros y materiales, controla inventario, préstamos y devoluciones.
+        </p>
 
-            <label>Título o Nombre:</label>
-            <input type="text" name="titulo" id="libTitle" required>
+        <div class="panel-grid">
+          <div class="panel-block">
+            <h3>Agregar Libro o Material</h3>
+            <form id="libraryForm" enctype="multipart/form-data">
+              <div class="form-grid">
+                <label>
+                  Código:
+                  <input type="text" name="codigo" id="libCode" required>
+                </label>
 
-            <label>Autor / Fabricante:</label>
-            <input type="text" name="autor" id="libAuthor" required>
+                <label>
+                  Título o Nombre:
+                  <input type="text" name="titulo" id="libTitle" required>
+                </label>
 
-            <label>Año:</label>
-            <input type="number" name="anio" id="libYear" required>
+                <label>
+                  Autor / Fabricante:
+                  <input type="text" name="autor" id="libAuthor" required>
+                </label>
 
-            <label>Serie / ISBN:</label>
-            <input type="text" name="serie" id="libSeries">
+                <label>
+                  Año:
+                  <input type="number" name="anio" id="libYear" required>
+                </label>
 
-            <!-- CATEGORÍA AÑADIDA -->
-            <label>Categoría:</label>
-            <select id="libCategory" name="categoria" required>
-                <option value="libro">Libro</option>
-                <option value="material escolar">Material Escolar</option>
-                <option value="material multimedia">Material Multimedia</option>
-                <option value="instrumento musical">Instrumento Musical</option>
-                <option value="material didáctico">Material Didáctico</option>
-                <option value="documento">Documento</option>
-                <option value="otros">Otros</option>
-            </select>
+                <label>
+                  Serie / ISBN:
+                  <input type="text" name="serie" id="libSeries">
+                </label>
 
-            <label>Descripción:</label>
-            <textarea name="descripcion" id="libDescription" required></textarea>
+                <!-- CATEGORÍA AÑADIDA -->
+                <label>
+                  Categoría:
+                  <select id="libCategory" name="categoria" required>
+                    <option value="libro">Libro</option>
+                    <option value="material escolar">Material Escolar</option>
+                    <option value="material multimedia">Material Multimedia</option>
+                    <option value="instrumento musical">Instrumento Musical</option>
+                    <option value="material didáctico">Material Didáctico</option>
+                    <option value="documento">Documento</option>
+                    <option value="otros">Otros</option>
+                  </select>
+                </label>
 
-            <label>Cantidad:</label>
-            <input type="number" name="cantidad" id="libQuantity" required>
+                <label>
+                  Descripción:
+                  <textarea name="descripcion" id="libDescription" required></textarea>
+                </label>
 
-            <label>Fotografía:</label>
-            <input type="file" id="libPhoto" name="photo" accept="image/*">
+                <label>
+                  Cantidad:
+                  <input type="number" name="cantidad" id="libQuantity" required>
+                </label>
 
-            <button type="submit" class="button">Guardar</button>
-        </form>
-    </section>
+                <label>
+                  Fotografía:
+                  <input type="file" id="libPhoto" name="photo" accept="image/*">
+                </label>
+              </div>
 
-    <section class="inventory-section">
-        <h2>Inventario General de Biblioteca</h2>
-        <table id="libraryTable">
-            <thead>
-                <tr>
+              <button type="submit" class="btn-primary">Guardar</button>
+            </form>
+          </div>
+
+          <div class="panel-block">
+            <h3>Inventario General de Biblioteca</h3>
+            <div class="table-wrapper">
+              <table id="libraryTable" class="inventory-table">
+                <thead>
+                  <tr>
                     <th>ID</th>
                     <th>Código</th>
                     <th>Título / Material</th>
@@ -74,46 +122,77 @@
                     <th>Descripción</th>
                     <th>Foto</th>
                     <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody id="libraryTableBody">
-                <!-- Elementos cargados dinámicamente -->
-            </tbody>
-        </table>
-    </section>
+                  </tr>
+                </thead>
+                <tbody id="libraryTableBody">
+                  <!-- Elementos cargados dinámicamente -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
 
-    <section class="loans-section">
-        <h2>Registrar Préstamo</h2>
-        <form id="loanForm">
-            <label>ID del Material:</label>
-            <input type="text" id="loanBookId" name="bookId" required>
+        <div class="panel-grid">
+          <div class="panel-block">
+            <h3>Registrar Préstamo</h3>
+            <form id="loanForm">
+              <div class="form-grid">
+                <label>
+                  ID del Material:
+                  <input type="text" id="loanBookId" name="bookId" required>
+                </label>
 
-            <label>Usuario (correo):</label>
-            <input type="email" id="loanUser" name="userEmail" required>
+                <label>
+                  Usuario (correo):
+                  <input type="email" id="loanUser" name="userEmail" required>
+                </label>
+              </div>
 
-            <button type="submit" class="button">Registrar Préstamo</button>
-        </form>
+              <button type="submit" class="btn-secondary">Registrar Préstamo</button>
+            </form>
 
-        <h3>Préstamos Activos</h3>
-        <table id="loanTable">
-            <thead>
-                <tr>
+            <h3 style="margin-top: 1.2rem;">Préstamos Activos</h3>
+            <div class="table-wrapper">
+              <table id="loanTable" class="inventory-table">
+                <thead>
+                  <tr>
                     <th>ID</th>
                     <th>ID Material</th>
                     <th>Usuario</th>
                     <th>Fecha Préstamo</th>
                     <th>Devuelto</th>
                     <th>Acción</th>
-                </tr>
-            </thead>
-            <tbody id="loanTableBody">
-                <!-- Préstamos dinámicos -->
-            </tbody>
-        </table>
-    </section>
+                  </tr>
+                </thead>
+                <tbody id="loanTableBody">
+                  <!-- Préstamos dinámicos -->
+                </tbody>
+              </table>
+            </div>
+          </div>
 
-    <footer>
-        <p>© 2025 Innova Space Education - Biblioteca</p>
-    </footer>
+          <div class="panel-block">
+            <h3>Registrar Devolución</h3>
+            <form id="returnForm">
+              <div class="form-grid">
+                <label>
+                  ID del préstamo:
+                  <input type="text" name="loanId" required>
+                </label>
+              </div>
+              <button type="submit" class="btn-ghost">Registrar Devolución</button>
+            </form>
+          </div>
+        </div>
+
+        <footer style="margin-top: 1rem; text-align: center; font-size: 0.8rem; opacity: 0.8;">
+          <p>© 2025 Innova Space Education - Biblioteca</p>
+        </footer>
+      </section>
+    </main>
+  </div>
+
+  <script defer src="/js/script.js"></script>
+  <script defer src="/js/library.js"></script>
 </body>
 </html>
