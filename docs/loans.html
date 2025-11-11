@@ -2,37 +2,77 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Préstamos y Devoluciones - Innova Space Track</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="/css/app.css">
 </head>
-<body data-page="loans">
-  <div class="navbar">
-    <a href="dashboard.html">Inicio</a>
-    <a href="library.html">Biblioteca</a>
-    <a href="computer.html">Computación</a>
-    <a href="science.html">Ciencias</a>
+<body class="body-space" data-page="loans">
+  <!-- Fondo espacial animado -->
+  <div class="background space-bg"></div>
+
+  <div class="app-shell">
+    <!-- HEADER con logo y botón Agendar hora -->
+    <header class="main-header glass-panel">
+      <div class="header-left">
+        <img
+          src="/img/logo-colegio.png"
+          alt="Logo Colegio Providencia"
+          class="header-logo"
+        />
+        <div class="header-title">
+          <h1>Inventario Colegio Providencia</h1>
+          <span class="header-subtitle">Préstamos y Devoluciones</span>
+        </div>
+      </div>
+
+      <nav class="header-right">
+        <a
+          href="https://sites.google.com/colprovidencia.cl/agenda-hora/inicio"
+          class="btn-secondary"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Agendar hora
+        </a>
+
+        <a href="/" class="btn-ghost">Panel principal</a>
+
+        <form action="/logout" method="get" class="logout-form">
+          <button type="submit" class="btn-ghost">Cerrar sesión</button>
+        </form>
+      </nav>
+    </header>
+
+    <main class="main-content">
+      <section class="glass-panel" style="padding: 1.4rem 1.6rem;">
+        <h2>📦 Gestión de Préstamos y Devoluciones</h2>
+        <p class="section-description">
+          Revisa y gestiona los préstamos de materiales y su estado de devolución.
+        </p>
+
+        <div class="panel-block">
+          <div class="table-wrapper">
+            <table class="inventory-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Material</th>
+                  <th>Usuario</th>
+                  <th>Fecha Préstamo</th>
+                  <th>Devuelto</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="loanTableBody">
+                <!-- Filas de préstamos dinámicos (si los cargas con JS) -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
   </div>
 
-  <main>
-    <h1>📦 Gestión de Préstamos y Devoluciones</h1>
-
-    <section id="loanSection">
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Material</th>
-            <th>Usuario</th>
-            <th>Fecha Préstamo</th>
-            <th>Devuelto</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody id="loanTableBody"></tbody>
-      </table>
-    </section>
-  </main>
-
-  <script src="script.js"></script>
+  <script defer src="/js/script.js"></script>
 </body>
 </html>
