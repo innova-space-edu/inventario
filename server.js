@@ -1,190 +1,544 @@
 const express = require('express');
 const path = require('path');
-const bodyParser = require('body-parser');
 const session = require('express-session');
 const multer = require('multer');
 const fs = require('fs');
+const cors = require('cors');
+const db = require('./db'); // conexión a PostgreSQL (query, initDb)
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Admin fijo
+// ================== ADMIN FIJO ==================
 const ADMIN_EMAIL = 'Emorales@colprovidencia.cl';
 const ADMIN_PASSWORD = '123456';
 
-// Middlewares
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(session({
+// ================== DIRECTORIOS DE DATOS ==================
+// Usamos DATA_DIR para JSON de usuarios y uploads. Aunque items/reservas/préstamos van a BD,
+// mantenemos estos directorios para compatibilidad y para las fotos.
+const DATA_DIR = process.env.DATA_DIR || __dirname;
+
+const CONFIG_DIR = path.join(DATA_DIR, 'config');
+const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
+
+// Crear carpetas si no existen
+if (!fs.existsSync(CONFIG_DIR)) {
+  fs.mkdirSync(CONFIG_DIR, { recursive: true });
+}
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
+// Archivos JSON obligatorios (los de inventario ya no se usan, pero los dejamos)
+const defaultJsonFiles = [
+  'users.json',
+  'science_items.json',
+  'computing_items.json',
+  'library_items.json',
+  'science_reservations.json',
+  'computing_reservations.json',
+  'library_reservations.json',
+  'library_loans.json'
+];
+
+defaultJsonFiles.forEach((fileName) => {
+  const fullPath = path.join(CONFIG_DIR, fileName);
+  if (!fs.existsSync(fullPath)) {
+    fs.writeFileSync(fullPath, '[]', 'utf8');
+  } else {
+    const data = fs.readFileSync(fullPath, 'utf8').trim();
+    if (data === '') {
+      fs.writeFileSync(fullPath, '[]', 'utf8');
+    }
+  }
+});
+
+// ================== CORS ==================
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'https://innova-space-edu.github.io',
+  'https://innova-space-edu.github.io/inventario',
+  'https://inventario-u224.onrender.com'
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(null, false);
+    },
+    credentials: true
+  })
+);
+
+app.set('trust proxy', 1);
+
+// ================== MIDDLEWARES BÁSICOS ==================
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+app.use(
+  session({
     secret: 'inventario_secreto',
     resave: false,
-    saveUninitialized: false
-}));
-
-// Static files
-app.use(express.static(path.join(__dirname, 'public')));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// *** NUEVO: servir la carpeta /config para que el frontend pueda cargar los *.json ***
-// Esto permite que las rutas como /config/library_items.json funcionen en el navegador.
-app.use('/config', express.static(path.join(__dirname, 'config')));
-
-// Configure file upload
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, 'uploads/');
-    },
-    filename: function (req, file, cb) {
-        cb(null, Date.now() + '-' + file.originalname);
+    saveUninitialized: false,
+    cookie: {
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      secure: process.env.NODE_ENV === 'production'
     }
-});
-const upload = multer({ storage: storage });
+  })
+);
 
-// Simple user database (JSON file)
-const usersDBPath = path.join(__dirname, 'config', 'users.json');
+// Archivos estáticos del frontend (HTML, CSS, JS de la app)
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Carpeta de uploads (persistente si DATA_DIR apunta a un Disk)
+app.use('/uploads', express.static(UPLOADS_DIR));
+
+// Servir también /config para casos donde el front lo use
+app.use('/config', express.static(CONFIG_DIR));
+
+// ================== USERS (LOGIN / REGISTRO) ==================
+const usersDBPath = path.join(CONFIG_DIR, 'users.json');
 
 function loadUsers() {
-    if (!fs.existsSync(usersDBPath)) return [];
+  if (!fs.existsSync(usersDBPath)) return [];
 
-    try {
-        const data = fs.readFileSync(usersDBPath);
-        const users = JSON.parse(data);
-
-        // Aseguramos que el admin fijo esté también en el archivo si quieres
-        const hasAdmin = users.some(u => u.email === ADMIN_EMAIL);
-        if (!hasAdmin) {
-            users.push({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD, role: 'admin' });
-            fs.writeFileSync(usersDBPath, JSON.stringify(users, null, 2));
-        }
-        return users;
-    } catch (err) {
-        console.error('Error leyendo users.json:', err);
-        return [];
+  try {
+    const data = fs.readFileSync(usersDBPath, 'utf8').trim();
+    const users = data ? JSON.parse(data) : [];
+    const hasAdmin = users.some((u) => u.email === ADMIN_EMAIL);
+    if (!hasAdmin) {
+      users.push({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD, role: 'admin' });
+      fs.writeFileSync(usersDBPath, JSON.stringify(users, null, 2));
     }
+    return users;
+  } catch (err) {
+    console.error('Error leyendo users.json:', err);
+    return [];
+  }
 }
 
 function saveUsers(users) {
-    fs.writeFileSync(usersDBPath, JSON.stringify(users, null, 2));
+  fs.writeFileSync(usersDBPath, JSON.stringify(users, null, 2));
 }
 
-// Middleware to check if user is logged in
+// Helpers viejos para JSON (se quedan por compatibilidad, aunque ya no los usamos para inventario)
+function readJsonArray(filePath) {
+  if (!fs.existsSync(filePath)) return [];
+  try {
+    const data = fs.readFileSync(filePath, 'utf8').trim();
+    if (data === '') return [];
+    const parsed = JSON.parse(data);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (err) {
+    console.error('Error leyendo archivo JSON:', filePath, err);
+    return [];
+  }
+}
+
+function writeJsonArray(filePath, arr) {
+  try {
+    fs.writeFileSync(filePath, JSON.stringify(arr, null, 2), 'utf8');
+  } catch (err) {
+    console.error('Error escribiendo archivo JSON:', filePath, err);
+  }
+}
+
+// ================== MIDDLEWARE LOGIN ==================
 function requireLogin(req, res, next) {
-    if (!req.session.user) {
-        return res.redirect('/login.html');
-    }
-    next();
+  if (req.session.user) {
+    return next();
+  }
+
+  if (req.path.startsWith('/api/')) {
+    return res.status(401).json({ message: 'No autenticado' });
+  }
+
+  return res.redirect('/login.html');
 }
 
-// Routes
+// ================== RUTAS DE PÁGINAS ==================
 app.get('/', (req, res) => {
-    if (!req.session.user) {
-        return res.redirect('/login.html');
-    }
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  if (!req.session.user) {
+    return res.redirect('/login.html');
+  }
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.post('/login', (req, res) => {
-    const { email, password } = req.body;
+  const { email, password } = req.body;
 
-    // 1) Validar admin fijo
-    if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-        req.session.user = { email: ADMIN_EMAIL, role: 'admin' };
-        return res.redirect('/');
-    }
+  if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+    req.session.user = { email: ADMIN_EMAIL, role: 'admin' };
+    return res.redirect('/');
+  }
 
-    // 2) Buscar en users.json (para otros usuarios si quieres)
-    const users = loadUsers();
-    const user = users.find(u => u.email === email && u.password === password);
+  const users = loadUsers();
+  const user = users.find((u) => u.email === email && u.password === password);
 
-    if (user) {
-        req.session.user = user;
-        return res.redirect('/');
-    } else {
-        // Respuesta simple (puedes mejorarla más adelante)
-        return res.send('Usuario o contraseña incorrectos. <a href="/login.html">Volver</a>');
-    }
+  if (user) {
+    req.session.user = user;
+    return res.redirect('/');
+  } else {
+    return res.send('Usuario o contraseña incorrectos. <a href="/login.html">Volver</a>');
+  }
 });
 
 app.get('/logout', (req, res) => {
-    req.session.destroy(() => {
-        res.redirect('/login.html');
+  req.session.destroy(() => {
+    res.redirect('/login.html');
+  });
+});
+
+// ================== UPLOADS (multer) ==================
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, UPLOADS_DIR);
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + '-' + file.originalname);
+  }
+});
+const upload = multer({ storage: storage });
+
+// Laboratorios válidos
+const VALID_LABS = ['science', 'computing', 'library'];
+
+// ================== API: INVENTARIO POR LABORATORIO (PostgreSQL) ==================
+
+// GET items
+app.get('/api/:lab/items', requireLogin, async (req, res) => {
+  const lab = req.params.lab;
+
+  if (!VALID_LABS.includes(lab)) {
+    return res.status(400).json({ message: 'Laboratorio no válido' });
+  }
+
+  try {
+    const { rows } = await db.query(
+      'SELECT id, data, photo FROM items WHERE lab = $1 ORDER BY id',
+      [lab]
+    );
+
+    const items = rows.map((row) => {
+      const data = row.data || {};
+      const item = { id: row.id, ...data };
+      if (row.photo) {
+        const photoPath = path.join(UPLOADS_DIR, row.photo);
+        if (fs.existsSync(photoPath)) {
+          item.photo = row.photo;
+        } else {
+          item.photo = null;
+        }
+      }
+      return item;
     });
+
+    return res.json(items);
+  } catch (err) {
+    console.error('Error al obtener items de', lab, err);
+    return res.status(500).json({ message: 'Error al obtener items' });
+  }
 });
 
-// API endpoints for adding and removing items
-app.post('/api/:lab/items', requireLogin, upload.single('photo'), (req, res) => {
-    const lab = req.params.lab; // 'science', 'computing', 'library'
-    const itemsFile = path.join(__dirname, 'config', `${lab}_items.json`);
-    const items = fs.existsSync(itemsFile) ? JSON.parse(fs.readFileSync(itemsFile)) : [];
+// POST item
+app.post('/api/:lab/items', requireLogin, upload.single('photo'), async (req, res) => {
+  const lab = req.params.lab;
 
-    const newItem = {
-        id: Date.now().toString(),
-        ...req.body,
-        photo: req.file ? req.file.filename : null
-    };
-    items.push(newItem);
-    fs.writeFileSync(itemsFile, JSON.stringify(items, null, 2));
+  if (!VALID_LABS.includes(lab)) {
+    return res.status(400).json({ message: 'Laboratorio no válido' });
+  }
+
+  const id = Date.now().toString();
+  const data = { ...req.body };
+  const photo = req.file ? req.file.filename : null;
+
+  try {
+    await db.query(
+      'INSERT INTO items (id, lab, data, photo) VALUES ($1, $2, $3::jsonb, $4)',
+      [id, lab, JSON.stringify(data), photo]
+    );
+
+    const newItem = { id, ...data, photo };
     res.json({ message: 'Item agregado', item: newItem });
+  } catch (err) {
+    console.error('Error al agregar item en', lab, err);
+    res.status(500).json({ message: 'Error al agregar item' });
+  }
 });
 
-app.delete('/api/:lab/items/:id', requireLogin, (req, res) => {
-    const lab = req.params.lab;
-    const itemsFile = path.join(__dirname, 'config', `${lab}_items.json`);
-    const items = fs.existsSync(itemsFile) ? JSON.parse(fs.readFileSync(itemsFile)) : [];
-    const itemIndex = items.findIndex(i => i.id === req.params.id);
-    if (itemIndex === -1) {
-        return res.status(404).json({ message: 'Item no encontrado' });
+// DELETE item
+app.delete('/api/:lab/items/:id', requireLogin, async (req, res) => {
+  const lab = req.params.lab;
+  const id = req.params.id;
+
+  if (!VALID_LABS.includes(lab)) {
+    return res.status(400).json({ message: 'Laboratorio no válido' });
+  }
+
+  try {
+    const { rows } = await db.query(
+      'DELETE FROM items WHERE id = $1 AND lab = $2 RETURNING id, data, photo',
+      [id, lab]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Item no encontrado' });
     }
-    const [removed] = items.splice(itemIndex, 1);
-    fs.writeFileSync(itemsFile, JSON.stringify(items, null, 2));
-    res.json({ message: 'Item eliminado', item: removed });
+
+    const row = rows[0];
+    const data = row.data || {};
+    const removed = { id: row.id, ...data, photo: row.photo || null };
+
+    return res.json({ message: 'Item eliminado', item: removed });
+  } catch (err) {
+    console.error('Error al eliminar item de', lab, err);
+    return res.status(500).json({ message: 'Error al eliminar item' });
+  }
 });
 
-// Endpoint for scheduling/reservations
-app.post('/api/:lab/reservations', requireLogin, (req, res) => {
-    const lab = req.params.lab;
-    const reservationsFile = path.join(__dirname, 'config', `${lab}_reservations.json`);
-    const reservations = fs.existsSync(reservationsFile) ? JSON.parse(fs.readFileSync(reservationsFile)) : [];
+// ================== API: RESERVAS DE LABORATORIO (PostgreSQL) ==================
+
+// GET reservas
+app.get('/api/:lab/reservations', requireLogin, async (req, res) => {
+  const lab = req.params.lab;
+
+  if (!VALID_LABS.includes(lab)) {
+    return res.status(400).json({ message: 'Laboratorio no válido' });
+  }
+
+  try {
+    const { rows } = await db.query(
+      'SELECT id, data, user_email FROM reservations WHERE lab = $1 ORDER BY id',
+      [lab]
+    );
+
+    const reservations = rows.map((row) => {
+      const data = row.data || {};
+      return {
+        id: row.id,
+        ...data,
+        user: row.user_email || null
+      };
+    });
+
+    return res.json(reservations);
+  } catch (err) {
+    console.error('Error al obtener reservas de', lab, err);
+    return res.status(500).json({ message: 'Error al obtener reservas' });
+  }
+});
+
+// POST reserva
+app.post('/api/:lab/reservations', requireLogin, async (req, res) => {
+  const lab = req.params.lab;
+
+  if (!VALID_LABS.includes(lab)) {
+    return res.status(400).json({ message: 'Laboratorio no válido' });
+  }
+
+  const id = Date.now().toString();
+  const data = { ...req.body };
+  const userEmail = req.session.user ? req.session.user.email : null;
+
+  try {
+    await db.query(
+      'INSERT INTO reservations (id, lab, data, user_email) VALUES ($1, $2, $3::jsonb, $4)',
+      [id, lab, JSON.stringify(data), userEmail]
+    );
+
     const newReservation = {
-        id: Date.now().toString(),
-        ...req.body,
-        user: req.session.user.email
+      id,
+      ...data,
+      user: userEmail
     };
-    reservations.push(newReservation);
-    fs.writeFileSync(reservationsFile, JSON.stringify(reservations, null, 2));
+
     res.json({ message: 'Reserva creada', reservation: newReservation });
+  } catch (err) {
+    console.error('Error al crear reserva en', lab, err);
+    res.status(500).json({ message: 'Error al crear reserva' });
+  }
 });
 
-// API to manage library loans
-app.post('/api/library/loan', requireLogin, (req, res) => {
-    const loansFile = path.join(__dirname, 'config', 'library_loans.json');
-    const loans = fs.existsSync(loansFile) ? JSON.parse(fs.readFileSync(loansFile)) : [];
+// ================== API: PRÉSTAMOS BIBLIOTECA (PostgreSQL) ==================
+
+// GET préstamos
+app.get('/api/library/loans', requireLogin, async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      'SELECT id, data, user_email, loan_date, returned, return_date FROM library_loans ORDER BY loan_date DESC NULLS LAST, id'
+    );
+
+    const loans = rows.map((row) => {
+      const data = row.data || {};
+      return {
+        id: row.id,
+        ...data,
+        user: row.user_email || null,
+        loanDate: row.loan_date,
+        returned: row.returned,
+        returnDate: row.return_date
+      };
+    });
+
+    return res.json(loans);
+  } catch (err) {
+    console.error('Error al obtener préstamos de biblioteca:', err);
+    return res.status(500).json({ message: 'Error al obtener préstamos' });
+  }
+});
+
+// Registrar préstamo
+app.post('/api/library/loan', requireLogin, async (req, res) => {
+  const id = Date.now().toString();
+  const data = { ...req.body };
+  const userEmail = req.session.user ? req.session.user.email : null;
+  const loanDate = new Date();
+
+  try {
+    await db.query(
+      'INSERT INTO library_loans (id, data, user_email, loan_date, returned) VALUES ($1, $2::jsonb, $3, $4, $5)',
+      [id, JSON.stringify(data), userEmail, loanDate, false]
+    );
+
     const newLoan = {
-        id: Date.now().toString(),
-        user: req.session.user.email,
-        ...req.body,
-        loanDate: new Date().toISOString(),
-        returned: false
+      id,
+      ...data,
+      user: userEmail,
+      loanDate,
+      returned: false
     };
-    loans.push(newLoan);
-    fs.writeFileSync(loansFile, JSON.stringify(loans, null, 2));
+
     res.json({ message: 'Préstamo registrado', loan: newLoan });
+  } catch (err) {
+    console.error('Error al registrar préstamo de biblioteca:', err);
+    res.status(500).json({ message: 'Error al registrar préstamo' });
+  }
 });
 
-app.post('/api/library/return/:loanId', requireLogin, (req, res) => {
-    const loansFile = path.join(__dirname, 'config', 'library_loans.json');
-    const loans = fs.existsSync(loansFile) ? JSON.parse(fs.readFileSync(loansFile)) : [];
-    const loan = loans.find(l => l.id === req.params.loanId);
-    if (!loan) {
-        return res.status(404).json({ message: 'Préstamo no encontrado' });
+// Actualizar préstamo
+app.put('/api/library/loan/:loanId', requireLogin, async (req, res) => {
+  const loanId = req.params.loanId;
+  const { bookCode, borrowerName, borrowerCourse, notes } = req.body;
+
+  try {
+    const { rows } = await db.query(
+      'SELECT id, data, user_email, loan_date, returned, return_date FROM library_loans WHERE id = $1',
+      [loanId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Préstamo no encontrado' });
     }
-    loan.returned = true;
-    loan.returnDate = new Date().toISOString();
-    fs.writeFileSync(loansFile, JSON.stringify(loans, null, 2));
-    res.json({ message: 'Préstamo devuelto', loan });
+
+    const row = rows[0];
+    const data = row.data || {};
+
+    if (bookCode !== undefined) data.bookCode = bookCode;
+    if (borrowerName !== undefined) data.borrowerName = borrowerName;
+    if (borrowerCourse !== undefined) data.borrowerCourse = borrowerCourse;
+    if (notes !== undefined) data.notes = notes;
+
+    await db.query(
+      'UPDATE library_loans SET data = $1::jsonb WHERE id = $2',
+      [JSON.stringify(data), loanId]
+    );
+
+    const updatedLoan = {
+      id: row.id,
+      ...data,
+      user: row.user_email || null,
+      loanDate: row.loan_date,
+      returned: row.returned,
+      returnDate: row.return_date
+    };
+
+    res.json({ message: 'Préstamo actualizado', loan: updatedLoan });
+  } catch (err) {
+    console.error('Error al actualizar préstamo de biblioteca:', err);
+    res.status(500).json({ message: 'Error al actualizar préstamo' });
+  }
 });
 
-// Start server
-app.listen(PORT, () => {
-    console.log(`Servidor escuchando en http://localhost:${PORT}`);
+// Registrar devolución
+app.post('/api/library/return/:loanId', requireLogin, async (req, res) => {
+  const loanId = req.params.loanId;
+  const returnDate = new Date();
+
+  try {
+    const { rows } = await db.query(
+      'UPDATE library_loans SET returned = TRUE, return_date = $1 WHERE id = $2 RETURNING id, data, user_email, loan_date, returned, return_date',
+      [returnDate, loanId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Préstamo no encontrado' });
+    }
+
+    const row = rows[0];
+    const data = row.data || {};
+
+    const loan = {
+      id: row.id,
+      ...data,
+      user: row.user_email || null,
+      loanDate: row.loan_date,
+      returned: row.returned,
+      returnDate: row.return_date
+    };
+
+    res.json({ message: 'Préstamo devuelto', loan });
+  } catch (err) {
+    console.error('Error al registrar devolución de préstamo:', err);
+    res.status(500).json({ message: 'Error al registrar devolución' });
+  }
 });
+
+// Eliminar préstamo
+app.delete('/api/library/loan/:loanId', requireLogin, async (req, res) => {
+  const loanId = req.params.loanId;
+
+  try {
+    const { rows } = await db.query(
+      'DELETE FROM library_loans WHERE id = $1 RETURNING id, data, user_email, loan_date, returned, return_date',
+      [loanId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Préstamo no encontrado' });
+    }
+
+    const row = rows[0];
+    const data = row.data || {};
+
+    const removed = {
+      id: row.id,
+      ...data,
+      user: row.user_email || null,
+      loanDate: row.loan_date,
+      returned: row.returned,
+      returnDate: row.return_date
+    };
+
+    res.json({ message: 'Préstamo eliminado', loan: removed });
+  } catch (err) {
+    console.error('Error al eliminar préstamo de biblioteca:', err);
+    res.status(500).json({ message: 'Error al eliminar préstamo' });
+  }
+});
+
+// ================== START SERVER (esperando a que la BD esté lista) ==================
+db.initDb()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Servidor escuchando en http://localhost:${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error('Error al inicializar la base de datos:', err);
+    process.exit(1);
+  });
