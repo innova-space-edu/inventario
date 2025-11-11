@@ -1,57 +1,101 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inventario - Laboratorio de Ciencias</title>
-    <link rel="stylesheet" href="/css/styles.css">
-    <script defer src="/js/science.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventario - Laboratorio de Ciencias</title>
+  <link rel="stylesheet" href="/css/app.css">
 </head>
-<body>
-    <header>
-        <h1>Laboratorio de Ciencias</h1>
-        <nav>
-            <a href="/">Inicio</a>
-        </nav>
+<body class="body-space">
+  <div class="background"></div>
+
+  <div class="app-shell">
+    <header class="main-header glass-panel">
+      <div class="header-left">
+        <img src="/img/logo-colegio.png" alt="Logo Colegio Providencia" class="header-logo">
+        <div class="header-title">
+          <h1>Inventario Colegio Providencia</h1>
+          <span class="header-subtitle">Laboratorio de Ciencias</span>
+        </div>
+      </div>
+      <nav class="header-right">
+        <a
+          href="https://sites.google.com/colprovidencia.cl/agenda-hora/inicio"
+          class="btn-secondary"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Agendar hora
+        </a>
+        <a href="/" class="btn-ghost">Panel principal</a>
+        <form action="/logout" method="get" class="logout-form">
+          <button type="submit" class="btn-ghost">Cerrar sesión</button>
+        </form>
+      </nav>
     </header>
 
-    <section class="form-section">
-        <h2>Agregar Producto</h2>
-        <form id="scienceForm">
-            <label>Código:</label>
-            <input type="text" name="codigo" required>
-            <label>Nombre:</label>
-            <input type="text" name="nombre" required>
-            <label>Descripción:</label>
-            <textarea name="descripcion" required></textarea>
+    <main class="main-content">
+      <section class="glass-panel" style="padding: 1.2rem 1.3rem 1.4rem;">
+        <h2>Laboratorio de Ciencias</h2>
+        <p class="section-description">
+          Registra productos de laboratorio, categorías y reservas de uso.
+        </p>
 
-            <!-- CATEGORÍA AÑADIDA -->
-            <label>Categoría:</label>
-            <select name="categoria" required>
-                <option value="instrumento">Instrumento de Laboratorio</option>
-                <option value="material químico">Material Químico</option>
-                <option value="material biológico">Material Biológico</option>
-                <option value="instrumento electrónico">Instrumento Electrónico</option>
-                <option value="modelo educativo">Modelo o Material Didáctico</option>
-                <option value="seguridad">Elemento de Seguridad</option>
-                <option value="otro">Otro</option>
-            </select>
+        <div class="panel-grid">
+          <div class="panel-block">
+            <h3>Agregar Producto</h3>
+            <form id="scienceForm" enctype="multipart/form-data">
+              <div class="form-grid">
+                <label>
+                  Código:
+                  <input type="text" name="codigo" required>
+                </label>
+                <label>
+                  Nombre:
+                  <input type="text" name="nombre" required>
+                </label>
+                <label>
+                  Descripción:
+                  <textarea name="descripcion" required></textarea>
+                </label>
 
-            <label>Cantidad:</label>
-            <input type="number" name="cantidad" required>
-            <label>Fecha de Ingreso:</label>
-            <input type="date" name="fecha" required>
-            <label>Fotografía:</label>
-            <input type="file" name="photo" accept="image/*">
-            <button type="submit" class="button">Guardar</button>
-        </form>
-    </section>
+                <!-- CATEGORÍA AÑADIDA -->
+                <label>
+                  Categoría:
+                  <select name="categoria" required>
+                    <option value="instrumento">Instrumento de Laboratorio</option>
+                    <option value="material químico">Material Químico</option>
+                    <option value="material biológico">Material Biológico</option>
+                    <option value="instrumento electrónico">Instrumento Electrónico</option>
+                    <option value="modelo educativo">Modelo o Material Didáctico</option>
+                    <option value="seguridad">Elemento de Seguridad</option>
+                    <option value="otro">Otro</option>
+                  </select>
+                </label>
 
-    <section class="inventory-section">
-        <h2>Inventario Actual</h2>
-        <table id="scienceTable">
-            <thead>
-                <tr>
+                <label>
+                  Cantidad:
+                  <input type="number" name="cantidad" required>
+                </label>
+                <label>
+                  Fecha de Ingreso:
+                  <input type="date" name="fecha" required>
+                </label>
+                <label>
+                  Fotografía:
+                  <input type="file" name="photo" accept="image/*">
+                </label>
+              </div>
+              <button type="submit" class="btn-primary">Guardar</button>
+            </form>
+          </div>
+
+          <div class="panel-block">
+            <h3>Inventario Actual</h3>
+            <div class="table-wrapper">
+              <table id="scienceTable" class="inventory-table">
+                <thead>
+                  <tr>
                     <th>ID</th>
                     <th>Código</th>
                     <th>Nombre</th>
@@ -61,24 +105,37 @@
                     <th>Fecha</th>
                     <th>Foto</th>
                     <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- Items se llenarán dinámicamente -->
-            </tbody>
-        </table>
-    </section>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- Items se llenarán dinámicamente -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
 
-    <section class="reservations-section">
-        <h2>Reservar Laboratorio</h2>
-        <form id="scienceReservationForm">
-            <label>Fecha de Reserva:</label>
-            <input type="datetime-local" name="date" required>
-            <label>Descripción/Actividad:</label>
-            <input type="text" name="activity" required>
-            <button type="submit" class="button">Reservar</button>
-        </form>
-    </section>
+        <div class="panel-block">
+          <h3>Reservar Laboratorio</h3>
+          <form id="scienceReservationForm">
+            <div class="form-grid">
+              <label>
+                Fecha de Reserva:
+                <input type="datetime-local" name="date" required>
+              </label>
+              <label>
+                Descripción/Actividad:
+                <input type="text" name="activity" required>
+              </label>
+            </div>
+            <button type="submit" class="btn-secondary">Reservar</button>
+          </form>
+        </div>
+      </section>
+    </main>
+  </div>
 
+  <script defer src="/js/script.js"></script>
+  <script defer src="/js/science.js"></script>
 </body>
 </html>
