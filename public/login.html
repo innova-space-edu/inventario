@@ -6,21 +6,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Innova Space Education – Track | Inicio de sesión</title>
 
-    <!-- Tus estilos originales -->
-    <link rel="stylesheet" href="style.css" />
-    <!-- Estilos de fondo espacial y glass UI -->
+    <!-- Estilos -->
+    <link rel="stylesheet" href="/css/style.css" />
     <link rel="stylesheet" href="/css/app.css" />
 
-    <!-- Tu script original -->
-    <script defer src="script.js"></script>
+    <!-- Script principal de la página de login -->
+    <script defer src="/js/login.js"></script>
   </head>
-  <!-- añadimos body-space para usar el fondo animado -->
+
   <body data-page="login" class="body-space">
-    <!-- Fondo espacial animado -->
     <div class="background space-bg"></div>
 
     <div class="login-container glass-panel">
-      <!-- Logo del colegio (pon logo-colegio.png o .jpg en /public/img/) -->
+      <!-- Logo -->
       <div class="login-logo">
         <img src="/img/logo-colegio.png" alt="Logo Colegio Providencia" />
       </div>
@@ -28,22 +26,22 @@
       <h1 class="title rainbow">Innova Space Education – Track</h1>
       <p class="subtitle">Sistema de inventario institucional</p>
 
-      <!-- IMPORTANTE: ahora el form se envía al backend -->
+      <!-- Formulario de login -->
       <form
         id="loginForm"
         class="styled-form login-form"
-        method="post"
+        method="POST"
         action="/login"
+        autocomplete="on"
       >
         <label for="email">Correo electrónico</label>
         <input
           type="email"
           id="email"
           name="email"
-          placeholder="Emorales@colprovidencia.cl"
+          placeholder="emorales@colprovidencia.cl"
           required
           autocomplete="username"
-          data-message="Ingresa tu correo electrónico institucional"
         />
 
         <label for="password">Contraseña</label>
@@ -54,7 +52,6 @@
           placeholder="••••••"
           required
           autocomplete="current-password"
-          data-message="Ingresa tu contraseña"
         />
 
         <button type="submit" class="primary-button btn-primary">
