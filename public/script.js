@@ -205,24 +205,30 @@
   /* ================= Página del panel ================= */
   function initDashboardPage() {
     const user = localStorage.getItem('innovaUser') || '';
-    speak('Bienvenido al panel de inventario y reservas' + (user ? ', ' + user : '') + '. Selecciona una sección para comenzar.');
-    // Añadir mensajes a los enlaces de navegación
-    const scienceLink = document.getElementById('scienceLink');
-    const compLink = document.getElementById('computerLink');
-    const libraryLink = document.getElementById('libraryLink');
-    if (scienceLink) {
-      scienceLink.addEventListener('click', () => {
-        speak('Abriendo laboratorio de ciencias. Aquí puedes agregar productos, ver inventario y gestionar reservas.');
+    speak(
+      'Bienvenido al sistema de inventario institucional' +
+      (user ? ', ' + user : '') +
+      '. Usa las pestañas de la parte superior para moverte entre laboratorio de ciencias, sala de computación y biblioteca.'
+    );
+
+    // Pestañas del nuevo diseño
+    const scienceTab = document.querySelector('button[data-target="#tab-science"]');
+    const computingTab = document.querySelector('button[data-target="#tab-computing"]');
+    const libraryTab = document.querySelector('button[data-target="#tab-library"]');
+
+    if (scienceTab) {
+      scienceTab.addEventListener('click', () => {
+        speak('Estás en el laboratorio de ciencias. Aquí puedes registrar materiales y reservas de laboratorio para tus clases.');
       });
     }
-    if (compLink) {
-      compLink.addEventListener('click', () => {
-        speak('Abriendo laboratorio de computación. Aquí puedes agregar equipos, gestionar inventario y reservar el laboratorio.');
+    if (computingTab) {
+      computingTab.addEventListener('click', () => {
+        speak('Estás en la sala de computación. Aquí puedes registrar equipos, materiales y reservas de la sala de computadores.');
       });
     }
-    if (libraryLink) {
-      libraryLink.addEventListener('click', () => {
-        speak('Abriendo biblioteca. Aquí puedes agregar libros, registrar préstamos y devoluciones.');
+    if (libraryTab) {
+      libraryTab.addEventListener('click', () => {
+        speak('Estás en la biblioteca. Aquí puedes agregar libros, registrar préstamos y devoluciones para estudiantes y funcionarios.');
       });
     }
   }
@@ -754,7 +760,10 @@
   }
 
   // Ejecutar cuando el DOM esté listo
-  document.addEventListener('DOMContentLoaded', initPage);
+  // (usamos una función flecha para que siempre llame a la versión actual de initPage)
+  document.addEventListener('DOMContentLoaded', () => {
+    initPage();
+  });
 
   /* =======================================================
      NUEVA SECCIÓN: SUGERENCIAS INTELIGENTES Y PANEL DE AYUDA
@@ -834,4 +843,3 @@
   };
 
 })();
-
