@@ -1,3 +1,4 @@
+// server.js
 const express = require('express');
 const path = require('path');
 const session = require('express-session');
@@ -6,7 +7,6 @@ const fs = require('fs');
 const cors = require('cors');
 const db = require('./db'); // conexión a PostgreSQL (query, initDb)
 const { createClient } = require('@supabase/supabase-js');
-const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -15,37 +15,16 @@ const PORT = process.env.PORT || 3000;
 const ADMIN_EMAIL = 'Emorales@colprovidencia.cl';
 const ADMIN_PASSWORD = '123456';
 
-// ================== SUPABASE STORAGE ==================
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'inventario-fotos';
-
-let supabase = null;
-
-if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
-  supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-  console.log('Supabase Storage habilitado para fotos ✅');
-} else {
-  console.warn(
-    '⚠️ SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY no definidos. ' +
-      'Se usarán solo uploads locales en /uploads.'
-  );
-}
-
-// ================== DIRECTORIOS DE DATOS ==================
-// Usamos DATA_DIR para JSON de usuarios y uploads. Aunque items/reservas/préstamos van a BD,
-// mantenemos estos directorios para compatibilidad y para las fotos.
+// ================== DIRECTORIOS DE DATOS (SOLO JSON, NO FOTOS) ==================
+// Usamos DATA_DIR para JSON de usuarios y configuración.
+// Las FOTOS ya NO se guardan en disco: se suben directo a Supabase Storage.
 const DATA_DIR = process.env.DATA_DIR || __dirname;
 
 const CONFIG_DIR = path.join(DATA_DIR, 'config');
-const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
 
-// Crear carpetas si no existen
+// Crear carpeta de config si no existe
 if (!fs.existsSync(CONFIG_DIR)) {
   fs.mkdirSync(CONFIG_DIR, { recursive: true });
-}
-if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
 
 // Archivos JSON obligatorios (los de inventario ya no se usan, pero los dejamos)
@@ -71,6 +50,18 @@ defaultJsonFiles.forEach((fileName) => {
     }
   }
 });
+
+// ================== SUPABASE (Postgres + Storage) ==================
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseBucket = process.env.SUPABASE_BUCKET || 'inventario-fotos';
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('❌ Falta SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY en las variables de entorno.');
+  process.exit(1);
+}
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // ================== CORS ==================
 const allowedOrigins = [
@@ -113,9 +104,6 @@ app.use(
 
 // Archivos estáticos del frontend (HTML, CSS, JS de la app)
 app.use(express.static(path.join(__dirname, 'public')));
-
-// Carpeta de uploads (persistente si DATA_DIR apunta a un Disk)
-app.use('/uploads', express.static(UPLOADS_DIR));
 
 // Servir también /config para casos donde el front lo use
 app.use('/config', express.static(CONFIG_DIR));
@@ -213,19 +201,37 @@ app.get('/logout', (req, res) => {
   });
 });
 
-// ================== UPLOADS (multer) ==================
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, UPLOADS_DIR);
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + '-' + file.originalname);
-  }
-});
-const upload = multer({ storage: storage });
+// ================== UPLOADS (multer EN MEMORIA + SUPABASE) ==================
+// Ya NO guardamos archivos en disco. Solo en buffer y directo a Supabase.
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 
 // Laboratorios válidos
 const VALID_LABS = ['science', 'computing', 'library'];
+
+// Helper para subir foto a Supabase Storage y devolver URL pública
+async function uploadToSupabase(file, lab) {
+  if (!file) return null;
+
+  const timestamp = Date.now();
+  const safeName = file.originalname.replace(/\s+/g, '_');
+  const filePath = `${lab}/${timestamp}-${safeName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from(supabaseBucket)
+    .upload(filePath, file.buffer, {
+      contentType: file.mimetype,
+      upsert: false
+    });
+
+  if (uploadError) {
+    console.error('Error subiendo archivo a Supabase:', uploadError);
+    return null;
+  }
+
+  const { data } = supabase.storage.from(supabaseBucket).getPublicUrl(filePath);
+  return data.publicUrl || null;
+}
 
 // ================== API: INVENTARIO POR LABORATORIO (PostgreSQL) ==================
 
@@ -246,24 +252,7 @@ app.get('/api/:lab/items', requireLogin, async (req, res) => {
     const items = rows.map((row) => {
       const data = row.data || {};
       const item = { id: row.id, ...data };
-
-      if (row.photo) {
-        // Si es URL completa (Supabase, http/https), la mandamos tal cual.
-        if (/^https?:\/\//i.test(row.photo)) {
-          item.photo = row.photo;
-        } else {
-          // Compatibilidad con fotos guardadas en disco local
-          const photoPath = path.join(UPLOADS_DIR, row.photo);
-          if (fs.existsSync(photoPath)) {
-            item.photo = row.photo;
-          } else {
-            item.photo = null;
-          }
-        }
-      } else {
-        item.photo = null;
-      }
-
+      item.photo = row.photo || null; // aquí ya es URL (o null)
       return item;
     });
 
@@ -284,52 +273,22 @@ app.post('/api/:lab/items', requireLogin, upload.single('photo'), async (req, re
 
   const id = Date.now().toString();
   const data = { ...req.body };
-  let photo = null;
+
+  let photoUrl = null;
+  try {
+    photoUrl = await uploadToSupabase(req.file, lab);
+  } catch (err) {
+    console.error('Error en uploadToSupabase:', err);
+    // Si falla la foto, seguimos guardando el item sin foto
+  }
 
   try {
-    // 1) Guardamos el archivo en disco (como siempre)
-    if (req.file) {
-      const localFilename = req.file.filename;
-      photo = localFilename; // valor por defecto (compatibilidad local)
-
-      // 2) Si Supabase está configurado, subimos el archivo a Storage
-      if (supabase) {
-        try {
-          const localPath = path.join(UPLOADS_DIR, localFilename);
-          const fileBuffer = fs.readFileSync(localPath);
-          const ext = path.extname(localFilename) || '';
-          const supaName = `${lab}/${uuidv4()}${ext}`;
-
-          const { error: uploadError } = await supabase.storage
-            .from(SUPABASE_BUCKET)
-            .upload(supaName, fileBuffer, {
-              contentType: req.file.mimetype,
-              upsert: false
-            });
-
-          if (uploadError) {
-            console.error('Error al subir imagen a Supabase:', uploadError);
-          } else {
-            const { data: publicData } = supabase.storage
-              .from(SUPABASE_BUCKET)
-              .getPublicUrl(supaName);
-
-            if (publicData && publicData.publicUrl) {
-              photo = publicData.publicUrl; // guardamos la URL pública en BD
-            }
-          }
-        } catch (e) {
-          console.error('Error leyendo archivo local para subirlo a Supabase:', e);
-        }
-      }
-    }
-
     await db.query(
       'INSERT INTO items (id, lab, data, photo) VALUES ($1, $2, $3::jsonb, $4)',
-      [id, lab, JSON.stringify(data), photo]
+      [id, lab, JSON.stringify(data), photoUrl]
     );
 
-    const newItem = { id, ...data, photo };
+    const newItem = { id, ...data, photo: photoUrl };
     res.json({ message: 'Item agregado', item: newItem });
   } catch (err) {
     console.error('Error al agregar item en', lab, err);
@@ -359,6 +318,10 @@ app.delete('/api/:lab/items/:id', requireLogin, async (req, res) => {
     const row = rows[0];
     const data = row.data || {};
     const removed = { id: row.id, ...data, photo: row.photo || null };
+
+    // NOTA: aquí podríamos borrar también la foto en Supabase usando la ruta.
+    // Como estamos guardando la URL pública, tendríamos que parsear el path.
+    // Para simplificar, por ahora NO borramos el archivo del bucket.
 
     return res.json({ message: 'Item eliminado', item: removed });
   } catch (err) {
