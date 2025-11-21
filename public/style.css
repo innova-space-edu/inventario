@@ -44,21 +44,33 @@ body {
 
 .background .star {
   position: absolute;
-  width: 2px;
-  height: 2px;
-  background: white;
   border-radius: 50%;
+  background: white;
   opacity: 0.8;
-  animation: twinkle 3s infinite ease-in-out;
+  /* Parpadeo + movimiento lento en diagonal */
+  animation:
+    twinkle 3s ease-in-out infinite alternate,
+    drift var(--drift-duration, 40s) linear infinite;
 }
 
+/* Parpadeo */
 @keyframes twinkle {
   0%,
   100% {
-    opacity: 0.5;
+    opacity: 0.4;
   }
   50% {
     opacity: 1;
+  }
+}
+
+/* Desplazamiento suave del campo de estrellas */
+@keyframes drift {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-80px, 80px, 0);
   }
 }
 
@@ -67,21 +79,22 @@ body {
   width: 180px;
   height: 2px;
   background: linear-gradient(90deg, white, rgba(255, 255, 255, 0));
-  opacity: 0.8;
+  opacity: 0.9;
   transform: rotate(-45deg);
-  animation: shooting 4s linear infinite;
+  /* El JS va creando / eliminando las fugaces, por eso usamos forwards */
+  animation: shooting 4s linear forwards;
 }
 
 @keyframes shooting {
   0% {
-    transform: translate(0, 0) rotate(-45deg);
+    transform: translate3d(0, 0, 0) rotate(-45deg);
     opacity: 0;
   }
   10% {
     opacity: 1;
   }
   100% {
-    transform: translate(-1300px, 1300px) rotate(-45deg);
+    transform: translate3d(-1300px, 1300px, 0) rotate(-45deg);
     opacity: 0;
   }
 }
@@ -359,7 +372,7 @@ body[data-page="login"] .login-container {
   height: 82px;
   margin: 0 auto 1rem auto;
   border-radius: 18px;
-  background: rgba(0, 0, 0, 0.3);
+  background: #f7f9ff; /* blanco invierno para resaltar el logo */
   padding: 0.4rem;
   box-shadow: 0 0 15px rgba(0, 0, 0, 0.6);
   object-fit: contain;
