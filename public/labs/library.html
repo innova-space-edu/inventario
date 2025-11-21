@@ -4,116 +4,133 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inventario - Biblioteca</title>
+
+    <!-- Estilos originales -->
     <link rel="stylesheet" href="/css/styles.css">
+    <!-- Fondo espacial + glass UI -->
+    <link rel="stylesheet" href="/css/app.css">
+
+    <!-- JS específico de biblioteca (API + BD + Supabase) -->
+    <script defer src="/js/library.js"></script>
+    <!-- JS general (fondo, voz, sugerencias, etc.) -->
     <script defer src="/js/script.js"></script>
 </head>
+<!-- Cambiamos data-page para NO activar la biblioteca vieja de localStorage -->
 <body data-page="library-api" class="body-space">
-    <header>
-        <h1>Biblioteca</h1>
-        <nav>
-            <a href="/">Inicio</a>
-        </nav>
-    </header>
+    <!-- Fondo espacial animado -->
+    <div class="background space-bg"></div>
 
-    <section class="form-section">
-        <h2>Agregar Libro o Material</h2>
-        <form id="libraryForm">
-            <label>Código:</label>
-            <input type="text" name="codigo" id="libCode" required>
+    <div class="app-shell">
+      <div class="glass-panel">
+        <header>
+            <h1>Biblioteca</h1>
+            <nav>
+                <a href="/">Inicio</a>
+            </nav>
+        </header>
 
-            <label>Título o Nombre:</label>
-            <input type="text" name="titulo" id="libTitle" required>
+        <section class="form-section">
+            <h2>Agregar Libro o Material</h2>
+            <!-- enctype para subir foto -->
+            <form id="libraryForm" enctype="multipart/form-data" method="post">
+                <label>Código:</label>
+                <input type="text" name="codigo" id="libCode" required>
 
-            <label>Autor / Fabricante:</label>
-            <input type="text" name="autor" id="libAuthor" required>
+                <label>Título o Nombre:</label>
+                <input type="text" name="titulo" id="libTitle" required>
 
-            <label>Año:</label>
-            <input type="number" name="anio" id="libYear" required>
+                <label>Autor / Fabricante:</label>
+                <input type="text" name="autor" id="libAuthor" required>
 
-            <label>Serie / ISBN:</label>
-            <input type="text" name="serie" id="libSeries">
+                <label>Año:</label>
+                <input type="number" name="anio" id="libYear" required>
 
-            <!-- CATEGORÍA AÑADIDA -->
-            <label>Categoría:</label>
-            <select id="libCategory" name="categoria" required>
-                <option value="libro">Libro</option>
-                <option value="material escolar">Material Escolar</option>
-                <option value="material multimedia">Material Multimedia</option>
-                <option value="instrumento musical">Instrumento Musical</option>
-                <option value="material didáctico">Material Didáctico</option>
-                <option value="documento">Documento</option>
-                <option value="otros">Otros</option>
-            </select>
+                <label>Serie / ISBN:</label>
+                <input type="text" name="serie" id="libSeries">
 
-            <label>Descripción:</label>
-            <textarea name="descripcion" id="libDescription" required></textarea>
+                <!-- CATEGORÍA AÑADIDA -->
+                <label>Categoría:</label>
+                <select id="libCategory" name="categoria" required>
+                    <option value="libro">Libro</option>
+                    <option value="material escolar">Material Escolar</option>
+                    <option value="material multimedia">Material Multimedia</option>
+                    <option value="instrumento musical">Instrumento Musical</option>
+                    <option value="material didáctico">Material Didáctico</option>
+                    <option value="documento">Documento</option>
+                    <option value="otros">Otros</option>
+                </select>
 
-            <label>Cantidad:</label>
-            <input type="number" name="cantidad" id="libQuantity" required>
+                <label>Descripción:</label>
+                <textarea name="descripcion" id="libDescription" required></textarea>
 
-            <label>Fotografía:</label>
-            <input type="file" id="libPhoto" name="photo" accept="image/*">
+                <label>Cantidad:</label>
+                <input type="number" name="cantidad" id="libQuantity" required>
 
-            <button type="submit" class="button">Guardar</button>
-        </form>
-    </section>
+                <label>Fotografía:</label>
+                <input type="file" id="libPhoto" name="photo" accept="image/*">
 
-    <section class="inventory-section">
-        <h2>Inventario General de Biblioteca</h2>
-        <table id="libraryTable">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Código</th>
-                    <th>Título / Material</th>
-                    <th>Autor / Fabricante</th>
-                    <th>Año</th>
-                    <th>Serie</th>
-                    <th>Categoría</th>
-                    <th>Cantidad</th>
-                    <th>Descripción</th>
-                    <th>Foto</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody id="libraryTableBody">
-                <!-- Elementos cargados dinámicamente -->
-            </tbody>
-        </table>
-    </section>
+                <button type="submit" class="button">Guardar</button>
+            </form>
+        </section>
 
-    <section class="loans-section">
-        <h2>Registrar Préstamo</h2>
-        <form id="loanForm">
-            <label>ID del Material:</label>
-            <input type="text" id="loanBookId" name="bookId" required>
+        <section class="inventory-section">
+            <h2>Inventario General de Biblioteca</h2>
+            <table id="libraryTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Código</th>
+                        <th>Título / Material</th>
+                        <th>Autor / Fabricante</th>
+                        <th>Año</th>
+                        <th>Serie</th>
+                        <th>Categoría</th>
+                        <th>Cantidad</th>
+                        <th>Descripción</th>
+                        <th>Foto</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="libraryTableBody">
+                    <!-- Elementos cargados dinámicamente -->
+                </tbody>
+            </table>
+        </section>
 
-            <label>Usuario (correo):</label>
-            <input type="email" id="loanUser" name="userEmail" required>
+        <section class="loans-section">
+            <h2>Registrar Préstamo</h2>
+            <form id="loanForm">
+                <label>ID del Material:</label>
+                <input type="text" id="loanBookId" name="bookId" required>
 
-            <button type="submit" class="button">Registrar Préstamo</button>
-        </form>
+                <label>Usuario (correo):</label>
+                <input type="email" id="loanUser" name="userEmail" required>
 
-        <h3>Préstamos Activos</h3>
-        <table id="loanTable">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>ID Material</th>
-                    <th>Usuario</th>
-                    <th>Fecha Préstamo</th>
-                    <th>Devuelto</th>
-                    <th>Acción</th>
-                </tr>
-            </thead>
-            <tbody id="loanTableBody">
-                <!-- Préstamos dinámicos -->
-            </tbody>
-        </table>
-    </section>
+                <button type="submit" class="button">Registrar Préstamo</button>
+            </form>
 
-    <footer>
-        <p>© 2025 Innova Space Education - Biblioteca</p>
-    </footer>
+            <h3>Préstamos Activos</h3>
+            <table id="loanTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>ID Material</th>
+                        <th>Usuario</th>
+                        <th>Fecha Préstamo</th>
+                        <th>Devuelto</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="loanTableBody">
+                    <!-- Préstamos dinámicos -->
+                </tbody>
+            </table>
+        </section>
+
+        <footer>
+            <p>© 2025 Innova Space Education - Biblioteca</p>
+        </footer>
+      </div>
+    </div>
 </body>
 </html>
