@@ -1,101 +1,65 @@
-// public/js/library.js
+// public/js/science.js
 document.addEventListener('DOMContentLoaded', () => {
-    const form = document.getElementById('libraryForm');
-    const tableBody = document.querySelector('#libraryTableBody');
-    const loanForm = document.getElementById('loanForm');
-    const loanBody = document.getElementById('loanTableBody');
+    const scienceForm = document.getElementById('scienceForm');
+    const scienceTableBody = document.querySelector('#scienceTable tbody');
+    const scienceReservationForm = document.getElementById('scienceReservationForm');
 
-    // Obtener inventario desde API
-    fetch('/api/library/items')
+    // Cargar items desde API
+    fetch('/api/science/items')
         .then(resp => resp.json())
         .then(items => items.forEach(addRow))
         .catch(err => console.error("Error cargando items:", err));
 
-    // Agregar nuevo material
-    form.addEventListener('submit', async (e) => {
+    // Agregar producto
+    scienceForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const formData = new FormData(form);
 
-        const response = await fetch('/api/library/items', {
+        const formData = new FormData(scienceForm);
+        const response = await fetch('/api/science/items', {
             method: 'POST',
             body: formData
         });
 
         const result = await response.json();
         addRow(result.item);
-        form.reset();
+        scienceForm.reset();
     });
 
-    // Mostrar items
+    // Insertar fila
     function addRow(item) {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${item.id}</td>
             <td>${item.codigo}</td>
-            <td>${item.titulo}</td>
-            <td>${item.autor}</td>
-            <td>${item.anio}</td>
-            <td>${item.serie}</td>
+            <td>${item.nombre}</td>
+            <td>${item.descripcion}</td>
             <td>${item.categoria}</td>
             <td>${item.cantidad}</td>
-            <td>${item.descripcion}</td>
+            <td>${item.fecha}</td>
             <td>${item.photo ? `<img src="${item.photo}" width="50">` : ''}</td>
             <td><button data-id="${item.id}" class="delete-button">Eliminar</button></td>
         `;
 
         tr.querySelector('.delete-button').addEventListener('click', async () => {
-            await fetch(`/api/library/items/${item.id}`, { method: 'DELETE' });
+            await fetch(`/api/science/items/${item.id}`, { method: 'DELETE' });
             tr.remove();
         });
 
-        tableBody.appendChild(tr);
+        scienceTableBody.appendChild(tr);
     }
 
-    // Obtener préstamos
-    fetch('/api/library/loans')
-        .then(resp => resp.json())
-        .then(loans => loans.forEach(addLoan))
-        .catch(err => console.error("Error cargando préstamos:", err));
-
-    // Registrar préstamo
-    loanForm.addEventListener('submit', async (e) => {
+    // Reservas
+    scienceReservationForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const data = Object.fromEntries(new FormData(loanForm));
 
-        const response = await fetch('/api/library/loan', {
+        const data = Object.fromEntries(new FormData(scienceReservationForm));
+        await fetch('/api/science/reservations', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
 
-        const result = await response.json();
-        addLoan(result.loan);
-        loanForm.reset();
+        alert('Reserva registrada');
+        scienceReservationForm.reset();
     });
-
-    // Mostrar préstamo
-    function addLoan(loan) {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${loan.id}</td>
-            <td>${loan.bookId || loan.bookCode || ''}</td>
-            <td>${loan.user || ''}</td>
-            <td>${loan.loanDate ? new Date(loan.loanDate).toLocaleString() : ''}</td>
-            <td>${loan.returned ? '✔️' : '❌'}</td>
-            <td>
-                ${loan.returned ? '' : `<button class="return-button" data-id="${loan.id}">Devolver</button>`}
-            </td>
-        `;
-
-        // Acción de devolver
-        const btn = tr.querySelector('.return-button');
-        if (btn) {
-            btn.addEventListener('click', async () => {
-                await fetch(`/api/library/return/${loan.id}`, { method: 'POST' });
-                tr.remove();
-            });
-        }
-
-        loanBody.appendChild(tr);
-    }
 });
