@@ -4,86 +4,103 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inventario - Laboratorio de Computación</title>
+
+    <!-- Estilos originales -->
     <link rel="stylesheet" href="/css/styles.css">
+    <!-- Fondo espacial + glass UI -->
+    <link rel="stylesheet" href="/css/app.css">
+
+    <!-- JS específico del laboratorio -->
     <script defer src="/js/computing.js"></script>
+    <!-- JS general (fondo, voz, sugerencias, etc.) -->
+    <script defer src="/js/script.js"></script>
 </head>
-<body>
-    <header>
-        <h1>Laboratorio de Computación</h1>
-        <nav>
-            <a href="/">Inicio</a>
-        </nav>
-    </header>
+<body data-page="computer" class="body-space">
+    <!-- Fondo espacial animado -->
+    <div class="background space-bg"></div>
 
-    <section class="form-section">
-        <h2>Agregar Equipo</h2>
-        <form id="computingForm">
-            <label>ID del Equipo:</label>
-            <input type="text" name="idEquip" required>
-            <label>Código:</label>
-            <input type="text" name="codigo" required>
-            <label>Marca:</label>
-            <input type="text" name="marca" required>
-            <label>Modelo:</label>
-            <input type="text" name="modelo" required>
-            <label>Año:</label>
-            <input type="number" name="anio" required>
-            <label>Serie:</label>
-            <input type="text" name="serie" required>
+    <div class="app-shell">
+      <div class="glass-panel">
+        <header>
+            <h1>Laboratorio de Computación</h1>
+            <nav>
+                <a href="/">Inicio</a>
+            </nav>
+        </header>
 
-            <!-- CATEGORÍA AÑADIDA -->
-            <label>Categoría:</label>
-            <select name="categoria" required>
-                <option value="equipo de cómputo">Equipo de Cómputo</option>
-                <option value="audiovisual">Material Audiovisual</option>
-                <option value="electrónico">Material Electrónico</option>
-                <option value="periférico">Periférico</option>
-                <option value="cableado o adaptador">Cableado o Adaptador</option>
-                <option value="varios">Otros Materiales</option>
-            </select>
+        <section class="form-section">
+            <h2>Agregar Equipo</h2>
+            <!-- IMPORTANTE: enctype para subir fotos -->
+            <form id="computingForm" enctype="multipart/form-data" method="post">
+                <label>ID del Equipo:</label>
+                <input type="text" name="idEquip" required>
+                <label>Código:</label>
+                <input type="text" name="codigo" required>
+                <label>Marca:</label>
+                <input type="text" name="marca" required>
+                <label>Modelo:</label>
+                <input type="text" name="modelo" required>
+                <label>Año:</label>
+                <input type="number" name="anio" required>
+                <label>Serie:</label>
+                <input type="text" name="serie" required>
 
-            <label>Descripción:</label>
-            <textarea name="descripcion" required></textarea>
-            <label>Fotografía:</label>
-            <input type="file" name="photo" accept="image/*">
-            <button type="submit" class="button">Guardar</button>
-        </form>
-    </section>
+                <!-- CATEGORÍA AÑADIDA -->
+                <label>Categoría:</label>
+                <select name="categoria" required>
+                    <option value="equipo de cómputo">Equipo de Cómputo</option>
+                    <option value="audiovisual">Material Audiovisual</option>
+                    <option value="electrónico">Material Electrónico</option>
+                    <option value="periférico">Periférico</option>
+                    <option value="cableado o adaptador">Cableado o Adaptador</option>
+                    <option value="varios">Otros Materiales</option>
+                </select>
 
-    <section class="inventory-section">
-        <h2>Inventario de Equipos</h2>
-        <table id="computingTable">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Equipo</th>
-                    <th>Código</th>
-                    <th>Marca</th>
-                    <th>Modelo</th>
-                    <th>Año</th>
-                    <th>Serie</th>
-                    <th>Categoría</th>
-                    <th>Descripción</th>
-                    <th>Foto</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- Datos se insertarán vía JS -->
-            </tbody>
-        </table>
-    </section>
+                <label>Descripción:</label>
+                <textarea name="descripcion" required></textarea>
 
-    <section class="reservations-section">
-        <h2>Reservar Laboratorio de Computación</h2>
-        <form id="computingReservationForm">
-            <label>Fecha de Reserva:</label>
-            <input type="datetime-local" name="date" required>
-            <label>Descripción/Actividad:</label>
-            <input type="text" name="activity" required>
-            <button type="submit" class="button">Reservar</button>
-        </form>
-    </section>
+                <label>Fotografía:</label>
+                <input type="file" name="photo" accept="image/*">
 
+                <button type="submit" class="button">Guardar</button>
+            </form>
+        </section>
+
+        <section class="inventory-section">
+            <h2>Inventario de Equipos</h2>
+            <table id="computingTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Equipo</th>
+                        <th>Código</th>
+                        <th>Marca</th>
+                        <th>Modelo</th>
+                        <th>Año</th>
+                        <th>Serie</th>
+                        <th>Categoría</th>
+                        <th>Descripción</th>
+                        <th>Foto</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Datos se insertarán vía JS -->
+                </tbody>
+            </table>
+        </section>
+
+        <section class="reservations-section">
+            <h2>Reservar Laboratorio de Computación</h2>
+            <form id="computingReservationForm">
+                <label>Fecha de Reserva:</label>
+                <input type="datetime-local" name="date" required>
+                <label>Descripción/Actividad:</label>
+                <input type="text" name="activity" required>
+                <button type="submit" class="button">Reservar</button>
+            </form>
+        </section>
+      </div>
+    </div>
 </body>
 </html>
