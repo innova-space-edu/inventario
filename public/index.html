@@ -7,7 +7,7 @@
 
   <link rel="stylesheet" href="/css/app.css" />
 </head>
-<body class="body-space">
+<body class="body-space" data-page="dashboard">
   <div class="space-bg"></div>
 
   <div class="app-shell">
@@ -78,6 +78,19 @@
                   Descripción
                   <input type="text" name="descripcion" />
                 </label>
+                <!-- NUEVO: Categoría ciencias -->
+                <label>
+                  Categoría
+                  <select name="categoria" required>
+                    <option value="instrumento">Instrumento de Laboratorio</option>
+                    <option value="material químico">Material Químico</option>
+                    <option value="material biológico">Material Biológico</option>
+                    <option value="instrumento electrónico">Instrumento Electrónico</option>
+                    <option value="modelo educativo">Modelo o Material Didáctico</option>
+                    <option value="seguridad">Elemento de Seguridad</option>
+                    <option value="otro">Otro</option>
+                  </select>
+                </label>
                 <label>
                   Cantidad
                   <input type="number" name="cantidad" min="0" required />
@@ -109,6 +122,7 @@
                     <th>Código</th>
                     <th>Nombre</th>
                     <th>Descripción</th>
+                    <th>Categoría</th>
                     <th>Cantidad</th>
                     <th>Fecha</th>
                     <th>Foto</th>
@@ -192,6 +206,18 @@
                   Serie
                   <input type="text" name="serie" />
                 </label>
+                <!-- NUEVO: Categoría computación -->
+                <label>
+                  Categoría
+                  <select name="categoria" required>
+                    <option value="equipo de cómputo">Equipo de Cómputo</option>
+                    <option value="audiovisual">Material Audiovisual</option>
+                    <option value="electrónico">Material Electrónico</option>
+                    <option value="periférico">Periférico</option>
+                    <option value="cableado o adaptador">Cableado o Adaptador</option>
+                    <option value="varios">Otros Materiales</option>
+                  </select>
+                </label>
                 <label>
                   Descripción
                   <input type="text" name="descripcion" />
@@ -221,6 +247,7 @@
                     <th>Modelo</th>
                     <th>Año</th>
                     <th>Serie</th>
+                    <th>Categoría</th>
                     <th>Descripción</th>
                     <th>Foto</th>
                     <th>Acciones</th>
@@ -299,6 +326,19 @@
                   Serie
                   <input type="text" name="serie" />
                 </label>
+                <!-- NUEVO: Categoría biblioteca -->
+                <label>
+                  Categoría
+                  <select name="categoria" required>
+                    <option value="libro">Libro</option>
+                    <option value="material escolar">Material Escolar</option>
+                    <option value="material multimedia">Material Multimedia</option>
+                    <option value="instrumento musical">Instrumento Musical</option>
+                    <option value="material didáctico">Material Didáctico</option>
+                    <option value="documento">Documento</option>
+                    <option value="otros">Otros</option>
+                  </select>
+                </label>
                 <label>
                   Cantidad
                   <input type="number" name="cantidad" min="0" required />
@@ -331,6 +371,7 @@
                     <th>Autor</th>
                     <th>Año</th>
                     <th>Serie</th>
+                    <th>Categoría</th>
                     <th>Cantidad</th>
                     <th>Descripción</th>
                     <th>Foto</th>
