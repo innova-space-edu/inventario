@@ -5,6 +5,8 @@ const multer = require('multer');
 const fs = require('fs');
 const cors = require('cors');
 const db = require('./db'); // conexión a PostgreSQL (query, initDb)
+const { createClient } = require('@supabase/supabase-js');
+const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -12,6 +14,23 @@ const PORT = process.env.PORT || 3000;
 // ================== ADMIN FIJO ==================
 const ADMIN_EMAIL = 'Emorales@colprovidencia.cl';
 const ADMIN_PASSWORD = '123456';
+
+// ================== SUPABASE STORAGE ==================
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'inventario-fotos';
+
+let supabase = null;
+
+if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+  supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  console.log('Supabase Storage habilitado para fotos ✅');
+} else {
+  console.warn(
+    '⚠️ SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY no definidos. ' +
+      'Se usarán solo uploads locales en /uploads.'
+  );
+}
 
 // ================== DIRECTORIOS DE DATOS ==================
 // Usamos DATA_DIR para JSON de usuarios y uploads. Aunque items/reservas/préstamos van a BD,
@@ -227,14 +246,24 @@ app.get('/api/:lab/items', requireLogin, async (req, res) => {
     const items = rows.map((row) => {
       const data = row.data || {};
       const item = { id: row.id, ...data };
+
       if (row.photo) {
-        const photoPath = path.join(UPLOADS_DIR, row.photo);
-        if (fs.existsSync(photoPath)) {
+        // Si es URL completa (Supabase, http/https), la mandamos tal cual.
+        if (/^https?:\/\//i.test(row.photo)) {
           item.photo = row.photo;
         } else {
-          item.photo = null;
+          // Compatibilidad con fotos guardadas en disco local
+          const photoPath = path.join(UPLOADS_DIR, row.photo);
+          if (fs.existsSync(photoPath)) {
+            item.photo = row.photo;
+          } else {
+            item.photo = null;
+          }
         }
+      } else {
+        item.photo = null;
       }
+
       return item;
     });
 
@@ -255,9 +284,46 @@ app.post('/api/:lab/items', requireLogin, upload.single('photo'), async (req, re
 
   const id = Date.now().toString();
   const data = { ...req.body };
-  const photo = req.file ? req.file.filename : null;
+  let photo = null;
 
   try {
+    // 1) Primero guardamos el archivo en disco (como ya hacías)
+    if (req.file) {
+      const localFilename = req.file.filename;
+      photo = localFilename; // valor por defecto (compatibilidad local)
+
+      // 2) Si Supabase está configurado, subimos el archivo a Storage
+      if (supabase) {
+        try {
+          const localPath = path.join(UPLOADS_DIR, localFilename);
+          const fileBuffer = fs.readFileSync(localPath);
+          const ext = path.extname(localFilename) || '';
+          const supaName = `${lab}/${uuidv4()}${ext}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from(SUPABASE_BUCKET)
+            .upload(supaName, fileBuffer, {
+              contentType: req.file.mimetype,
+              upsert: false
+            });
+
+          if (uploadError) {
+            console.error('Error al subir imagen a Supabase:', uploadError);
+          } else {
+            const { data: publicData } = supabase.storage
+              .from(SUPABASE_BUCKET)
+              .getPublicUrl(supaName);
+
+            if (publicData && publicData.publicUrl) {
+              photo = publicData.publicUrl; // guardamos la URL pública en BD
+            }
+          }
+        } catch (e) {
+          console.error('Error leyendo archivo local para subirlo a Supabase:', e);
+        }
+      }
+    }
+
     await db.query(
       'INSERT INTO items (id, lab, data, photo) VALUES ($1, $2, $3::jsonb, $4)',
       [id, lab, JSON.stringify(data), photo]
