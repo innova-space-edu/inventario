@@ -287,7 +287,7 @@ app.post('/api/:lab/items', requireLogin, upload.single('photo'), async (req, re
   let photo = null;
 
   try {
-    // 1) Primero guardamos el archivo en disco (como ya hacías)
+    // 1) Guardamos el archivo en disco (como siempre)
     if (req.file) {
       const localFilename = req.file.filename;
       photo = localFilename; // valor por defecto (compatibilidad local)
