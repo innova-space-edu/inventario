@@ -316,3 +316,108 @@ table img {
   font-size: 1rem;
   opacity: 0.9;
 }
+
+/* =========================================================
+   ESTILOS ESPECÍFICOS PARA LA PÁGINA DE LOGIN MODERNA
+   (centrada, pequeña y futurista)
+   ========================================================= */
+
+/* El body del login se centra completamente */
+body[data-page="login"] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem 1rem;
+  box-sizing: border-box;
+  background: var(--bg-color);
+}
+
+/* Contenedor principal de login (envoltorio) */
+.login-page {
+  width: 100%;
+  max-width: 520px;
+  position: relative;
+  z-index: 1; /* por encima del fondo de estrellas */
+}
+
+/* Ajuste de la tarjeta de login cuando está en la página de login */
+body[data-page="login"] .login-container {
+  margin: 0 auto;
+  width: 100%;
+  max-width: 420px;
+  padding: 2.2rem 2rem;
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* Logo en la parte superior del login */
+.login-logo {
+  display: block;
+  width: 82px;
+  height: 82px;
+  margin: 0 auto 1rem auto;
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.4rem;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.6);
+  object-fit: contain;
+}
+
+/* Agrupación de título y subtítulo para que se vea compacto */
+.login-title-group {
+  text-align: center;
+  margin-bottom: 1.6rem;
+}
+
+.login-title-group .title {
+  font-size: 2.1rem;
+  margin-bottom: 0.2rem;
+}
+
+.login-title-group .subtitle {
+  font-size: 0.95rem;
+}
+
+/* Para asegurarnos de que el formulario nunca se estire a toda la pantalla */
+#loginForm {
+  max-width: 360px;
+  margin: 0 auto;
+}
+
+/* Inputs del login un poco más altos y suaves */
+#loginForm input[type="email"],
+#loginForm input[type="password"] {
+  height: 44px;
+  font-size: 0.95rem;
+}
+
+/* Botón de ingreso más ancho y centrado */
+#loginForm .primary-button {
+  width: 100%;
+  margin-top: 1.4rem;
+}
+
+/* Texto pequeño bajo el formulario (si lo usas) */
+.login-footer-text {
+  margin-top: 1.2rem;
+  font-size: 0.8rem;
+  text-align: center;
+  opacity: 0.75;
+}
+
+/* En pantallas pequeñas (celular) se ajusta el margen para que no se corte */
+@media (max-width: 480px) {
+  body[data-page="login"] {
+    padding: 1.5rem 1rem;
+  }
+
+  body[data-page="login"] .login-container {
+    padding: 1.8rem 1.4rem;
+  }
+
+  #loginForm {
+    max-width: 100%;
+  }
+}
