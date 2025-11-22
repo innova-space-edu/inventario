@@ -10,6 +10,9 @@
 // En las demás páginas, los formularios quedan SOLO LECTURA.
 
 (async () => {
+  // -------------------------------------------
+  // Obtener sesión actual desde el backend
+  // -------------------------------------------
   async function fetchSession() {
     try {
       const resp = await fetch('/api/session', {
@@ -23,6 +26,39 @@
     }
   }
 
+  // -------------------------------------------
+  // Banner de advertencia solo-lectura
+  // -------------------------------------------
+  function showReadOnlyBanner(message) {
+    // Si ya existe un banner, no lo duplicamos
+    if (document.getElementById('readOnlyBanner')) return;
+
+    const banner = document.createElement('div');
+    banner.id = 'readOnlyBanner';
+    banner.textContent =
+      message ||
+      'No tienes permisos de edición en esta sección. Solo puedes visualizar los datos.';
+
+    banner.style.position = 'fixed';
+    banner.style.top = '0';
+    banner.style.left = '0';
+    banner.style.right = '0';
+    banner.style.zIndex = '9999';
+    banner.style.padding = '10px 16px';
+    banner.style.textAlign = 'center';
+    banner.style.fontSize = '14px';
+    banner.style.fontWeight = '500';
+    banner.style.background =
+      'linear-gradient(90deg, #ffcc00, #ff9800, #ff5722)';
+    banner.style.color = '#000';
+    banner.style.boxShadow = '0 2px 8px rgba(0,0,0,0.5)';
+
+    document.body.appendChild(banner);
+  }
+
+  // -------------------------------------------
+  // Bloquear edición de la página
+  // -------------------------------------------
   function lockPageEdition() {
     // Deshabilita inputs, selects, textareas y botones que no sean de navegación
     const controls = document.querySelectorAll(
@@ -41,33 +77,52 @@
     });
   }
 
+  // -------------------------------------------
+  // Lógica principal por página / rol
+  // -------------------------------------------
   document.addEventListener('DOMContentLoaded', async () => {
     const session = await fetchSession();
     if (!session || !session.role) return;
 
     const role = session.role;
-    // Admin puede todo
+
+    // Admin (Emorales) puede TODO, sin restricciones ni banner
     if (role === 'admin') return;
 
     const page = document.body.dataset.page; // 'login', 'dashboard', 'science', 'computer', 'library', etc.
 
-    // Login y dashboard siempre editables (form de login y navegación)
-    if (page === 'login' || page === 'dashboard') return;
+    // En login y dashboard no bloqueamos nada, pero podemos mostrar aviso ligero
+    if (page === 'login' || page === 'dashboard') {
+      // Aquí solo avisamos que se trata de una cuenta con permisos limitados
+      showReadOnlyBanner(
+        'Has iniciado sesión con una cuenta de área. Solo podrás editar tu sección asignada; el resto será solo lectura.'
+      );
+      return;
+    }
 
     // Lógica por página
     if (page === 'science') {
       if (role !== 'science') {
         // Usuarios que no son de ciencias → solo pueden VER
+        showReadOnlyBanner(
+          'Esta sección es exclusiva del laboratorio de Ciencias. Tu cuenta solo tiene permisos de lectura aquí.'
+        );
         lockPageEdition();
       }
     } else if (page === 'computer') {
       if (role !== 'computing') {
         // Usuarios que no son de computación → solo pueden VER
+        showReadOnlyBanner(
+          'Esta sección es exclusiva de la Sala de Computación. Tu cuenta solo tiene permisos de lectura aquí.'
+        );
         lockPageEdition();
       }
     } else if (page === 'library') {
       if (role !== 'library') {
         // Usuarios que no son de biblioteca → solo pueden VER
+        showReadOnlyBanner(
+          'Esta sección es exclusiva de la Biblioteca. Tu cuenta solo tiene permisos de lectura aquí.'
+        );
         lockPageEdition();
       }
     }
