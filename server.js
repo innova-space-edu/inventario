@@ -11,25 +11,25 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ================== ADMIN FIJO ==================
-const ADMIN_EMAIL = 'Emorales@colprovidencia.cl';
-const ADMIN_PASSWORD = '123456';
+// ================== CARGAR CREDENCIALES DESDE .ENV ==================
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
-// Usuarios fijos por laboratorio (roles)
+// Usuarios por laboratorio (roles), también desde .env
 const LAB_USERS = [
   {
-    email: 'ciencias@colprovidencia.cl',
-    password: 'ciencias2025',
+    email: process.env.SCIENCE_EMAIL,
+    password: process.env.SCIENCE_PASSWORD,
     role: 'science'
   },
   {
-    email: 'computacion@colprovidencia.cl',
-    password: 'computacion2025',
+    email: process.env.COMPUTING_EMAIL,
+    password: process.env.COMPUTING_PASSWORD,
     role: 'computing'
   },
   {
-    email: 'biblioteca@colprovidencia.cl',
-    password: 'biblioteca2025',
+    email: process.env.LIBRARY_EMAIL,
+    password: process.env.LIBRARY_PASSWORD,
     role: 'library'
   }
 ];
