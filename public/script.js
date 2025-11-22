@@ -264,7 +264,9 @@
 
   function initLoginPage() {
     speak(
-      'Bienvenido a Innova Space Education. Por favor, ingresa tu correo institucional y contraseña para continuar.'
+      'Bienvenido al sistema de inventario en línea del Colegio Providencia. ' +
+        'Para ingresar, escribe tu correo institucional en el primer campo, ' +
+        'luego tu contraseña en el segundo campo y presiona el botón Ingresar.'
     );
 
     const form = document.getElementById('loginForm');
@@ -276,12 +278,12 @@
 
       if (!email) {
         e.preventDefault();
-        speak('Por favor ingrese su correo electrónico.');
+        speak('Por favor ingresa tu correo institucional antes de continuar.');
         return;
       }
 
       localStorage.setItem('innovaUser', email);
-      speak('Inicio de sesión correcto. Redirigiendo al panel principal.');
+      speak('Datos enviados. Validando tu acceso al inventario.');
       // Dejamos que el servidor maneje el POST /login y la redirección.
     });
   }
