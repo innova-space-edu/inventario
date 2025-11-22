@@ -15,6 +15,25 @@ const PORT = process.env.PORT || 3000;
 const ADMIN_EMAIL = 'Emorales@colprovidencia.cl';
 const ADMIN_PASSWORD = '123456';
 
+// Usuarios fijos por laboratorio (roles)
+const LAB_USERS = [
+  {
+    email: 'ciencias@colprovidencia.cl',
+    password: 'ciencias2025',
+    role: 'science'
+  },
+  {
+    email: 'computacion@colprovidencia.cl',
+    password: 'computacion2025',
+    role: 'computing'
+  },
+  {
+    email: 'biblioteca@colprovidencia.cl',
+    password: 'biblioteca2025',
+    role: 'library'
+  }
+];
+
 // ================== DIRECTORIOS DE DATOS (SOLO JSON, NO FOTOS) ==================
 // Usamos DATA_DIR para JSON de usuarios y configuración.
 // Las FOTOS ya NO se guardan en disco: se suben directo a Supabase Storage.
@@ -39,7 +58,7 @@ const defaultJsonFiles = [
   'library_loans.json'
 ];
 
-defaultJsonFiles.forEach((fileName) => {
+defaultJsonFiles.forEach(fileName => {
   const fullPath = path.join(CONFIG_DIR, fileName);
   if (!fs.existsSync(fullPath)) {
     fs.writeFileSync(fullPath, '[]', 'utf8');
@@ -116,12 +135,26 @@ function loadUsers() {
 
   try {
     const data = fs.readFileSync(usersDBPath, 'utf8').trim();
-    const users = data ? JSON.parse(data) : [];
-    const hasAdmin = users.some((u) => u.email === ADMIN_EMAIL);
-    if (!hasAdmin) {
-      users.push({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD, role: 'admin' });
-      fs.writeFileSync(usersDBPath, JSON.stringify(users, null, 2));
-    }
+    let users = data ? JSON.parse(data) : [];
+
+    // Asegurar usuarios fijos (admin + lab users) con sus roles
+    const fixedUsers = [
+      { email: ADMIN_EMAIL, password: ADMIN_PASSWORD, role: 'admin' },
+      ...LAB_USERS
+    ];
+
+    fixedUsers.forEach(fu => {
+      const existing = users.find(u => u.email === fu.email);
+      if (!existing) {
+        users.push(fu);
+      } else {
+        // Actualizamos rol/contraseña en caso de que hayan cambiado
+        existing.password = fu.password;
+        existing.role = fu.role;
+      }
+    });
+
+    fs.writeFileSync(usersDBPath, JSON.stringify(users, null, 2));
     return users;
   } catch (err) {
     console.error('Error leyendo users.json:', err);
@@ -168,6 +201,48 @@ function requireLogin(req, res, next) {
   return res.redirect('/login.html');
 }
 
+// Helper para saber si un rol puede editar un laboratorio/sección
+function userCanEditLab(role, lab) {
+  if (role === 'admin') return true;
+  if (lab === 'science' && role === 'science') return true;
+  if (lab === 'computing' && role === 'computing') return true;
+  if (lab === 'library' && role === 'library') return true;
+  return false;
+}
+
+// Middleware para rutas /api/:lab/... que editan datos
+function canEditLab(req, res, next) {
+  const user = req.session.user;
+  if (!user) {
+    return res.status(401).json({ message: 'No autenticado' });
+  }
+
+  const lab = req.params.lab;
+  if (!VALID_LABS.includes(lab)) {
+    return res.status(400).json({ message: 'Laboratorio no válido' });
+  }
+
+  if (!userCanEditLab(user.role, lab)) {
+    return res.status(403).json({ message: 'No tienes permiso para editar esta sección.' });
+  }
+
+  next();
+}
+
+// Middleware específico para préstamos de biblioteca
+function canEditLibrary(req, res, next) {
+  const user = req.session.user;
+  if (!user) {
+    return res.status(401).json({ message: 'No autenticado' });
+  }
+
+  if (!userCanEditLab(user.role, 'library')) {
+    return res.status(403).json({ message: 'No tienes permiso para editar la biblioteca.' });
+  }
+
+  next();
+}
+
 // ================== RUTAS DE PÁGINAS ==================
 app.get('/', (req, res) => {
   if (!req.session.user) {
@@ -176,19 +251,27 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Endpoint para obtener info de sesión (usado por roleGuard.js)
+app.get('/api/session', (req, res) => {
+  if (!req.session.user) {
+    return res.json({ email: null, role: null });
+  }
+  const { email, role } = req.session.user;
+  res.json({ email, role: role || 'viewer' });
+});
+
 app.post('/login', (req, res) => {
   const { email, password } = req.body;
 
-  if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-    req.session.user = { email: ADMIN_EMAIL, role: 'admin' };
-    return res.redirect('/');
-  }
-
+  // Carga usuarios (incluye admin + lab users)
   const users = loadUsers();
-  const user = users.find((u) => u.email === email && u.password === password);
+  const user = users.find(u => u.email === email && u.password === password);
 
   if (user) {
-    req.session.user = user;
+    req.session.user = {
+      email: user.email,
+      role: user.role || 'viewer'
+    };
     return res.redirect('/');
   } else {
     return res.send('Usuario o contraseña incorrectos. <a href="/login.html">Volver</a>');
@@ -249,7 +332,7 @@ app.get('/api/:lab/items', requireLogin, async (req, res) => {
       [lab]
     );
 
-    const items = rows.map((row) => {
+    const items = rows.map(row => {
       const data = row.data || {};
       const item = { id: row.id, ...data };
       item.photo = row.photo || null; // aquí ya es URL (o null)
@@ -264,40 +347,46 @@ app.get('/api/:lab/items', requireLogin, async (req, res) => {
 });
 
 // POST item
-app.post('/api/:lab/items', requireLogin, upload.single('photo'), async (req, res) => {
-  const lab = req.params.lab;
+app.post(
+  '/api/:lab/items',
+  requireLogin,
+  canEditLab,
+  upload.single('photo'),
+  async (req, res) => {
+    const lab = req.params.lab;
 
-  if (!VALID_LABS.includes(lab)) {
-    return res.status(400).json({ message: 'Laboratorio no válido' });
+    if (!VALID_LABS.includes(lab)) {
+      return res.status(400).json({ message: 'Laboratorio no válido' });
+    }
+
+    const id = Date.now().toString();
+    const data = { ...req.body };
+
+    let photoUrl = null;
+    try {
+      photoUrl = await uploadToSupabase(req.file, lab);
+    } catch (err) {
+      console.error('Error en uploadToSupabase:', err);
+      // Si falla la foto, seguimos guardando el item sin foto
+    }
+
+    try {
+      await db.query(
+        'INSERT INTO items (id, lab, data, photo) VALUES ($1, $2, $3::jsonb, $4)',
+        [id, lab, JSON.stringify(data), photoUrl]
+      );
+
+      const newItem = { id, ...data, photo: photoUrl };
+      res.json({ message: 'Item agregado', item: newItem });
+    } catch (err) {
+      console.error('Error al agregar item en', lab, err);
+      res.status(500).json({ message: 'Error al agregar item' });
+    }
   }
-
-  const id = Date.now().toString();
-  const data = { ...req.body };
-
-  let photoUrl = null;
-  try {
-    photoUrl = await uploadToSupabase(req.file, lab);
-  } catch (err) {
-    console.error('Error en uploadToSupabase:', err);
-    // Si falla la foto, seguimos guardando el item sin foto
-  }
-
-  try {
-    await db.query(
-      'INSERT INTO items (id, lab, data, photo) VALUES ($1, $2, $3::jsonb, $4)',
-      [id, lab, JSON.stringify(data), photoUrl]
-    );
-
-    const newItem = { id, ...data, photo: photoUrl };
-    res.json({ message: 'Item agregado', item: newItem });
-  } catch (err) {
-    console.error('Error al agregar item en', lab, err);
-    res.status(500).json({ message: 'Error al agregar item' });
-  }
-});
+);
 
 // DELETE item
-app.delete('/api/:lab/items/:id', requireLogin, async (req, res) => {
+app.delete('/api/:lab/items/:id', requireLogin, canEditLab, async (req, res) => {
   const lab = req.params.lab;
   const id = req.params.id;
 
@@ -346,7 +435,7 @@ app.get('/api/:lab/reservations', requireLogin, async (req, res) => {
       [lab]
     );
 
-    const reservations = rows.map((row) => {
+    const reservations = rows.map(row => {
       const data = row.data || {};
       return {
         id: row.id,
@@ -363,7 +452,7 @@ app.get('/api/:lab/reservations', requireLogin, async (req, res) => {
 });
 
 // POST reserva
-app.post('/api/:lab/reservations', requireLogin, async (req, res) => {
+app.post('/api/:lab/reservations', requireLogin, canEditLab, async (req, res) => {
   const lab = req.params.lab;
 
   if (!VALID_LABS.includes(lab)) {
@@ -402,7 +491,7 @@ app.get('/api/library/loans', requireLogin, async (req, res) => {
       'SELECT id, data, user_email, loan_date, returned, return_date FROM library_loans ORDER BY loan_date DESC NULLS LAST, id'
     );
 
-    const loans = rows.map((row) => {
+    const loans = rows.map(row => {
       const data = row.data || {};
       return {
         id: row.id,
@@ -422,7 +511,7 @@ app.get('/api/library/loans', requireLogin, async (req, res) => {
 });
 
 // Registrar préstamo
-app.post('/api/library/loan', requireLogin, async (req, res) => {
+app.post('/api/library/loan', requireLogin, canEditLibrary, async (req, res) => {
   const id = Date.now().toString();
   const data = { ...req.body };
   const userEmail = req.session.user ? req.session.user.email : null;
@@ -450,7 +539,7 @@ app.post('/api/library/loan', requireLogin, async (req, res) => {
 });
 
 // Actualizar préstamo
-app.put('/api/library/loan/:loanId', requireLogin, async (req, res) => {
+app.put('/api/library/loan/:loanId', requireLogin, canEditLibrary, async (req, res) => {
   const loanId = req.params.loanId;
   const { bookCode, borrowerName, borrowerCourse, notes } = req.body;
 
@@ -494,71 +583,81 @@ app.put('/api/library/loan/:loanId', requireLogin, async (req, res) => {
 });
 
 // Registrar devolución
-app.post('/api/library/return/:loanId', requireLogin, async (req, res) => {
-  const loanId = req.params.loanId;
-  const returnDate = new Date();
+app.post(
+  '/api/library/return/:loanId',
+  requireLogin,
+  canEditLibrary,
+  async (req, res) => {
+    const loanId = req.params.loanId;
+    const returnDate = new Date();
 
-  try {
-    const { rows } = await db.query(
-      'UPDATE library_loans SET returned = TRUE, return_date = $1 WHERE id = $2 RETURNING id, data, user_email, loan_date, returned, return_date',
-      [returnDate, loanId]
-    );
+    try {
+      const { rows } = await db.query(
+        'UPDATE library_loans SET returned = TRUE, return_date = $1 WHERE id = $2 RETURNING id, data, user_email, loan_date, returned, return_date',
+        [returnDate, loanId]
+      );
 
-    if (rows.length === 0) {
-      return res.status(404).json({ message: 'Préstamo no encontrado' });
+      if (rows.length === 0) {
+        return res.status(404).json({ message: 'Préstamo no encontrado' });
+      }
+
+      const row = rows[0];
+      const data = row.data || {};
+
+      const loan = {
+        id: row.id,
+        ...data,
+        user: row.user_email || null,
+        loanDate: row.loan_date,
+        returned: row.returned,
+        returnDate: row.return_date
+      };
+
+      res.json({ message: 'Préstamo devuelto', loan });
+    } catch (err) {
+      console.error('Error al registrar devolución de préstamo:', err);
+      res.status(500).json({ message: 'Error al registrar devolución' });
     }
-
-    const row = rows[0];
-    const data = row.data || {};
-
-    const loan = {
-      id: row.id,
-      ...data,
-      user: row.user_email || null,
-      loanDate: row.loan_date,
-      returned: row.returned,
-      returnDate: row.return_date
-    };
-
-    res.json({ message: 'Préstamo devuelto', loan });
-  } catch (err) {
-    console.error('Error al registrar devolución de préstamo:', err);
-    res.status(500).json({ message: 'Error al registrar devolución' });
   }
-});
+);
 
 // Eliminar préstamo
-app.delete('/api/library/loan/:loanId', requireLogin, async (req, res) => {
-  const loanId = req.params.loanId;
+app.delete(
+  '/api/library/loan/:loanId',
+  requireLogin,
+  canEditLibrary,
+  async (req, res) => {
+    const loanId = req.params.loanId;
 
-  try {
-    const { rows } = await db.query(
-      'DELETE FROM library_loans WHERE id = $1 RETURNING id, data, user_email, loan_date, returned, return_date',
-      [loanId]
-    );
+    try {
+      const { rows } = await db.query(
+        'DELETE FROM library_loans WHERE id = $1 RETURNING id, data, user_email, loan_date, returned, return_date',
+        [loanId]
+      );
 
-    if (rows.length === 0) {
-      return res.status(404).json({ message: 'Préstamo no encontrado' });
+      if (rows.length === 0) {
+        return res.status(404).json({ message: 'Préstamo no encontrado' });
+      }
+
+      const row = rows[0];
+      const data = row.data || {};
+
+      const removed = {
+        id: row.id,
+        ...data,
+        user: row.user_email || null,
+        loanDate: row.loan_date,
+        returned: row.returned,
+        returnDate: row.return_date
+      };
+
+      res.json({ message: 'Préstamo eliminado', loan: removed });
+    } catch (err) {
+      console.error('Error al eliminar préstamo de biblioteca:', err);
+      res.status(500).json({ message: 'Error al eliminar préstamo' });
     }
-
-    const row = rows[0];
-    const data = row.data || {};
-
-    const removed = {
-      id: row.id,
-      ...data,
-      user: row.user_email || null,
-      loanDate: row.loan_date,
-      returned: row.returned,
-      returnDate: row.return_date
-    };
-
-    res.json({ message: 'Préstamo eliminado', loan: removed });
-  } catch (err) {
-    console.error('Error al eliminar préstamo de biblioteca:', err);
-    res.status(500).json({ message: 'Error al eliminar préstamo' });
   }
-});
+);
 
 // ================== START SERVER (esperando a que la BD esté lista) ==================
 db.initDb()
@@ -567,7 +666,7 @@ db.initDb()
       console.log(`Servidor escuchando en http://localhost:${PORT}`);
     });
   })
-  .catch((err) => {
+  .catch(err => {
     console.error('Error al inicializar la base de datos:', err);
     process.exit(1);
   });
