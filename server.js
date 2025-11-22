@@ -16,7 +16,7 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
 // Usuarios por laboratorio (roles), también desde .env
-const LAB_USERS = [
+let LAB_USERS = [
   {
     email: process.env.SCIENCE_EMAIL,
     password: process.env.SCIENCE_PASSWORD,
@@ -34,11 +34,27 @@ const LAB_USERS = [
   }
 ];
 
+// Filtrar usuarios mal configurados (sin email o sin password)
+LAB_USERS = LAB_USERS.filter(u => u.email && u.password);
+
+// Pequeña verificación de configuración
+if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
+  console.warn(
+    '⚠️ ADMIN_EMAIL o ADMIN_PASSWORD no están definidos en las variables de entorno. ' +
+      'El usuario administrador podría no funcionar correctamente.'
+  );
+}
+if (LAB_USERS.length === 0) {
+  console.warn(
+    '⚠️ Ningún usuario de laboratorio configurado correctamente. ' +
+      'Revisa SCIENCE_*, COMPUTING_* y LIBRARY_* en las variables de entorno.'
+  );
+}
+
 // ================== DIRECTORIOS DE DATOS (SOLO JSON, NO FOTOS) ==================
 // Usamos DATA_DIR para JSON de usuarios y configuración.
 // Las FOTOS ya NO se guardan en disco: se suben directo a Supabase Storage.
 const DATA_DIR = process.env.DATA_DIR || __dirname;
-
 const CONFIG_DIR = path.join(DATA_DIR, 'config');
 
 // Crear carpeta de config si no existe
@@ -138,10 +154,13 @@ function loadUsers() {
     let users = data ? JSON.parse(data) : [];
 
     // Asegurar usuarios fijos (admin + lab users) con sus roles
-    const fixedUsers = [
-      { email: ADMIN_EMAIL, password: ADMIN_PASSWORD, role: 'admin' },
-      ...LAB_USERS
-    ];
+    const fixedUsers = [];
+
+    if (ADMIN_EMAIL && ADMIN_PASSWORD) {
+      fixedUsers.push({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD, role: 'admin' });
+    }
+
+    fixedUsers.push(...LAB_USERS);
 
     fixedUsers.forEach(fu => {
       const existing = users.find(u => u.email === fu.email);
