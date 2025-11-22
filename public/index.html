@@ -302,6 +302,9 @@
           Registra libros, controla préstamos y devoluciones de forma centralizada.
         </p>
 
+        <!-- Banner de alertas de préstamos vencidos -->
+        <div id="libraryOverdueBanner" class="alert-banner" style="display: none;"></div>
+
         <div class="panel-grid">
           <div class="panel-block">
             <h3>Agregar libro a la biblioteca</h3>
@@ -429,6 +432,31 @@
                 Registrar devolución
               </button>
             </form>
+          </div>
+        </div>
+
+        <!-- Listado de préstamos -->
+        <div class="panel-block">
+          <h3>Listado de préstamos</h3>
+          <div class="table-wrapper">
+            <table id="loansTable" class="inventory-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Código libro</th>
+                  <th>Nombre quien pide</th>
+                  <th>Curso / Funcionario</th>
+                  <th>Fecha préstamo</th>
+                  <th>Devuelto</th>
+                  <th>Fecha devolución</th>
+                  <th>Observaciones</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- library.js llenará aquí -->
+              </tbody>
+            </table>
           </div>
         </div>
       </section>
