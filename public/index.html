@@ -49,6 +49,8 @@
       <button class="tab-button active" data-target="#tab-science">Laboratorio de Ciencias</button>
       <button class="tab-button" data-target="#tab-computing">Sala de Computación</button>
       <button class="tab-button" data-target="#tab-library">Biblioteca</button>
+      <!-- NUEVO: pestaña de historial -->
+      <button class="tab-button" data-target="#tab-history">Historial</button>
     </nav>
 
     <!-- CONTENIDO PRINCIPAL -->
@@ -461,6 +463,57 @@
         </div>
       </section>
 
+      <!-- HISTORIAL -->
+      <section id="tab-history" class="tab-panel glass-panel">
+        <h2>Historial de movimientos</h2>
+        <p class="section-description">
+          Revisa los movimientos del sistema: ingresos, eliminaciones, reservas y préstamos.
+        </p>
+
+        <div class="panel-block">
+          <div class="filters-row">
+            <label>
+              Módulo
+              <select id="historyLabFilter">
+                <option value="all">Todos los módulos</option>
+                <option value="science">Laboratorio de Ciencias</option>
+                <option value="computing">Sala de Computación</option>
+                <option value="library">Biblioteca</option>
+              </select>
+            </label>
+
+            <label>
+              Cantidad de registros
+              <select id="historyLimit">
+                <option value="50">Últimos 50</option>
+                <option value="100" selected>Últimos 100</option>
+                <option value="200">Últimos 200</option>
+                <option value="500">Últimos 500</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="table-wrapper">
+            <table id="historyTable" class="inventory-table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Módulo</th>
+                  <th>Acción</th>
+                  <th>Tipo</th>
+                  <th>ID entidad</th>
+                  <th>Usuario</th>
+                  <th>Detalle</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- history.js llenará aquí -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
     </main>
   </div>
 
@@ -469,6 +522,7 @@
   <script src="/js/science.js"></script>
   <script src="/js/computing.js"></script>
   <script src="/js/library.js"></script>
+  <script src="/js/history.js"></script>
 
   <!-- Script global (estrellas + voz + sugerencias) -->
   <script src="/js/script.js"></script>
@@ -477,3 +531,4 @@
   <script src="/js/roleGuard.js"></script>
 </body>
 </html>
+
