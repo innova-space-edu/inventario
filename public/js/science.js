@@ -1,148 +1,155 @@
-// /public/js/science.js
+// public/js/science.js
 document.addEventListener('DOMContentLoaded', () => {
   const scienceForm = document.getElementById('scienceForm');
   const scienceTableBody = document.querySelector('#scienceTable tbody');
   const scienceReservationForm = document.getElementById('scienceReservationForm');
+  const scienceReservationsBody = document.querySelector('#scienceReservationsTable tbody');
 
-  if (!scienceForm || !scienceTableBody) {
-    // No estamos en la pestaña de ciencias
-    return;
-  }
-
-  // ================== INVENTARIO DE CIENCIAS ==================
-
-  async function loadScienceItems() {
+  // ---- helper para historial ----
+  async function logHistory(entry) {
     try {
-      const resp = await fetch('/api/science/items', {
-        credentials: 'include'
+      await fetch('/api/history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          module: 'science',
+          ...entry
+        })
       });
-
-      if (!resp.ok) {
-        console.error('Error al cargar materiales de ciencias:', resp.status);
-        return;
-      }
-
-      const items = await resp.json();
-      if (!Array.isArray(items)) return;
-
-      // Limpiamos antes de cargar para evitar duplicados
-      scienceTableBody.innerHTML = '';
-      items.forEach(addRow);
     } catch (err) {
-      console.error('Error cargando items de ciencias:', err);
+      console.error('Error registrando historial (science):', err);
     }
   }
 
-  // Insertar fila en la tabla
+  // ========== ITEMS ==========
+  // Cargar items desde API
+  fetch('/api/science/items')
+    .then(resp => resp.json())
+    .then(items => items.forEach(addRow))
+    .catch(err => console.error('Error cargando items:', err));
+
+  // Agregar producto
+  if (scienceForm) {
+    scienceForm.addEventListener('submit', async e => {
+      e.preventDefault();
+
+      const formData = new FormData(scienceForm);
+      const response = await fetch('/api/science/items', {
+        method: 'POST',
+        body: formData
+      });
+
+      const result = await response.json();
+      if (result && result.item) {
+        addRow(result.item);
+
+        await logHistory({
+          action: 'create',
+          type: 'item',
+          entityId: result.item.id,
+          detail: `Ingresado material de ciencias: ${result.item.nombre || ''} (código ${result.item.codigo || ''})`
+        });
+      }
+
+      scienceForm.reset();
+    });
+  }
+
+  // Insertar fila en tabla de items
   function addRow(item) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${item.id || ''}</td>
+      <td>${item.id}</td>
       <td>${item.codigo || ''}</td>
       <td>${item.nombre || ''}</td>
       <td>${item.descripcion || ''}</td>
       <td>${item.categoria || ''}</td>
       <td>${item.cantidad || ''}</td>
       <td>${item.fecha || ''}</td>
-      <td>${item.photo ? `<img src="${item.photo}" width="50" alt="Foto material">` : ''}</td>
-      <td>
-        <button type="button" data-id="${item.id}" class="delete-button">
-          Eliminar
-        </button>
-      </td>
+      <td>${item.photo ? `<img src="${item.photo}" width="50">` : ''}</td>
+      <td><button data-id="${item.id}" class="delete-button btn-ghost">Eliminar</button></td>
     `;
 
     const deleteBtn = tr.querySelector('.delete-button');
     deleteBtn.addEventListener('click', async () => {
-      if (!item.id) return;
       if (!confirm('¿Seguro que deseas eliminar este material de ciencias?')) return;
 
-      try {
-        const resp = await fetch(`/api/science/items/${item.id}`, {
-          method: 'DELETE',
-          credentials: 'include'
-        });
-
-        if (!resp.ok) {
-          const data = await resp.json().catch(() => ({}));
-          alert(data.message || 'No se pudo eliminar el material.');
-          return;
-        }
-
-        // El backend también registra la eliminación en el historial.
+      const resp = await fetch(`/api/science/items/${item.id}`, { method: 'DELETE' });
+      if (resp.ok) {
         tr.remove();
-      } catch (err) {
-        console.error('Error al eliminar material de ciencias:', err);
-        alert('Ocurrió un error al eliminar el material.');
+        await logHistory({
+          action: 'delete',
+          type: 'item',
+          entityId: item.id,
+          detail: `Eliminado material de ciencias: ${item.nombre || ''} (código ${item.codigo || ''})`
+        });
+      } else {
+        alert('Error al eliminar el material.');
       }
     });
 
     scienceTableBody.appendChild(tr);
   }
 
-  // Agregar material de ciencias
-  scienceForm.addEventListener('submit', async e => {
-    e.preventDefault();
-
-    const formData = new FormData(scienceForm);
-
+  // ========== RESERVAS ==========
+  async function loadReservations() {
     try {
-      const resp = await fetch('/api/science/items', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include'
-      });
-
-      if (!resp.ok) {
-        const data = await resp.json().catch(() => ({}));
-        alert(data.message || 'No se pudo guardar el material de ciencias.');
-        return;
-      }
-
-      const result = await resp.json();
-      if (result && result.item) {
-        addRow(result.item);
-      }
-
-      scienceForm.reset();
+      const resp = await fetch('/api/science/reservations');
+      const reservations = await resp.json();
+      scienceReservationsBody.innerHTML = '';
+      reservations.forEach(addReservationRow);
     } catch (err) {
-      console.error('Error al guardar material de ciencias:', err);
-      alert('Ocurrió un error al guardar el material.');
+      console.error('Error cargando reservas de ciencias:', err);
     }
-  });
+  }
 
-  // ================== RESERVAS LABORATORIO CIENCIAS ==================
+  function addReservationRow(res) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${res.id}</td>
+      <td>${res.solicitante || ''}</td>
+      <td>${res.curso || ''}</td>
+      <td>${res.fechaUso || ''}</td>
+      <td>${res.horario || ''}</td>
+      <td>${res.observaciones || ''}</td>
+      <td>${res.user || ''}</td>
+    `;
+    scienceReservationsBody.appendChild(tr);
+  }
 
   if (scienceReservationForm) {
     scienceReservationForm.addEventListener('submit', async e => {
       e.preventDefault();
 
-      const formData = new FormData(scienceReservationForm);
-      const data = Object.fromEntries(formData.entries());
+      const data = Object.fromEntries(new FormData(scienceReservationForm));
+      const resp = await fetch('/api/science/reservations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
 
-      try {
-        const resp = await fetch('/api/science/reservations', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(data)
-        });
-
-        if (!resp.ok) {
-          const d = await resp.json().catch(() => ({}));
-          alert(d.message || 'No se pudo registrar la reserva de laboratorio.');
-          return;
-        }
-
-        alert('Reserva de laboratorio de ciencias registrada correctamente.');
-        scienceReservationForm.reset();
-      } catch (err) {
-        console.error('Error al registrar reserva de ciencias:', err);
-        alert('Ocurrió un error al registrar la reserva.');
+      if (!resp.ok) {
+        alert('Error al registrar reserva');
+        return;
       }
+
+      const result = await resp.json();
+      if (result && result.reservation) {
+        addReservationRow(result.reservation);
+
+        await logHistory({
+          action: 'create',
+          type: 'reservation',
+          entityId: result.reservation.id,
+          detail: `Reserva de laboratorio de ciencias para ${result.reservation.curso || ''} – ${result.reservation.solicitante || ''}`
+        });
+      }
+
+      alert('Reserva registrada');
+      scienceReservationForm.reset();
     });
   }
 
-  // ================== INICIALIZACIÓN ==================
-  loadScienceItems();
+  // cargar reservas al entrar
+  loadReservations();
 });
