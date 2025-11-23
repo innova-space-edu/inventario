@@ -14,6 +14,23 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
+  // ================== HELPER HISTORIAL ==================
+  async function logHistory(entry) {
+    try {
+      await fetch('/api/history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          module: 'library',
+          ...entry
+        })
+      });
+    } catch (err) {
+      console.error('Error registrando historial (library):', err);
+    }
+  }
+
   // ================== INVENTARIO DE BIBLIOTECA ==================
 
   async function loadLibraryItems() {
@@ -68,6 +85,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         tr.remove();
+
+        // Historial: eliminación de libro
+        await logHistory({
+          action: 'delete',
+          type: 'item',
+          entityId: item.id,
+          detail: `Eliminado libro/material: ${item.titulo || item.codigo || '(sin título)'}`
+        });
       } catch (err) {
         console.error('Error al eliminar libro:', err);
         alert('Ocurrió un error al eliminar el libro.');
@@ -98,6 +123,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const result = await resp.json();
       if (result && result.item) {
         addItemRow(result.item);
+
+        // Historial: creación de libro
+        await logHistory({
+          action: 'create',
+          type: 'item',
+          entityId: result.item.id,
+          detail: `Ingresado libro/material: ${result.item.titulo || result.item.codigo || '(sin título)'}`
+        });
       }
 
       libraryForm.reset();
@@ -122,6 +155,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const loans = await resp.json();
       loansTableBody.innerHTML = '';
       loans.forEach(addLoanRow);
+
+      // Actualizar banner de vencidos cada vez que recargamos préstamos
+      await checkOverdueLoans();
     } catch (err) {
       console.error('Error cargando préstamos:', err);
     }
@@ -175,6 +211,15 @@ document.addEventListener('DOMContentLoaded', () => {
             alert(data.message || 'No se pudo registrar la devolución.');
             return;
           }
+
+          // Historial: devolución por botón
+          await logHistory({
+            action: 'return',
+            type: 'loan',
+            entityId: loanId,
+            detail: `Devolución registrada — Código: ${codigo}, Usuario: ${nombre}`
+          });
+
           await loadLoans();
         } catch (err) {
           console.error('Error al registrar devolución:', err);
@@ -200,6 +245,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         tr.remove();
+
+        // Historial: eliminar préstamo
+        await logHistory({
+          action: 'delete',
+          type: 'loan',
+          entityId: loanId,
+          detail: `Préstamo eliminado — Código: ${codigo}, Usuario: ${nombre}`
+        });
       } catch (err) {
         console.error('Error al eliminar préstamo:', err);
         alert('Ocurrió un error al eliminar el préstamo.');
@@ -233,6 +286,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const result = await resp.json();
         if (result && result.loan) {
           addLoanRow(result.loan);
+
+          // Historial: crear préstamo
+          await logHistory({
+            action: 'create',
+            type: 'loan',
+            entityId: result.loan.id,
+            detail: `Préstamo creado — Código: ${result.loan.codigo}, Usuario: ${result.loan.nombre}`
+          });
         }
 
         loanForm.reset();
@@ -266,6 +327,14 @@ document.addEventListener('DOMContentLoaded', () => {
           alert(d.message || 'No se pudo registrar la devolución.');
           return;
         }
+
+        // Historial: devolución por formulario
+        await logHistory({
+          action: 'return',
+          type: 'loan',
+          entityId: loanId,
+          detail: `Devolución registrada manualmente — ID préstamo: ${loanId}`
+        });
 
         await loadLoans();
         returnForm.reset();
