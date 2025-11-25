@@ -23,6 +23,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const loansFilterDateFrom = document.getElementById('loansFilterDateFrom');
   const loansFilterDateTo = document.getElementById('loansFilterDateTo');
 
+  // Helper unificado para API
+  const apiFetch =
+    window.guardedFetch ||
+    ((url, options = {}) =>
+      fetch(url, { credentials: 'include', ...options }));
+
   if (!libraryForm || !libraryTableBody) {
     // No estamos en la pestaña de biblioteca
     return;
@@ -36,9 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function loadLibraryItems() {
     try {
-      const resp = await fetch('/api/library/items', {
-        credentials: 'include'
-      });
+      const resp = await apiFetch('/api/library/items');
       if (!resp.ok) {
         console.error('Error al cargar libros:', resp.status);
         return;
@@ -87,9 +91,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-          const resp = await fetch(`/api/library/items/${item.id}`, {
+          const resp = await apiFetch(`/api/library/items/${item.id}`, {
             method: 'DELETE',
-            credentials: 'include',
             headers: {
               'Content-Type': 'application/json'
             },
@@ -221,10 +224,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const formData = new FormData(libraryForm);
 
     try {
-      const resp = await fetch('/api/library/items', {
+      const resp = await apiFetch('/api/library/items', {
         method: 'POST',
-        body: formData,
-        credentials: 'include'
+        body: formData
       });
 
       if (!resp.ok) {
@@ -251,9 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
   async function loadLoans() {
     if (!loansTableBody) return;
     try {
-      const resp = await fetch('/api/library/loans', {
-        credentials: 'include'
-      });
+      const resp = await apiFetch('/api/library/loans');
       if (!resp.ok) {
         console.error('Error al cargar préstamos:', resp.status);
         return;
@@ -366,9 +366,8 @@ document.addEventListener('DOMContentLoaded', () => {
           if (!confirm('¿Marcar este préstamo como devuelto?')) return;
 
           try {
-            const resp = await fetch(`/api/library/return/${loanId}`, {
-              method: 'POST',
-              credentials: 'include'
+            const resp = await apiFetch(`/api/library/return/${loanId}`, {
+              method: 'POST'
             });
             if (!resp.ok) {
               const data = await resp.json().catch(() => ({}));
@@ -397,9 +396,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-          const resp = await fetch(`/api/library/loan/${loanId}`, {
+          const resp = await apiFetch(`/api/library/loan/${loanId}`, {
             method: 'DELETE',
-            credentials: 'include',
             headers: {
               'Content-Type': 'application/json'
             },
@@ -467,10 +465,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = Object.fromEntries(formData.entries());
 
       try {
-        const resp = await fetch('/api/library/loan', {
+        const resp = await apiFetch('/api/library/loan', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
           body: JSON.stringify(data)
         });
 
@@ -507,9 +504,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       try {
-        const resp = await fetch(`/api/library/return/${loanId}`, {
-          method: 'POST',
-          credentials: 'include'
+        const resp = await apiFetch(`/api/library/return/${loanId}`, {
+          method: 'POST'
         });
 
         if (!resp.ok) {
@@ -533,9 +529,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!overdueBanner) return;
 
     try {
-      const resp = await fetch('/api/library/overdue', {
-        credentials: 'include'
-      });
+      const resp = await apiFetch('/api/library/overdue');
       if (!resp.ok) return;
 
       const overdue = await resp.json();
@@ -544,9 +538,10 @@ document.addEventListener('DOMContentLoaded', () => {
           `⚠️ Hay ${overdue.length} préstamo(s) con más de 7 días sin devolución. Revisa el listado.`;
         overdueBanner.style.display = 'block';
 
-        // Si tienes función de voz global, la usamos
-        if (typeof window.speak === 'function') {
-          window.speak(
+        // Voz: intentamos usar innovaSpeak, o speak si existiera
+        const speakFn = window.innovaSpeak || window.speak;
+        if (typeof speakFn === 'function') {
+          speakFn(
             `Atención. Hay ${overdue.length} préstamos con más de siete días sin devolución en la biblioteca.`
           );
         }
