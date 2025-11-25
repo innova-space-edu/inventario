@@ -180,11 +180,14 @@
     }
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.voice = esVoice;
-    utterance.lang = esVoice.lang;
+    utterance.lang = esVoice.lang || 'es-ES';
     utterance.rate = 1;
     utterance.pitch = 1.05;
     synth.speak(utterance);
   }
+
+  // Exponer la función para otros scripts si la necesitan
+  window.innovaSpeak = speak;
 
   /*****************************************************************
    * PANEL DE SUGERENCIAS
@@ -247,6 +250,7 @@
    *****************************************************************/
 
   function initFieldSuggestions() {
+    // Inputs, textareas y selects con data-message
     document.querySelectorAll('input, textarea, select').forEach(el => {
       const msg = el.dataset.message;
       if (msg) {
@@ -255,6 +259,18 @@
           suggestAction(msg);
         });
       }
+    });
+
+    // Botones con data-message (por ejemplo, el de "Ingresar" en login)
+    document.querySelectorAll('button[data-message]').forEach(btn => {
+      const msg = btn.dataset.message;
+      if (!msg) return;
+      btn.addEventListener('mouseenter', () => {
+        suggestAction(msg);
+      });
+      btn.addEventListener('focus', () => {
+        suggestAction(msg);
+      });
     });
   }
 
@@ -334,6 +350,31 @@
         speak('Cerrando sesión del sistema de inventario.');
       });
     }
+
+    // NUEVO: soporte para pestañas en el dashboard (Ciencias, Computación, Biblioteca, Historial)
+    const tabButtons = document.querySelectorAll('.tab-button');
+    tabButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const target = btn.getAttribute('data-target') || '';
+        if (target === '#tab-science') {
+          speak(
+            'Has abierto el módulo de laboratorio de Ciencias. Aquí puedes registrar materiales y reservas de uso.'
+          );
+        } else if (target === '#tab-computing') {
+          speak(
+            'Has abierto la sala de Computación. Aquí puedes controlar los equipos, periféricos y reservas de la sala.'
+          );
+        } else if (target === '#tab-library') {
+          speak(
+            'Has abierto la Biblioteca. Aquí puedes registrar libros, préstamos y devoluciones.'
+          );
+        } else if (target === '#tab-history') {
+          speak(
+            'Has abierto el Historial de movimientos. Aquí puedes revisar los ingresos, eliminaciones, reservas y préstamos del sistema.'
+          );
+        }
+      });
+    });
   }
 
   /*****************************************************************
@@ -931,6 +972,8 @@
       .querySelectorAll('form button[type="submit"]')
       .forEach(btn => {
         btn.addEventListener('mouseenter', () => {
+          // Si ya tiene data-message, no pisamos ese mensaje
+          if (btn.dataset && btn.dataset.message) return;
           suggestAction(
             'Este botón enviará el formulario. Revisa los datos antes de continuar.'
           );
