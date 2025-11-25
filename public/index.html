@@ -390,6 +390,67 @@
 
           <div class="panel-block">
             <h3>Listado de libros</h3>
+
+            <!-- NUEVO: barra de búsqueda y filtros de biblioteca -->
+            <div class="filters-row" data-library-filters="container">
+              <!-- Filtros simples -->
+              <div class="filters-group" data-library-filters="simple" style="display: flex;">
+                <label>
+                  Buscar
+                  <input
+                    type="text"
+                    id="librarySearch"
+                    placeholder="Código, título, autor, categoría..."
+                  />
+                </label>
+              </div>
+
+              <!-- Filtros avanzados -->
+              <div class="filters-group" data-library-filters="advanced" style="display: none;">
+                <label>
+                  Categoría
+                  <select id="libraryFilterCategoria">
+                    <option value="all">Todas</option>
+                    <option value="libro">Libro</option>
+                    <option value="material escolar">Material Escolar</option>
+                    <option value="material multimedia">Material Multimedia</option>
+                    <option value="instrumento musical">Instrumento Musical</option>
+                    <option value="material didáctico">Material Didáctico</option>
+                    <option value="documento">Documento</option>
+                    <option value="otros">Otros</option>
+                  </select>
+                </label>
+
+                <label>
+                  Año desde
+                  <input type="number" id="libraryFilterYearFrom" min="1900" max="2100" />
+                </label>
+
+                <label>
+                  Año hasta
+                  <input type="number" id="libraryFilterYearTo" min="1900" max="2100" />
+                </label>
+
+                <label class="checkbox-inline">
+                  <input type="checkbox" id="libraryFilterHasPhoto" />
+                  Solo con foto
+                </label>
+              </div>
+
+              <!-- Selector modo filtros -->
+              <div class="filters-mode">
+                <label>
+                  Modo filtros
+                  <select id="libraryFilterMode">
+                    <option value="simple">Búsqueda simple</option>
+                    <option value="advanced">Solo avanzados</option>
+                    <option value="both" selected>Ambos</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+            <!-- FIN filtros biblioteca -->
+
             <div class="table-wrapper">
               <table id="libraryTable" class="inventory-table">
                 <thead>
@@ -463,6 +524,57 @@
         <!-- Listado de préstamos -->
         <div class="panel-block">
           <h3>Listado de préstamos</h3>
+
+          <!-- NUEVO: barra de búsqueda y filtros de préstamos -->
+          <div class="filters-row" data-loans-filters="container">
+            <!-- Filtros simples -->
+            <div class="filters-group" data-loans-filters="simple" style="display: flex;">
+              <label>
+                Buscar
+                <input
+                  type="text"
+                  id="loansSearch"
+                  placeholder="ID, código, nombre, curso..."
+                />
+              </label>
+            </div>
+
+            <!-- Filtros avanzados -->
+            <div class="filters-group" data-loans-filters="advanced" style="display: none;">
+              <label>
+                Estado
+                <select id="loansFilterReturned">
+                  <option value="all">Todos</option>
+                  <option value="yes">Solo devueltos</option>
+                  <option value="no">Solo pendientes</option>
+                </select>
+              </label>
+
+              <label>
+                Desde
+                <input type="date" id="loansFilterDateFrom" />
+              </label>
+
+              <label>
+                Hasta
+                <input type="date" id="loansFilterDateTo" />
+              </label>
+            </div>
+
+            <!-- Selector modo filtros -->
+            <div class="filters-mode">
+              <label>
+                Modo filtros
+                <select id="loansFilterMode">
+                  <option value="simple">Búsqueda simple</option>
+                  <option value="advanced">Solo avanzados</option>
+                  <option value="both" selected>Ambos</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          <!-- FIN filtros préstamos -->
+
           <div class="table-wrapper">
             <table id="loansTable" class="inventory-table">
               <thead>
