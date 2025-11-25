@@ -233,6 +233,28 @@ async function uploadToSupabase(file, lab) {
 /** HISTORIAL: helper + rutas /api/history */
 // =========================================================
 
+// ✅ NUEVO: garantizar que exista la tabla history
+async function ensureHistoryTable() {
+  try {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS history (
+        id TEXT PRIMARY KEY,
+        lab TEXT,
+        action TEXT,
+        entity_type TEXT,
+        entity_id TEXT,
+        user_email TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        data JSONB
+      );
+    `);
+    console.log('Tabla history verificada/creada ✅');
+  } catch (err) {
+    console.error('❌ Error creando/verificando tabla history:', err);
+    throw err;
+  }
+}
+
 // Helper para insertar en tabla "history"
 // Tabla esperada:
 //  id (text PK) | lab (text) | action (text) | entity_type (text)
@@ -499,6 +521,35 @@ app.post('/api/:lab/reservations', requireLogin, canEditLab, async (req, res) =>
 // API: PRÉSTAMOS BIBLIOTECA (PostgreSQL)
 // =========================================================
 
+// ✅ NUEVO: préstamos vencidos (> 7 días) para el banner
+app.get('/api/library/overdue', requireLogin, async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `
+      SELECT id, data, user_email, loan_date, returned, return_date
+      FROM library_loans
+      WHERE returned = FALSE
+        AND loan_date < NOW() - INTERVAL '7 days'
+      ORDER BY loan_date ASC, id
+      `
+    );
+
+    const overdue = rows.map(r => ({
+      id: r.id,
+      ...r.data,
+      user: r.user_email || null,
+      loanDate: r.loan_date,
+      returned: r.returned,
+      returnDate: r.return_date
+    }));
+
+    res.json(overdue);
+  } catch (err) {
+    console.error('Error al obtener préstamos vencidos de biblioteca:', err);
+    res.status(500).json({ message: 'Error al obtener préstamos vencidos' });
+  }
+});
+
 // GET préstamos
 app.get('/api/library/loans', requireLogin, async (req, res) => {
   try {
@@ -711,7 +762,10 @@ app.delete(
 // INICIAR SERVIDOR
 // =========================================================
 db.initDb()
-  .then(() => {
+  .then(async () => {
+    // ✅ Nos aseguramos también aquí de que history exista
+    await ensureHistoryTable();
+
     app.listen(PORT, () => {
       console.log(`Servidor corriendo en http://localhost:${PORT}`);
     });
