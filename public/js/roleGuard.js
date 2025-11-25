@@ -1,15 +1,30 @@
 // /public/js/roleGuard.js
-// Control de permisos de edición según el rol del usuario y la página actual.
-//
-// Roles esperados desde el backend (/api/session):
-//  - admin        → puede editar TODO
-//  - science      → solo edita página de ciencias
-//  - computing    → solo edita página de computación
-//  - library      → solo edita página de biblioteca
-//
-// En las demás páginas, los formularios quedan SOLO LECTURA.
+// Control de permisos de edición según el rol del usuario y helper global
+// para manejar fetch autenticado (guardedFetch).
 
-(async () => {
+(() => {
+  // -------------------------------------------
+  // Helper global: guardedFetch
+  // -------------------------------------------
+  async function guardedFetch(url, options = {}) {
+    const resp = await fetch(url, {
+      credentials: 'include',
+      ...options
+    });
+
+    if (resp.status === 401) {
+      // Sesión caducada o no autenticada
+      alert('Tu sesión ha expirado o no estás autenticado. Vuelve a iniciar sesión.');
+      window.location.href = '/login.html';
+      throw new Error('No autenticado (401)');
+    }
+
+    return resp;
+  }
+
+  // Exponemos en window para que lo use computing.js, history.js, etc.
+  window.guardedFetch = guardedFetch;
+
   // -------------------------------------------
   // Obtener sesión actual desde el backend
   // -------------------------------------------
@@ -86,24 +101,27 @@
 
     const role = session.role;
 
-    // Admin (Emorales) puede TODO, sin restricciones ni banner
+    // Admin puede TODO, sin restricciones ni banner
     if (role === 'admin') return;
 
-    const page = document.body.dataset.page; // 'login', 'dashboard', 'science', 'computer', 'library', etc.
+    const page = document.body.dataset.page; // 'login', 'dashboard', etc.
 
-    // En login y dashboard no bloqueamos nada, pero podemos mostrar aviso ligero
-    if (page === 'login' || page === 'dashboard') {
-      // Aquí solo avisamos que se trata de una cuenta con permisos limitados
+    // En login no bloqueamos nada
+    if (page === 'login') return;
+
+    // En el dashboard (todas las pestañas) mostramos aviso general de cuenta limitada
+    if (page === 'dashboard') {
       showReadOnlyBanner(
-        'Has iniciado sesión con una cuenta de área. Solo podrás editar tu sección asignada; el resto será solo lectura.'
+        'Has iniciado sesión con una cuenta de área. Solo podrás editar tu sección asignada; el resto será solo lectura (se configurará con más detalle).'
       );
+      // De momento no bloqueamos nada a nivel de pestañas;
+      // cuando quieras, podemos afinar esto por módulo.
       return;
     }
 
-    // Lógica por página
+    // Si en el futuro vuelves a usar páginas separadas:
     if (page === 'science') {
       if (role !== 'science') {
-        // Usuarios que no son de ciencias → solo pueden VER
         showReadOnlyBanner(
           'Esta sección es exclusiva del laboratorio de Ciencias. Tu cuenta solo tiene permisos de lectura aquí.'
         );
@@ -111,7 +129,6 @@
       }
     } else if (page === 'computer') {
       if (role !== 'computing') {
-        // Usuarios que no son de computación → solo pueden VER
         showReadOnlyBanner(
           'Esta sección es exclusiva de la Sala de Computación. Tu cuenta solo tiene permisos de lectura aquí.'
         );
@@ -119,7 +136,6 @@
       }
     } else if (page === 'library') {
       if (role !== 'library') {
-        // Usuarios que no son de biblioteca → solo pueden VER
         showReadOnlyBanner(
           'Esta sección es exclusiva de la Biblioteca. Tu cuenta solo tiene permisos de lectura aquí.'
         );
