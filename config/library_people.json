@@ -1,0 +1,26 @@
+[
+  {
+    "id": "STU-001",
+    "nombre": "Ana Pérez",
+    "tipo": "estudiante",
+    "curso": "7°A"
+  },
+  {
+    "id": "STU-002",
+    "nombre": "Vicente Rojas",
+    "tipo": "estudiante",
+    "curso": "8°B"
+  },
+  {
+    "id": "FUNC-001",
+    "nombre": "María López",
+    "tipo": "funcionario",
+    "curso": "Bibliotecaria"
+  },
+  {
+    "id": "FUNC-002",
+    "nombre": "Juan Soto",
+    "tipo": "funcionario",
+    "curso": "Inspectoría"
+  }
+]
