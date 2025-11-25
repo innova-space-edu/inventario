@@ -300,6 +300,8 @@
         '. Selecciona una sección para comenzar.'
     );
 
+    // En el diseño actual no hay enlaces separados, pero dejamos
+    // los handlers por si en el futuro agregas botones con estos IDs.
     const scienceLink = document.getElementById('scienceLink');
     const compLink = document.getElementById('computerLink');
     const libraryLink = document.getElementById('libraryLink');
@@ -325,10 +327,20 @@
         );
       });
     }
+
+    const logoutForm = document.querySelector('.logout-form');
+    if (logoutForm) {
+      logoutForm.addEventListener('submit', () => {
+        speak('Cerrando sesión del sistema de inventario.');
+      });
+    }
   }
 
   /*****************************************************************
-   * PÁGINA BIBLIOTECA
+   * (Las funciones de biblioteca / computación / ciencias que siguen
+   * se usaban cuando cada módulo era una página independiente.
+   * Con el nuevo diseño por pestañas no se ejecutan, pero las dejamos
+   * por compatibilidad y porque no interfieren.)
    *****************************************************************/
 
   function initLibraryPage() {
@@ -604,10 +616,6 @@
     }
   }
 
-  /*****************************************************************
-   * PÁGINA COMPUTACIÓN
-   *****************************************************************/
-
   function initComputerPage() {
     speak(
       'Estás en el laboratorio de computación. Puedes agregar equipos y materiales, ver inventario y reservar el laboratorio.'
@@ -745,10 +753,6 @@
       );
     });
   }
-
-  /*****************************************************************
-   * PÁGINA CIENCIAS
-   *****************************************************************/
 
   function initSciencePage() {
     speak(
