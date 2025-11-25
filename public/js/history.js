@@ -3,11 +3,12 @@
 // Espera que el backend tenga un endpoint GET /api/history con parámetros opcionales:
 //   ?lab=science|computing|library
 //   ?limit=50|100|...
+//
 // Respuesta esperada: array de objetos tipo:
-//   {
-//     id, lab, action, entityType, entityId,
-//     user, createdAt, data
-//   }
+// {
+//   id, lab, action, entityType, entityId,
+//   user, createdAt, data
+// }
 
 document.addEventListener('DOMContentLoaded', () => {
   const historyTableBody = document.querySelector('#historyTable tbody');
@@ -16,6 +17,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Si no existe la tabla de historial, salimos sin hacer nada
   if (!historyTableBody) return;
+
+  // Helper para usar guardedFetch si existe, o fetch normal con credenciales
+  const apiFetch =
+    window.guardedFetch ||
+    ((url, options = {}) =>
+      fetch(url, { credentials: 'include', ...options }));
 
   function formatDate(dateValue) {
     if (!dateValue) return '';
@@ -48,9 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const qs = params.length ? `?${params.join('&')}` : '';
 
     try {
-      const resp = await fetch(`/api/history${qs}`, {
-        credentials: 'include'
-      });
+      const resp = await apiFetch(`/api/history${qs}`);
 
       if (!resp.ok) {
         console.error('Error al cargar historial:', resp.status);
