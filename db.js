@@ -5,17 +5,21 @@ const { Pool } = require('pg');
 if (process.env.NODE_ENV !== 'production') {
   try {
     require('dotenv').config();
+    console.log('dotenv cargado (entorno no producción)');
   } catch (e) {
-    // si no existe dotenv no pasa nada
+    console.warn('No se pudo cargar dotenv. Asegúrate de tenerlo instalado si lo necesitas en local.');
   }
 }
 
 if (!process.env.DATABASE_URL) {
-  throw new Error('DATABASE_URL no está definida. Configúrala en .env (local) o en las variables de entorno de Render.');
+  throw new Error(
+    'DATABASE_URL no está definida. ' +
+      'Configúrala en .env (local) o en las variables de entorno del servicio (por ejemplo, Render).'
+  );
 }
 
-// Render Postgres SIEMPRE requiere SSL, incluso desde tu PC.
-// Así que dejamos ssl: { rejectUnauthorized: false } siempre.
+// Render Postgres / Supabase requieren SSL.
+// Dejamos ssl: { rejectUnauthorized: false } siempre.
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
@@ -59,11 +63,22 @@ async function initDb() {
     );
   `;
 
-  await pool.query(createItems);
-  await pool.query(createReservations);
-  await pool.query(createLoans);
+  try {
+    // Pequeña prueba de conexión rápida
+    await pool.query('SELECT NOW()');
+    console.log('Conexión a la base de datos establecida correctamente ✅');
 
-  console.log('Tablas verificadas/creadas correctamente ✅');
+    // Crear/verificar tablas
+    await pool.query(createItems);
+    await pool.query(createReservations);
+    await pool.query(createLoans);
+
+    console.log('Tablas verificadas/creadas correctamente ✅');
+  } catch (err) {
+    console.error('Error al inicializar la base de datos:', err);
+    // Re-lanzamos para que Render muestre el fallo y no parezca que todo está OK
+    throw err;
+  }
 }
 
 module.exports = {
