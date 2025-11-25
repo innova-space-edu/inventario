@@ -22,7 +22,7 @@
     return resp;
   }
 
-  // Exponemos en window para que lo use computing.js, history.js, etc.
+  // Exponemos en window para que lo use computing.js, history.js, library.js, science.js, etc.
   window.guardedFetch = guardedFetch;
 
   // -------------------------------------------
