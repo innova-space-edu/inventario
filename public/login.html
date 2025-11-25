@@ -5,10 +5,10 @@
   <title>Innova Space Education – Track | Acceso</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Tus estilos generales (en la raíz de /public) -->
+  <!-- Estilos generales -->
   <link rel="stylesheet" href="/style.css" />
 
-  <!-- Estilos específicos para centrar y hacer la tarjeta futurista -->
+  <!-- Estilos específicos del login -->
   <style>
     body.login-body {
       margin: 0;
@@ -20,17 +20,17 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      position: relative;
       overflow: hidden;
+      position: relative;
     }
 
-    /* Capa donde script.js dibuja las estrellas */
+    /* Capa donde script.js dibuja estrellas */
     .background {
       position: fixed;
       inset: 0;
       z-index: 0;
-      overflow: hidden;
       pointer-events: none;
+      overflow: hidden;
     }
 
     .login-wrapper {
@@ -46,9 +46,9 @@
       background: rgba(10, 12, 32, 0.9);
       border-radius: 18px;
       padding: 28px 24px 24px;
-      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
-      border: 1px solid rgba(120, 120, 255, 0.35);
       backdrop-filter: blur(14px);
+      border: 1px solid rgba(120, 120, 255, 0.35);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
     }
 
     .login-header {
@@ -88,8 +88,8 @@
 
     .login-subtitle {
       font-size: 0.9rem;
-      color: #c7d0ff;
       margin-bottom: 18px;
+      color: #c7d0ff;
     }
 
     .login-form {
@@ -99,8 +99,8 @@
     }
 
     .login-field label {
-      display: block;
       font-size: 0.85rem;
+      display: block;
       margin-bottom: 4px;
       color: #d5ddff;
     }
@@ -114,36 +114,39 @@
       color: #f9fbff;
       font-size: 0.9rem;
       outline: none;
-      transition: border 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+      transition: 0.2s ease;
     }
 
     .login-input:focus {
       border-color: #8f7bff;
-      box-shadow: 0 0 0 1px rgba(162, 140, 255, 0.8), 0 0 18px rgba(120, 90, 255, 0.6);
+      box-shadow: 0 0 0 1px rgba(162, 140, 255, 0.8),
+                  0 0 18px rgba(120, 90, 255, 0.6);
       background: rgba(7, 10, 32, 0.95);
     }
 
     .login-button {
-      margin-top: 10px;
       width: 100%;
       border: none;
       border-radius: 999px;
       padding: 11px 12px;
+      margin-top: 10px;
       font-size: 0.95rem;
       font-weight: 600;
       letter-spacing: 0.03em;
+      cursor: pointer;
       color: #ffffff;
       background: linear-gradient(90deg, #7b5cff, #4d9dff, #7b5cff);
       background-size: 200% 100%;
-      cursor: pointer;
+      transition: transform 0.12s ease,
+                  box-shadow 0.12s ease,
+                  background-position 1.8s ease;
       box-shadow: 0 14px 35px rgba(0, 0, 0, 0.6);
-      transition: transform 0.12s ease, box-shadow 0.12s ease, background-position 1.8s ease;
     }
 
     .login-button:hover {
       transform: translateY(-1px);
-      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.75);
       background-position: 100% 0;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.75);
     }
 
     .login-button:active {
@@ -154,15 +157,14 @@
     .login-footer {
       margin-top: 14px;
       font-size: 0.78rem;
-      color: #98a0d8;
       text-align: center;
+      color: #98a0d8;
     }
 
     .login-footer strong {
       color: #cfd6ff;
     }
 
-    /* Ajuste en móviles */
     @media (max-width: 480px) {
       .login-card {
         padding: 22px 18px 18px;
@@ -175,15 +177,16 @@
 </head>
 
 <body class="login-body" data-page="login">
-  <!-- Fondo para estrellas y estrellas fugaces (script.js lo usa) -->
+  <!-- Fondo animado -->
   <div class="background"></div>
 
   <div class="login-wrapper">
     <div class="login-card">
+
+      <!-- Logo + título -->
       <div class="login-header">
         <div class="login-logo">
-          <!-- Logo del colegio con fondo blanco -->
-          <img src="/img/logo-colegio.png" alt="Logo Colegio Providencia">
+          <img src="/img/logo-colegio.png" alt="Logo Colegio Providencia" />
         </div>
         <div class="login-title-group">
           <h1>Innova Space Education – Track</h1>
@@ -195,8 +198,14 @@
         Acceso para administración del inventario del Colegio Providencia.
       </p>
 
-      <!-- Formulario de login -->
-      <form id="loginForm" class="login-form" action="/login" method="post">
+      <!-- FORMULARIO LOGIN -->
+      <form id="loginForm"
+            class="login-form"
+            action="/login"
+            method="post"
+            autocomplete="on"
+            novalidate>
+
         <div class="login-field">
           <label for="email">Correo institucional</label>
           <input
@@ -206,7 +215,7 @@
             class="login-input"
             required
             autocomplete="username"
-            data-message="Estás en el campo de correo electrónico. Escribe tu correo institucional, por ejemplo usuario@colprovidencia.cl."
+            data-message="Estás en el campo de correo electrónico. Escribe tu correo institucional."
           />
         </div>
 
@@ -219,27 +228,28 @@
             class="login-input"
             required
             autocomplete="current-password"
-            data-message="Ahora estás en el campo de contraseña. Escribe tu clave secreta de acceso al inventario."
+            data-message="Ahora estás en el campo de contraseña. Escribe tu clave de acceso."
           />
         </div>
 
         <button
           type="submit"
           class="login-button"
-          data-message="Botón ingresar. Al presionarlo, se validarán tus datos y entrarás al sistema de inventario."
+          data-message="Botón Ingresar. Se validará tu identidad en el sistema."
         >
           Ingresar
         </button>
       </form>
 
       <div class="login-footer">
-        <strong>Tip:</strong> La voz del sistema te guiará en cada casilla.
-        Si no la escuchas, revisa que tu navegador tenga el volumen activado.
+        <strong>Tip:</strong> La voz del sistema te guiará automáticamente.
+        Si no la escuchas, revisa el volumen del navegador.
       </div>
+
     </div>
   </div>
 
-  <!-- Script general con estrellas + voz + sugerencias (en la raíz /public) -->
+  <!-- Script global (estrellas + voz + accesibilidad) -->
   <script src="/script.js"></script>
 </body>
 </html>
