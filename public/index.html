@@ -486,13 +486,23 @@
                   Código del libro
                   <input type="text" name="codigo" required />
                 </label>
+
+                <!-- NUEVO: selector de estudiante/funcionario -->
+                <label>
+                  Estudiante / Funcionario
+                  <select name="personaId" id="loanPersonSelect">
+                    <option value="">Escribe o selecciona una persona</option>
+                    <!-- library.js llenará las opciones dinámicamente -->
+                  </select>
+                </label>
+
                 <label>
                   Nombre de quien pide
-                  <input type="text" name="nombre" required />
+                  <input type="text" name="nombre" id="loanNombre" required />
                 </label>
                 <label>
                   Curso / Funcionario
-                  <input type="text" name="curso" />
+                  <input type="text" name="curso" id="loanCurso" />
                 </label>
                 <label>
                   Observaciones
