@@ -23,6 +23,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const loansFilterDateFrom = document.getElementById('loansFilterDateFrom');
   const loansFilterDateTo = document.getElementById('loansFilterDateTo');
 
+  // 🔹 NUEVO: referencias para listado de personas (estudiantes / funcionarios)
+  const loanPersonSelect = document.getElementById('loanPerson'); // <select>
+  const loanNameInput = loanForm ? loanForm.querySelector('input[name="nombre"]') : null;
+  const loanCourseInput = loanForm ? loanForm.querySelector('input[name="curso"]') : null;
+
   // Helper unificado para API
   const apiFetch =
     window.guardedFetch ||
@@ -37,6 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // ================== ESTADO LOCAL ==================
   let libraryItems = [];
   let libraryLoans = [];
+  // 🔹 NUEVO: personas para préstamos
+  let libraryPeople = [];
 
   // ================== INVENTARIO DE BIBLIOTECA ==================
 
@@ -464,6 +471,18 @@ document.addEventListener('DOMContentLoaded', () => {
       const formData = new FormData(loanForm);
       const data = Object.fromEntries(formData.entries());
 
+      // 🔹 NUEVO: si hay select de persona y se eligió alguien,
+      // sobrescribimos nombre/curso y agregamos campos extra
+      if (loanPersonSelect && loanPersonSelect.value) {
+        const selected = libraryPeople.find(p => p.id === loanPersonSelect.value);
+        if (selected) {
+          data.nombre = selected.nombre;
+          data.curso = selected.curso;
+          data.personaId = selected.id;
+          data.tipoPersona = selected.tipo;
+        }
+      }
+
       try {
         const resp = await apiFetch('/api/library/loan', {
           method: 'POST',
@@ -554,10 +573,51 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // 🔹 NUEVO: cargar personas de biblioteca
+  async function loadLibraryPeople() {
+    if (!loanPersonSelect) return; // si el select no existe en el HTML, no hacemos nada
+
+    try {
+      const resp = await fetch('/config/library_people.json');
+      if (!resp.ok) {
+        console.warn('No se pudo cargar library_people.json');
+        return;
+      }
+
+      const people = await resp.json();
+      libraryPeople = Array.isArray(people) ? people : [];
+
+      // Poblar el select
+      loanPersonSelect.innerHTML = '<option value="">Seleccione estudiante/funcionario...</option>';
+
+      libraryPeople.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = `${p.nombre} — ${p.tipo} (${p.curso})`;
+        loanPersonSelect.appendChild(opt);
+      });
+
+      // Al cambiar la persona seleccionada, rellenamos nombre y curso
+      loanPersonSelect.addEventListener('change', () => {
+        const selected = libraryPeople.find(p => p.id === loanPersonSelect.value);
+        if (selected) {
+          if (loanNameInput) loanNameInput.value = selected.nombre;
+          if (loanCourseInput) loanCourseInput.value = selected.curso;
+        } else {
+          if (loanNameInput) loanNameInput.value = '';
+          if (loanCourseInput) loanCourseInput.value = '';
+        }
+      });
+    } catch (err) {
+      console.error('Error cargando library_people.json:', err);
+    }
+  }
+
   // ================== INICIALIZACIÓN ==================
   loadLibraryItems();
   loadLoans();
   checkOverdueLoans();
   attachLibraryFiltersListeners();
   attachLoansFiltersListeners();
+  loadLibraryPeople(); // 🔹 nuevo: cargar listado de estudiantes/funcionarios
 });
