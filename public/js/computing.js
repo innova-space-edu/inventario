@@ -1,19 +1,33 @@
-// public/js/computing.js
+// /public/js/computing.js
+
 document.addEventListener('DOMContentLoaded', () => {
   const computingForm = document.getElementById('computingForm');
   const computingTableBody = document.querySelector('#computingTable tbody');
-  const computingReservationForm = document.getElementById('computingReservationForm');
-  const computingReservationsBody = document.querySelector('#computingReservationsTable tbody');
+  const computingReservationForm = document.getElementById(
+    'computingReservationForm'
+  );
+  const computingReservationsBody = document.querySelector(
+    '#computingReservationsTable tbody'
+  );
+
+  // Helper para usar guardedFetch si existe, o fetch normal con credenciales
+  const apiFetch =
+    window.guardedFetch ||
+    ((url, options = {}) =>
+      fetch(url, { credentials: 'include', ...options }));
 
   // ---- helper para historial ----
   async function logHistory(entry) {
     try {
-      await fetch('/api/history', {
+      await apiFetch('/api/history', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          module: 'computing',
-          ...entry
+          lab: 'computing',
+          action: entry.action,
+          entityType: entry.type,
+          entityId: entry.entityId,
+          data: { detail: entry.detail }
         })
       });
     } catch (err) {
@@ -21,37 +35,65 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // ========== ITEMS ==========
-  // Cargar items desde API
-  fetch('/api/computing/items')
-    .then(resp => resp.json())
-    .then(items => items.forEach(addRow))
-    .catch(err => console.error('Error cargando equipos:', err));
+  // ================== ITEMS ==================
+
+  async function loadItems() {
+    if (!computingTableBody) return;
+
+    try {
+      const resp = await apiFetch('/api/computing/items');
+      if (!resp.ok) {
+        console.error('Error cargando equipos:', resp.status);
+        return;
+      }
+      const items = await resp.json();
+      if (!Array.isArray(items)) return;
+
+      computingTableBody.innerHTML = '';
+      items.forEach(addRow);
+    } catch (err) {
+      console.error('Error cargando equipos:', err);
+    }
+  }
 
   // Agregar equipo
-  if (computingForm) {
+  if (computingForm && computingTableBody) {
     computingForm.addEventListener('submit', async e => {
       e.preventDefault();
 
-      const formData = new FormData(computingForm);
-      const response = await fetch('/api/computing/items', {
-        method: 'POST',
-        body: formData
-      });
-
-      const result = await response.json();
-      if (result && result.item) {
-        addRow(result.item);
-
-        await logHistory({
-          action: 'create',
-          type: 'item',
-          entityId: result.item.id,
-          detail: `Ingresado equipo de computación: ${result.item.marca || ''} ${result.item.modelo || ''} (código ${result.item.codigo || ''})`
+      try {
+        const formData = new FormData(computingForm);
+        const response = await apiFetch('/api/computing/items', {
+          method: 'POST',
+          body: formData
         });
-      }
 
-      computingForm.reset();
+        if (!response.ok) {
+          alert('Error al guardar el equipo');
+          return;
+        }
+
+        const result = await response.json();
+        if (result && result.item) {
+          addRow(result.item);
+
+          await logHistory({
+            action: 'create',
+            type: 'item',
+            entityId: result.item.id,
+            detail: `Ingresado equipo de computación: ${
+              result.item.marca || ''
+            } ${result.item.modelo || ''} (código ${
+              result.item.codigo || ''
+            })`
+          });
+        }
+
+        computingForm.reset();
+      } catch (err) {
+        console.error('Error al guardar equipo:', err);
+        alert('Error al guardar el equipo');
+      }
     });
   }
 
@@ -75,16 +117,25 @@ document.addEventListener('DOMContentLoaded', () => {
     deleteBtn.addEventListener('click', async () => {
       if (!confirm('¿Seguro que deseas eliminar este equipo?')) return;
 
-      const resp = await fetch(`/api/computing/items/${item.id}`, { method: 'DELETE' });
-      if (resp.ok) {
-        tr.remove();
-        await logHistory({
-          action: 'delete',
-          type: 'item',
-          entityId: item.id,
-          detail: `Eliminado equipo de computación: ${item.marca || ''} ${item.modelo || ''} (código ${item.codigo || ''})`
+      try {
+        const resp = await apiFetch(`/api/computing/items/${item.id}`, {
+          method: 'DELETE'
         });
-      } else {
+        if (resp.ok) {
+          tr.remove();
+          await logHistory({
+            action: 'delete',
+            type: 'item',
+            entityId: item.id,
+            detail: `Eliminado equipo de computación: ${
+              item.marca || ''
+            } ${item.modelo || ''} (código ${item.codigo || ''})`
+          });
+        } else {
+          alert('Error al eliminar el equipo.');
+        }
+      } catch (err) {
+        console.error('Error al eliminar equipo:', err);
         alert('Error al eliminar el equipo.');
       }
     });
@@ -92,11 +143,23 @@ document.addEventListener('DOMContentLoaded', () => {
     computingTableBody.appendChild(tr);
   }
 
-  // ========== RESERVAS ==========
+  // ================== RESERVAS ==================
+
   async function loadReservations() {
+    if (!computingReservationsBody) return;
+
     try {
-      const resp = await fetch('/api/computing/reservations');
+      const resp = await apiFetch('/api/computing/reservations');
+      if (!resp.ok) {
+        console.error(
+          'Error cargando reservas de computación:',
+          resp.status
+        );
+        return;
+      }
       const reservations = await resp.json();
+      if (!Array.isArray(reservations)) return;
+
       computingReservationsBody.innerHTML = '';
       reservations.forEach(addReservationRow);
     } catch (err) {
@@ -122,34 +185,45 @@ document.addEventListener('DOMContentLoaded', () => {
     computingReservationForm.addEventListener('submit', async e => {
       e.preventDefault();
 
-      const data = Object.fromEntries(new FormData(computingReservationForm));
-      const resp = await fetch('/api/computing/reservations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-
-      if (!resp.ok) {
-        alert('Error al registrar reserva');
-        return;
-      }
-
-      const result = await resp.json();
-      if (result && result.reservation) {
-        addReservationRow(result.reservation);
-
-        await logHistory({
-          action: 'create',
-          type: 'reservation',
-          entityId: result.reservation.id,
-          detail: `Reserva sala de computación para ${result.reservation.curso || ''} – ${result.reservation.solicitante || ''}`
+      try {
+        const data = Object.fromEntries(
+          new FormData(computingReservationForm)
+        );
+        const resp = await apiFetch('/api/computing/reservations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
         });
-      }
 
-      alert('Reserva registrada');
-      computingReservationForm.reset();
+        if (!resp.ok) {
+          alert('Error al registrar reserva');
+          return;
+        }
+
+        const result = await resp.json();
+        if (result && result.reservation && computingReservationsBody) {
+          addReservationRow(result.reservation);
+
+          await logHistory({
+            action: 'create',
+            type: 'reservation',
+            entityId: result.reservation.id,
+            detail: `Reserva sala de computación para ${
+              result.reservation.curso || ''
+            } – ${result.reservation.solicitante || ''}`
+          });
+        }
+
+        alert('Reserva registrada');
+        computingReservationForm.reset();
+      } catch (err) {
+        console.error('Error al registrar reserva:', err);
+        alert('Error al registrar reserva');
+      }
     });
   }
 
+  // Carga inicial
+  loadItems();
   loadReservations();
 });
