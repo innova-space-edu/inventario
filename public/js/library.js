@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const loansFilterDateTo = document.getElementById('loansFilterDateTo');
 
   // NUEVO: referencias para personas de biblioteca
-  // (Ajustado para coincidir con index.html: id="loanPersonSelect")
+  // Debe coincidir con index.html: id="loanPersonSelect"
   const loanPersonSelect = document.getElementById('loanPersonSelect');
   const loanTipoPersonaInput = document.getElementById('loanTipoPersona');
 
