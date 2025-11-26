@@ -23,10 +23,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const loansFilterDateFrom = document.getElementById('loansFilterDateFrom');
   const loansFilterDateTo = document.getElementById('loansFilterDateTo');
 
-  // 🔹 NUEVO: referencias para listado de personas (estudiantes / funcionarios)
-  const loanPersonSelect = document.getElementById('loanPerson'); // <select>
-  const loanNameInput = loanForm ? loanForm.querySelector('input[name="nombre"]') : null;
-  const loanCourseInput = loanForm ? loanForm.querySelector('input[name="curso"]') : null;
+  // NUEVO: referencias para personas de biblioteca
+  const loanPersonaSelect = document.getElementById('loanPersonaSelect');
+  const loanTipoPersonaInput = document.getElementById('loanTipoPersona');
+
+  const peopleForm = document.getElementById('peopleForm');
+  const peopleFormSubmit = document.getElementById('peopleFormSubmit');
+  const peopleFormCancel = document.getElementById('peopleFormCancel');
+  const peopleTableBody = document.querySelector('#peopleTable tbody');
 
   // Helper unificado para API
   const apiFetch =
@@ -42,10 +46,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // ================== ESTADO LOCAL ==================
   let libraryItems = [];
   let libraryLoans = [];
-  // 🔹 NUEVO: personas para préstamos
+  // NUEVO: personas de biblioteca
   let libraryPeople = [];
+  let editingPersonId = null;
 
-  // ================== INVENTARIO DE BIBLIOTECA ==================
+  // ==================================================
+  // ============= INVENTARIO DE BIBLIOTECA ===========
+  // ==================================================
 
   async function loadLibraryItems() {
     try {
@@ -88,7 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
       deleteBtn.addEventListener('click', async () => {
         if (!confirm('¿Seguro que deseas eliminar este libro del inventario?')) return;
 
-        // NUEVO: motivo obligatorio al eliminar (para historial y reportes)
+        // motivo obligatorio al eliminar (para historial y reportes)
         const motivo = prompt(
           'Indica el motivo de eliminación (por ejemplo: "daño", "pérdida", "traslado", etc.):'
         );
@@ -255,7 +262,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // ================== PRÉSTAMOS DE BIBLIOTECA ==================
+  // ==================================================
+  // ============= PRÉSTAMOS DE BIBLIOTECA ============
+  // ==================================================
 
   async function loadLoans() {
     if (!loansTableBody) return;
@@ -471,18 +480,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const formData = new FormData(loanForm);
       const data = Object.fromEntries(formData.entries());
 
-      // 🔹 NUEVO: si hay select de persona y se eligió alguien,
-      // sobrescribimos nombre/curso y agregamos campos extra
-      if (loanPersonSelect && loanPersonSelect.value) {
-        const selected = libraryPeople.find(p => p.id === loanPersonSelect.value);
-        if (selected) {
-          data.nombre = selected.nombre;
-          data.curso = selected.curso;
-          data.personaId = selected.id;
-          data.tipoPersona = selected.tipo;
-        }
-      }
-
       try {
         const resp = await apiFetch('/api/library/loan', {
           method: 'POST',
@@ -503,6 +500,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         loanForm.reset();
+        // Si hay selector de persona y campo tipo, los limpiamos también
+        if (loanPersonaSelect) loanPersonaSelect.value = '';
+        if (loanTipoPersonaInput) loanTipoPersonaInput.value = '';
       } catch (err) {
         console.error('Error al registrar préstamo:', err);
         alert('Ocurrió un error al registrar el préstamo.');
@@ -542,7 +542,218 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ================== ALERTA DE PRÉSTAMOS VENCIDOS (> 7 DÍAS) ==================
+  // ==================================================
+  // ==== PERSONAS BIBLIOTECA (estudiantes/func.) =====
+  // ==================================================
+
+  async function loadLibraryPeople() {
+    // Si no hay nada en la interfaz relacionado, no hacemos nada
+    if (!peopleTableBody && !loanPersonaSelect) return;
+
+    try {
+      const resp = await apiFetch('/api/library/people');
+      if (!resp.ok) {
+        console.error('Error al cargar personas de biblioteca:', resp.status);
+        return;
+      }
+      const data = await resp.json();
+      libraryPeople = Array.isArray(data) ? data : [];
+      renderPeopleTable();
+      fillLoanPersonaSelect();
+    } catch (err) {
+      console.error('Error cargando personas de biblioteca:', err);
+    }
+  }
+
+  function fillLoanPersonaSelect() {
+    if (!loanPersonaSelect) return;
+
+    loanPersonaSelect.innerHTML = '<option value="">-- Seleccionar desde lista --</option>';
+
+    libraryPeople.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      const etiquetaCurso = p.curso ? ` – ${p.curso}` : '';
+      opt.textContent = `${p.nombre}${etiquetaCurso}`;
+      loanPersonaSelect.appendChild(opt);
+    });
+  }
+
+  function renderPeopleTable() {
+    if (!peopleTableBody) return;
+    peopleTableBody.innerHTML = '';
+
+    libraryPeople.forEach(person => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${person.id}</td>
+        <td>${person.nombre || ''}</td>
+        <td>${person.tipo || ''}</td>
+        <td>${person.curso || ''}</td>
+        <td>
+          <button type="button" class="edit-person-button" data-id="${person.id}">Editar</button>
+          <button type="button" class="delete-person-button" data-id="${person.id}">Eliminar</button>
+        </td>
+      `;
+
+      const editBtn = tr.querySelector('.edit-person-button');
+      const deleteBtn = tr.querySelector('.delete-person-button');
+
+      if (editBtn && peopleForm) {
+        editBtn.addEventListener('click', () => {
+          const p = libraryPeople.find(x => x.id === person.id);
+          if (!p) return;
+
+          editingPersonId = p.id;
+          // Rellenar formulario
+          const idInput = peopleForm.elements['id'];
+          const nombreInput = peopleForm.elements['nombre'];
+          const tipoSelect = peopleForm.elements['tipo'];
+          const cursoInput = peopleForm.elements['curso'];
+
+          if (idInput) idInput.value = p.id || '';
+          if (nombreInput) nombreInput.value = p.nombre || '';
+          if (tipoSelect) tipoSelect.value = p.tipo || 'estudiante';
+          if (cursoInput) cursoInput.value = p.curso || '';
+
+          if (peopleFormSubmit) peopleFormSubmit.textContent = 'Actualizar persona';
+          if (peopleFormCancel) peopleFormCancel.style.display = 'inline-block';
+        });
+      }
+
+      if (deleteBtn) {
+        deleteBtn.addEventListener('click', async () => {
+          if (!confirm('¿Seguro que deseas eliminar esta persona del listado?')) return;
+
+          const motivo = prompt(
+            'Opcional: indica el motivo de eliminación (por ejemplo, "egresado", "baja", etc.):'
+          ) || '';
+
+          try {
+            const resp = await apiFetch(`/api/library/people/${encodeURIComponent(person.id)}`, {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ motivo })
+            });
+
+            if (!resp.ok) {
+              const d = await resp.json().catch(() => ({}));
+              alert(d.message || 'No se pudo eliminar la persona.');
+              return;
+            }
+
+            await loadLibraryPeople();
+          } catch (err) {
+            console.error('Error al eliminar persona:', err);
+            alert('Ocurrió un error al eliminar la persona.');
+          }
+        });
+      }
+
+      peopleTableBody.appendChild(tr);
+    });
+  }
+
+  function resetPeopleForm() {
+    if (!peopleForm) return;
+    peopleForm.reset();
+    editingPersonId = null;
+    if (peopleFormSubmit) peopleFormSubmit.textContent = 'Guardar persona';
+    if (peopleFormCancel) peopleFormCancel.style.display = 'none';
+  }
+
+  if (peopleForm) {
+    peopleForm.addEventListener('submit', async e => {
+      e.preventDefault();
+
+      const formData = new FormData(peopleForm);
+      const data = Object.fromEntries(formData.entries());
+
+      const payload = {
+        id: (data.id || '').trim(),
+        nombre: (data.nombre || '').trim(),
+        tipo: (data.tipo || '').trim(),
+        curso: (data.curso || '').trim()
+      };
+
+      if (!payload.nombre || !payload.tipo) {
+        alert('Nombre y tipo son obligatorios (estudiante/funcionario).');
+        return;
+      }
+
+      try {
+        let resp;
+        if (editingPersonId) {
+          // Actualizar existente
+          resp = await apiFetch(`/api/library/people/${encodeURIComponent(editingPersonId)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              nombre: payload.nombre,
+              tipo: payload.tipo,
+              curso: payload.curso
+            })
+          });
+        } else {
+          // Crear nueva persona
+          resp = await apiFetch('/api/library/people', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+        }
+
+        if (!resp.ok) {
+          const d = await resp.json().catch(() => ({}));
+          alert(d.message || 'No se pudo guardar la persona.');
+          return;
+        }
+
+        await loadLibraryPeople();
+        resetPeopleForm();
+      } catch (err) {
+        console.error('Error al guardar persona:', err);
+        alert('Ocurrió un error al guardar la persona.');
+      }
+    });
+  }
+
+  if (peopleFormCancel) {
+    peopleFormCancel.addEventListener('click', e => {
+      e.preventDefault();
+      resetPeopleForm();
+    });
+  }
+
+  if (loanPersonaSelect && loanForm) {
+    loanPersonaSelect.addEventListener('change', () => {
+      const personId = loanPersonaSelect.value;
+      if (!personId) {
+        if (loanTipoPersonaInput) loanTipoPersonaInput.value = '';
+        return;
+      }
+
+      const person = libraryPeople.find(p => p.id === personId);
+      if (!person) return;
+
+      const nombreInput = loanForm.elements['nombre'];
+      const cursoInput = loanForm.elements['curso'];
+
+      if (nombreInput && !nombreInput.value) {
+        nombreInput.value = person.nombre || '';
+      }
+      if (cursoInput && !cursoInput.value) {
+        cursoInput.value = person.curso || '';
+      }
+      if (loanTipoPersonaInput) {
+        loanTipoPersonaInput.value = person.tipo || '';
+      }
+    });
+  }
+
+  // ==================================================
+  // ALERTA DE PRÉSTAMOS VENCIDOS (> 7 DÍAS)
+  // ==================================================
 
   async function checkOverdueLoans() {
     if (!overdueBanner) return;
@@ -573,51 +784,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 🔹 NUEVO: cargar personas de biblioteca
-  async function loadLibraryPeople() {
-    if (!loanPersonSelect) return; // si el select no existe en el HTML, no hacemos nada
-
-    try {
-      const resp = await fetch('/config/library_people.json');
-      if (!resp.ok) {
-        console.warn('No se pudo cargar library_people.json');
-        return;
-      }
-
-      const people = await resp.json();
-      libraryPeople = Array.isArray(people) ? people : [];
-
-      // Poblar el select
-      loanPersonSelect.innerHTML = '<option value="">Seleccione estudiante/funcionario...</option>';
-
-      libraryPeople.forEach(p => {
-        const opt = document.createElement('option');
-        opt.value = p.id;
-        opt.textContent = `${p.nombre} — ${p.tipo} (${p.curso})`;
-        loanPersonSelect.appendChild(opt);
-      });
-
-      // Al cambiar la persona seleccionada, rellenamos nombre y curso
-      loanPersonSelect.addEventListener('change', () => {
-        const selected = libraryPeople.find(p => p.id === loanPersonSelect.value);
-        if (selected) {
-          if (loanNameInput) loanNameInput.value = selected.nombre;
-          if (loanCourseInput) loanCourseInput.value = selected.curso;
-        } else {
-          if (loanNameInput) loanNameInput.value = '';
-          if (loanCourseInput) loanCourseInput.value = '';
-        }
-      });
-    } catch (err) {
-      console.error('Error cargando library_people.json:', err);
-    }
-  }
-
   // ================== INICIALIZACIÓN ==================
   loadLibraryItems();
   loadLoans();
   checkOverdueLoans();
   attachLibraryFiltersListeners();
   attachLoansFiltersListeners();
-  loadLibraryPeople(); // 🔹 nuevo: cargar listado de estudiantes/funcionarios
+  // NUEVO: cargar personas para combo y panel
+  loadLibraryPeople();
 });
