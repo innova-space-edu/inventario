@@ -44,7 +44,7 @@ if (LAB_USERS.length === 0) {
 const VALID_LABS = ['science', 'computing', 'library'];
 
 // =========================================================
-// DIRECTORIOS DE CONFIG (users.json)
+// DIRECTORIOS DE CONFIG (users.json, library_people.json)
 // =========================================================
 const DATA_DIR = process.env.DATA_DIR || __dirname;
 const CONFIG_DIR = path.join(DATA_DIR, 'config');
@@ -52,6 +52,31 @@ if (!fs.existsSync(CONFIG_DIR)) fs.mkdirSync(CONFIG_DIR, { recursive: true });
 
 const USERS_PATH = path.join(CONFIG_DIR, 'users.json');
 if (!fs.existsSync(USERS_PATH)) fs.writeFileSync(USERS_PATH, '[]', 'utf8');
+
+// ✅ NUEVO: archivo de personas de biblioteca (estudiantes/funcionarios)
+const LIBRARY_PEOPLE_PATH = path.join(CONFIG_DIR, 'library_people.json');
+if (!fs.existsSync(LIBRARY_PEOPLE_PATH)) {
+  fs.writeFileSync(LIBRARY_PEOPLE_PATH, '[]', 'utf8');
+}
+
+// Helpers para personas biblioteca
+function loadLibraryPeople() {
+  try {
+    const txt = fs.readFileSync(LIBRARY_PEOPLE_PATH, 'utf8').trim();
+    return txt ? JSON.parse(txt) : [];
+  } catch (err) {
+    console.error('Error leyendo library_people.json:', err);
+    return [];
+  }
+}
+
+function saveLibraryPeople(people) {
+  try {
+    fs.writeFileSync(LIBRARY_PEOPLE_PATH, JSON.stringify(people, null, 2), 'utf8');
+  } catch (err) {
+    console.error('Error guardando library_people.json:', err);
+  }
+}
 
 // =========================================================
 // SUPABASE
@@ -518,6 +543,119 @@ app.post('/api/:lab/reservations', requireLogin, canEditLab, async (req, res) =>
 });
 
 // =========================================================
+// API: PERSONAS BIBLIOTECA (JSON library_people.json)
+// =========================================================
+
+// Obtener todas las personas (estudiantes/funcionarios)
+app.get('/api/library/people', requireLogin, (req, res) => {
+  const people = loadLibraryPeople();
+  res.json(people);
+});
+
+// Crear persona
+app.post('/api/library/people', requireLogin, canEditLibrary, async (req, res) => {
+  const { id: rawId, nombre, tipo, curso } = req.body;
+
+  if (!nombre || !tipo) {
+    return res.status(400).json({ message: 'Nombre y tipo son obligatorios.' });
+  }
+
+  let id = rawId && rawId.trim() ? rawId.trim() : null;
+  const people = loadLibraryPeople();
+
+  // Si no se entrega ID, generamos uno automático
+  if (!id) {
+    const prefix = tipo === 'funcionario' ? 'FUNC' : 'STU';
+    let counter = 1;
+    do {
+      id = `${prefix}-${String(counter).padStart(3, '0')}`;
+      counter += 1;
+    } while (people.some(p => p.id === id));
+  } else {
+    // Si se entrega ID y ya existe, error
+    if (people.some(p => p.id === id)) {
+      return res.status(409).json({ message: 'Ya existe una persona con ese ID.' });
+    }
+  }
+
+  const person = {
+    id,
+    nombre: nombre.trim(),
+    tipo: tipo.trim(),
+    curso: (curso || '').trim()
+  };
+
+  people.push(person);
+  saveLibraryPeople(people);
+
+  await addHistory({
+    lab: 'library',
+    action: 'create-person',
+    entityType: 'person',
+    entityId: id,
+    userEmail: req.session.user.email,
+    data: person
+  });
+
+  res.json({ message: 'Persona creada', person });
+});
+
+// Actualizar persona
+app.put('/api/library/people/:id', requireLogin, canEditLibrary, async (req, res) => {
+  const { id } = req.params;
+  const { nombre, tipo, curso } = req.body;
+
+  const people = loadLibraryPeople();
+  const index = people.findIndex(p => p.id === id);
+
+  if (index === -1) {
+    return res.status(404).json({ message: 'Persona no encontrada.' });
+  }
+
+  if (nombre !== undefined) people[index].nombre = nombre.trim();
+  if (tipo !== undefined) people[index].tipo = tipo.trim();
+  if (curso !== undefined) people[index].curso = curso.trim();
+
+  saveLibraryPeople(people);
+
+  await addHistory({
+    lab: 'library',
+    action: 'update-person',
+    entityType: 'person',
+    entityId: id,
+    userEmail: req.session.user.email,
+    data: people[index]
+  });
+
+  res.json({ message: 'Persona actualizada', person: people[index] });
+});
+
+// Eliminar persona
+app.delete('/api/library/people/:id', requireLogin, canEditLibrary, async (req, res) => {
+  const { id } = req.params;
+  const people = loadLibraryPeople();
+  const index = people.findIndex(p => p.id === id);
+
+  if (index === -1) {
+    return res.status(404).json({ message: 'Persona no encontrada.' });
+  }
+
+  const removed = people.splice(index, 1)[0];
+  saveLibraryPeople(people);
+
+  await addHistory({
+    lab: 'library',
+    action: 'delete-person',
+    entityType: 'person',
+    entityId: id,
+    userEmail: req.session.user.email,
+    data: removed
+  });
+
+  res.json({ message: 'Persona eliminada', person: removed });
+});
+
+// =========================================================
 // API: PRÉSTAMOS BIBLIOTECA (PostgreSQL)
 // =========================================================
 
@@ -576,11 +714,47 @@ app.get('/api/library/loans', requireLogin, async (req, res) => {
 // Registrar préstamo
 app.post('/api/library/loan', requireLogin, canEditLibrary, async (req, res) => {
   const id = Date.now().toString();
-  const data = { ...req.body };
+  const raw = { ...req.body };
   const userEmail = req.session.user ? req.session.user.email : null;
   const loanDate = new Date();
 
   try {
+    // Normalización de campos
+    let codigo = raw.codigo || raw.bookCode || '';
+    let nombre = raw.nombre || raw.borrowerName || '';
+    let curso = raw.curso || raw.borrowerCourse || '';
+    let observaciones = raw.observaciones || raw.notes || '';
+
+    const personaId = raw.personaId || raw.personId || null;
+    let tipoPersona = raw.tipoPersona || raw.personType || null;
+
+    // Si viene personaId y faltan nombre/curso, completamos desde library_people.json
+    if (personaId && (!nombre || !curso || !tipoPersona)) {
+      const people = loadLibraryPeople();
+      const found = people.find(p => p.id === personaId);
+      if (found) {
+        if (!nombre) nombre = found.nombre || nombre;
+        if (!curso) curso = found.curso || curso;
+        if (!tipoPersona) tipoPersona = found.tipo || tipoPersona;
+      }
+    }
+
+    // Construimos el objeto de datos, manteniendo compatibilidad
+    const data = {
+      // Nuevos campos
+      codigo,
+      nombre,
+      curso,
+      observaciones,
+      personaId: personaId || undefined,
+      tipoPersona: tipoPersona || undefined,
+      // Alias para compatibilidad con código antiguo
+      bookCode: codigo,
+      borrowerName: nombre,
+      borrowerCourse: curso,
+      notes: observaciones
+    };
+
     await db.query(
       'INSERT INTO library_loans (id, data, user_email, loan_date, returned) VALUES ($1,$2::jsonb,$3,$4,$5)',
       [id, JSON.stringify(data), userEmail, loanDate, false]
@@ -628,10 +802,22 @@ app.put('/api/library/loan/:loanId', requireLogin, canEditLibrary, async (req, r
     const row = rows[0];
     const data = row.data || {};
 
-    if (bookCode !== undefined) data.bookCode = bookCode;
-    if (borrowerName !== undefined) data.borrowerName = borrowerName;
-    if (borrowerCourse !== undefined) data.borrowerCourse = borrowerCourse;
-    if (notes !== undefined) data.notes = notes;
+    if (bookCode !== undefined) {
+      data.bookCode = bookCode;
+      data.codigo = bookCode;
+    }
+    if (borrowerName !== undefined) {
+      data.borrowerName = borrowerName;
+      data.nombre = borrowerName;
+    }
+    if (borrowerCourse !== undefined) {
+      data.borrowerCourse = borrowerCourse;
+      data.curso = borrowerCourse;
+    }
+    if (notes !== undefined) {
+      data.notes = notes;
+      data.observaciones = notes;
+    }
 
     await db.query('UPDATE library_loans SET data = $1::jsonb WHERE id = $2', [
       JSON.stringify(data),
