@@ -490,7 +490,7 @@
                 <!-- NUEVO: selector de estudiante/funcionario -->
                 <label>
                   Estudiante / Funcionario
-                  <select name="personaId" id="loanPersonSelect">
+                  <select name="personaId" id="loanPersonaSelect">
                     <option value="">Escribe o selecciona una persona</option>
                     <!-- library.js llenará las opciones dinámicamente -->
                   </select>
@@ -504,6 +504,10 @@
                   Curso / Funcionario
                   <input type="text" name="curso" id="loanCurso" />
                 </label>
+
+                <!-- NUEVO: tipo persona (estudiante/funcionario) para el backend (oculto) -->
+                <input type="hidden" name="tipoPersona" id="loanTipoPersona" />
+
                 <label>
                   Observaciones
                   <input type="text" name="observaciones" />
@@ -606,6 +610,70 @@
             </table>
           </div>
         </div>
+
+        <!-- NUEVO: Panel de administración de estudiantes y funcionarios -->
+        <div class="panel-grid">
+          <div class="panel-block">
+            <h3>Personas registradas (Estudiantes / Funcionarios)</h3>
+            <form id="peopleForm">
+              <div class="form-grid">
+                <label>
+                  ID
+                  <input type="text" name="id" placeholder="Ej: STU-001, FUNC-001" />
+                </label>
+                <label>
+                  Nombre completo
+                  <input type="text" name="nombre" required />
+                </label>
+                <label>
+                  Tipo
+                  <select name="tipo" required>
+                    <option value="estudiante">Estudiante</option>
+                    <option value="funcionario">Funcionario</option>
+                  </select>
+                </label>
+                <label>
+                  Curso / Cargo
+                  <input type="text" name="curso" placeholder="Ej: 7°A, Inspectoría" />
+                </label>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn-secondary" id="peopleFormSubmit">
+                  Guardar persona
+                </button>
+                <button
+                  type="button"
+                  class="btn-ghost"
+                  id="peopleFormCancel"
+                  style="display: none;"
+                >
+                  Cancelar edición
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div class="panel-block">
+            <h3>Listado de personas</h3>
+            <div class="table-wrapper">
+              <table id="peopleTable" class="inventory-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Tipo</th>
+                    <th>Curso / Cargo</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- library.js llenará aquí -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
       </section>
 
       <!-- HISTORIAL -->
