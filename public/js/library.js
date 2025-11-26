@@ -24,7 +24,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const loansFilterDateTo = document.getElementById('loansFilterDateTo');
 
   // NUEVO: referencias para personas de biblioteca
-  const loanPersonaSelect = document.getElementById('loanPersonaSelect');
+  // (Ajustado para coincidir con index.html: id="loanPersonSelect")
+  const loanPersonSelect = document.getElementById('loanPersonSelect');
   const loanTipoPersonaInput = document.getElementById('loanTipoPersona');
 
   const peopleForm = document.getElementById('peopleForm');
@@ -295,7 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const mode = loansFilterMode ? loansFilterMode.value : 'both';
     const text = loansSearchInput ? loansSearchInput.value.trim().toLowerCase() : '';
 
-    // Buscador simple (ID, código, nombre, curso, observaciones)
+    // Buscador simple (ID, código, nombre, curso, observaciones, personaId)
     if (text && (mode === 'simple' || mode === 'both' || !loansFilterMode)) {
       loans = loans.filter(loan => {
         const codigo = loan.codigo || loan.bookCode || '';
@@ -303,8 +304,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const curso = loan.curso || loan.borrowerCourse || '';
         const obs = loan.observaciones || loan.notes || '';
         const id = loan.id || '';
+        const personaId = loan.personaId || loan.personId || '';
 
-        return [id, codigo, nombre, curso, obs].some(v =>
+        return [id, codigo, nombre, curso, obs, personaId].some(v =>
           v && String(v).toLowerCase().includes(text)
         );
       });
@@ -501,7 +503,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         loanForm.reset();
         // Si hay selector de persona y campo tipo, los limpiamos también
-        if (loanPersonaSelect) loanPersonaSelect.value = '';
+        if (loanPersonSelect) loanPersonSelect.value = '';
         if (loanTipoPersonaInput) loanTipoPersonaInput.value = '';
       } catch (err) {
         console.error('Error al registrar préstamo:', err);
@@ -548,7 +550,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function loadLibraryPeople() {
     // Si no hay nada en la interfaz relacionado, no hacemos nada
-    if (!peopleTableBody && !loanPersonaSelect) return;
+    if (!peopleTableBody && !loanPersonSelect) return;
 
     try {
       const resp = await apiFetch('/api/library/people');
@@ -566,16 +568,16 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function fillLoanPersonaSelect() {
-    if (!loanPersonaSelect) return;
+    if (!loanPersonSelect) return;
 
-    loanPersonaSelect.innerHTML = '<option value="">-- Seleccionar desde lista --</option>';
+    loanPersonSelect.innerHTML = '<option value="">-- Seleccionar desde lista --</option>';
 
     libraryPeople.forEach(p => {
       const opt = document.createElement('option');
       opt.value = p.id;
       const etiquetaCurso = p.curso ? ` – ${p.curso}` : '';
       opt.textContent = `${p.nombre}${etiquetaCurso}`;
-      loanPersonaSelect.appendChild(opt);
+      loanPersonSelect.appendChild(opt);
     });
   }
 
@@ -725,9 +727,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  if (loanPersonaSelect && loanForm) {
-    loanPersonaSelect.addEventListener('change', () => {
-      const personId = loanPersonaSelect.value;
+  if (loanPersonSelect && loanForm) {
+    loanPersonSelect.addEventListener('change', () => {
+      const personId = loanPersonSelect.value;
       if (!personId) {
         if (loanTipoPersonaInput) loanTipoPersonaInput.value = '';
         return;
