@@ -1,15 +1,26 @@
 // /public/js/library.js
+// ===============================
+// Biblioteca – Inventario + Préstamos + Personas
+// Actualizado: estilos futuristas, filtros avanzados, select de personas,
+// mejoras de UX, exportación (CSV / impresión a PDF vía print), alertas y
+// compatibilidad con tu backend actual.
+// ===============================
+
 document.addEventListener('DOMContentLoaded', () => {
+  // ------------------ Referencias base ------------------
   const libraryForm = document.getElementById('libraryForm');
   const libraryTableBody = document.querySelector('#libraryTable tbody');
 
   const loanForm = document.getElementById('loanForm');
   const returnForm = document.getElementById('returnForm');
-  const loansTableBody = document.querySelector('#loansTable tbody');
+  // Nota: en tu HTML la tabla se llama "loanTable", pero aquí soportamos ambos ids
+  const loansTableBody =
+    document.querySelector('#loansTable tbody') ||
+    document.querySelector('#loanTable tbody');
 
   const overdueBanner = document.getElementById('libraryOverdueBanner');
 
-  // NUEVO: referencias para buscador y filtros avanzados (si existen en el HTML)
+  // ------------------ Filtros inventario ------------------
   const librarySearchInput = document.getElementById('librarySearch');
   const libraryFilterMode = document.getElementById('libraryFilterMode');
   const libraryFilterCategoria = document.getElementById('libraryFilterCategoria');
@@ -17,14 +28,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const libraryFilterYearTo = document.getElementById('libraryFilterYearTo');
   const libraryFilterHasPhoto = document.getElementById('libraryFilterHasPhoto');
 
+  // ------------------ Filtros préstamos ------------------
   const loansSearchInput = document.getElementById('loansSearch');
   const loansFilterMode = document.getElementById('loansFilterMode');
   const loansFilterReturned = document.getElementById('loansFilterReturned');
   const loansFilterDateFrom = document.getElementById('loansFilterDateFrom');
   const loansFilterDateTo = document.getElementById('loansFilterDateTo');
 
-  // NUEVO: referencias para personas de biblioteca
-  // Debe coincidir con index.html: id="loanPersonSelect"
+  // ------------------ Personas (estudiantes/func.) ------------------
+  // En la UI: <select id="loanPersonSelect"> para auto-completar préstamo
   const loanPersonSelect = document.getElementById('loanPersonSelect');
   const loanTipoPersonaInput = document.getElementById('loanTipoPersona');
 
@@ -33,37 +45,83 @@ document.addEventListener('DOMContentLoaded', () => {
   const peopleFormCancel = document.getElementById('peopleFormCancel');
   const peopleTableBody = document.querySelector('#peopleTable tbody');
 
-  // Helper unificado para API
+  // ------------------ Botones de reporte (si existen en tu HTML) ------------------
+  const btnExportLibraryCSV = document.getElementById('btnExportLibraryCSV');
+  const btnExportLoansCSV = document.getElementById('btnExportLoansCSV');
+  const btnPrintLibraryReport = document.getElementById('btnPrintLibraryReport');
+  const btnPrintLoansReport = document.getElementById('btnPrintLoansReport');
+
+  // ------------------ Helper de API (con credenciales) ------------------
   const apiFetch =
     window.guardedFetch ||
-    ((url, options = {}) =>
-      fetch(url, { credentials: 'include', ...options }));
+    ((url, options = {}) => fetch(url, { credentials: 'include', ...options }));
 
-  if (!libraryForm || !libraryTableBody) {
-    // No estamos en la pestaña de biblioteca
-    return;
-  }
+  // Si no estamos en la pantalla de biblioteca, salir silenciosamente
+  if (!libraryForm || !libraryTableBody) return;
 
-  // ================== ESTADO LOCAL ==================
+  // ================== Estado local ==================
   let libraryItems = [];
   let libraryLoans = [];
-  // NUEVO: personas de biblioteca
   let libraryPeople = [];
   let editingPersonId = null;
 
-  // ==================================================
-  // ============= INVENTARIO DE BIBLIOTECA ===========
-  // ==================================================
+  // ================== Utils ==================
+  function formatDate(dateValue) {
+    if (!dateValue) return '';
+    const d = new Date(dateValue);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleString('es-CL');
+  }
 
+  function debounce(fn, wait = 250) {
+    let t;
+    return (...args) => {
+      clearTimeout(t);
+      t = setTimeout(() => fn(...args), wait);
+    };
+  }
+
+  function safeInnerText(value) {
+    return value == null ? '' : String(value);
+  }
+
+  function imageFallback(imgEl) {
+    imgEl.onerror = null;
+    imgEl.src = '/img/placeholder.png'; // asegúrate de tener esta imagen en /public/img
+    imgEl.alt = 'Sin imagen';
+  }
+
+  // Registrar en historial (si backend lo soporta)
+  async function logHistory(entry) {
+    try {
+      await apiFetch('/api/history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lab: 'library',
+          action: entry.action,
+          entityType: entry.type,
+          entityId: entry.entityId,
+          data: { detail: entry.detail }
+        })
+      });
+    } catch (err) {
+      // No interrumpimos la UX si falla
+      console.warn('No se pudo registrar historial (library):', err);
+    }
+  }
+
+  // ================== INVENTARIO ==================
   async function loadLibraryItems() {
     try {
       const resp = await apiFetch('/api/library/items');
       if (!resp.ok) {
-        console.error('Error al cargar libros:', resp.status);
+        console.error('Error al cargar inventario de biblioteca:', resp.status);
         return;
       }
       const items = await resp.json();
       libraryItems = Array.isArray(items) ? items : [];
+      restoreInventoryFiltersFromStorage();
       renderLibraryTable();
     } catch (err) {
       console.error('Error cargando libros:', err);
@@ -77,18 +135,24 @@ document.addEventListener('DOMContentLoaded', () => {
     filtered.forEach(item => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td>${item.id}</td>
-        <td>${item.codigo || ''}</td>
-        <td>${item.titulo || ''}</td>
-        <td>${item.autor || ''}</td>
-        <td>${item.anio || ''}</td>
-        <td>${item.serie || ''}</td>
-        <td>${item.categoria || ''}</td>
-        <td>${item.cantidad || ''}</td>
-        <td>${item.descripcion || ''}</td>
-        <td>${item.photo ? `<img src="${item.photo}" width="50" alt="Foto libro">` : ''}</td>
+        <td>${safeInnerText(item.id)}</td>
+        <td>${safeInnerText(item.codigo)}</td>
+        <td>${safeInnerText(item.titulo)}</td>
+        <td>${safeInnerText(item.autor)}</td>
+        <td>${safeInnerText(item.anio)}</td>
+        <td>${safeInnerText(item.serie)}</td>
+        <td>${safeInnerText(item.categoria)}</td>
+        <td>${safeInnerText(item.cantidad)}</td>
+        <td>${safeInnerText(item.descripcion)}</td>
         <td>
-          <button type="button" class="delete-button" data-id="${item.id}">Eliminar</button>
+          ${
+            item.photo
+              ? `<img src="${item.photo}" width="50" alt="Foto libro" onerror="(${imageFallback.toString()})(this)">`
+              : ''
+          }
+        </td>
+        <td>
+          <button type="button" class="delete-button btn-ghost" data-id="${item.id}">Eliminar</button>
         </td>
       `;
 
@@ -96,7 +160,6 @@ document.addEventListener('DOMContentLoaded', () => {
       deleteBtn.addEventListener('click', async () => {
         if (!confirm('¿Seguro que deseas eliminar este libro del inventario?')) return;
 
-        // motivo obligatorio al eliminar (para historial y reportes)
         const motivo = prompt(
           'Indica el motivo de eliminación (por ejemplo: "daño", "pérdida", "traslado", etc.):'
         );
@@ -108,9 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
           const resp = await apiFetch(`/api/library/items/${item.id}`, {
             method: 'DELETE',
-            headers: {
-              'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ motivo: motivo.trim() })
           });
 
@@ -120,9 +181,15 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
           }
 
-          // Eliminamos del arreglo local y re-renderizamos con filtros
           libraryItems = libraryItems.filter(it => it.id !== item.id);
           renderLibraryTable();
+
+          await logHistory({
+            action: 'delete',
+            type: 'item',
+            entityId: item.id,
+            detail: `Eliminado libro/material "${item.titulo || ''}" (código ${item.codigo || ''}) – Motivo: ${motivo}`
+          });
         } catch (err) {
           console.error('Error al eliminar libro:', err);
           alert('Ocurrió un error al eliminar el libro.');
@@ -133,14 +200,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Función de filtrado combinando buscador + filtros avanzados
   function getFilteredLibraryItems() {
     let items = [...libraryItems];
 
     const mode = libraryFilterMode ? libraryFilterMode.value : 'both';
     const text = librarySearchInput ? librarySearchInput.value.trim().toLowerCase() : '';
 
-    // Filtro de texto (modo simple o both)
     if (text && (mode === 'simple' || mode === 'both' || !libraryFilterMode)) {
       items = items.filter(item => {
         const values = [
@@ -151,13 +216,10 @@ document.addEventListener('DOMContentLoaded', () => {
           item.categoria,
           item.descripcion
         ];
-        return values.some(
-          v => v && String(v).toLowerCase().includes(text)
-        );
+        return values.some(v => v && String(v).toLowerCase().includes(text));
       });
     }
 
-    // Filtros avanzados
     if (mode === 'advanced' || mode === 'both' || !libraryFilterMode) {
       const cat = libraryFilterCategoria ? libraryFilterCategoria.value : 'all';
       const yearFrom = libraryFilterYearFrom ? parseInt(libraryFilterYearFrom.value, 10) : NaN;
@@ -165,9 +227,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const mustHavePhoto = libraryFilterHasPhoto ? libraryFilterHasPhoto.checked : false;
 
       if (cat && cat !== 'all') {
-        items = items.filter(it => (it.categoria || '').toLowerCase() === cat.toLowerCase());
+        items = items.filter(
+          it => (it.categoria || '').toLowerCase() === String(cat).toLowerCase()
+        );
       }
-
       if (!Number.isNaN(yearFrom)) {
         items = items.filter(it => {
           const y = parseInt(it.anio, 10);
@@ -175,7 +238,6 @@ document.addEventListener('DOMContentLoaded', () => {
           return y >= yearFrom;
         });
       }
-
       if (!Number.isNaN(yearTo)) {
         items = items.filter(it => {
           const y = parseInt(it.anio, 10);
@@ -183,7 +245,6 @@ document.addEventListener('DOMContentLoaded', () => {
           return y <= yearTo;
         });
       }
-
       if (mustHavePhoto) {
         items = items.filter(it => !!it.photo);
       }
@@ -192,47 +253,37 @@ document.addEventListener('DOMContentLoaded', () => {
     return items;
   }
 
-  // Listeners para buscador y filtros de inventario
-  function attachLibraryFiltersListeners() {
-    if (librarySearchInput) {
-      librarySearchInput.addEventListener('input', () => {
-        renderLibraryTable();
-      });
-    }
-    if (libraryFilterMode) {
-      libraryFilterMode.addEventListener('change', () => {
-        // Mostrar/ocultar paneles según modo (si usas clases en el HTML)
-        const simpleGroup = document.querySelector('[data-library-filters="simple"]');
-        const advancedGroup = document.querySelector('[data-library-filters="advanced"]');
-        const mode = libraryFilterMode.value;
-
-        if (simpleGroup) {
-          simpleGroup.style.display =
-            mode === 'simple' || mode === 'both' ? 'flex' : 'none';
-        }
-        if (advancedGroup) {
-          advancedGroup.style.display =
-            mode === 'advanced' || mode === 'both' ? 'flex' : 'none';
-        }
-
-        renderLibraryTable();
-      });
-    }
-    if (libraryFilterCategoria) {
-      libraryFilterCategoria.addEventListener('change', renderLibraryTable);
-    }
-    if (libraryFilterYearFrom) {
-      libraryFilterYearFrom.addEventListener('input', renderLibraryTable);
-    }
-    if (libraryFilterYearTo) {
-      libraryFilterYearTo.addEventListener('input', renderLibraryTable);
-    }
-    if (libraryFilterHasPhoto) {
-      libraryFilterHasPhoto.addEventListener('change', renderLibraryTable);
-    }
+  // Persistencia de filtros de inventario
+  function persistInventoryFiltersToStorage() {
+    try {
+      const state = {
+        text: librarySearchInput ? librarySearchInput.value : '',
+        mode: libraryFilterMode ? libraryFilterMode.value : 'both',
+        categoria: libraryFilterCategoria ? libraryFilterCategoria.value : 'all',
+        from: libraryFilterYearFrom ? libraryFilterYearFrom.value : '',
+        to: libraryFilterYearTo ? libraryFilterYearTo.value : '',
+        hasPhoto: libraryFilterHasPhoto ? !!libraryFilterHasPhoto.checked : false
+      };
+      localStorage.setItem('lib_filters', JSON.stringify(state));
+    } catch (_) {}
   }
 
-  // Envío del formulario de libros
+  function restoreInventoryFiltersFromStorage() {
+    try {
+      const raw = localStorage.getItem('lib_filters');
+      if (!raw) return;
+      const state = JSON.parse(raw);
+
+      if (librarySearchInput) librarySearchInput.value = state.text || '';
+      if (libraryFilterMode) libraryFilterMode.value = state.mode || 'both';
+      if (libraryFilterCategoria) libraryFilterCategoria.value = state.categoria || 'all';
+      if (libraryFilterYearFrom) libraryFilterYearFrom.value = state.from || '';
+      if (libraryFilterYearTo) libraryFilterYearTo.value = state.to || '';
+      if (libraryFilterHasPhoto) libraryFilterHasPhoto.checked = !!state.hasPhoto;
+    } catch (_) {}
+  }
+
+  // Envío del formulario de alta de libros/material
   libraryForm.addEventListener('submit', async e => {
     e.preventDefault();
 
@@ -246,7 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (!resp.ok) {
         const data = await resp.json().catch(() => ({}));
-        alert(data.message || 'No se pudo guardar el libro.');
+        alert(data.message || 'No se pudo guardar el libro/material.');
         return;
       }
 
@@ -254,19 +305,23 @@ document.addEventListener('DOMContentLoaded', () => {
       if (result && result.item) {
         libraryItems.push(result.item);
         renderLibraryTable();
+
+        await logHistory({
+          action: 'create',
+          type: 'item',
+          entityId: result.item.id,
+          detail: `Ingresado libro/material "${result.item.titulo || ''}" (código ${result.item.codigo || ''})`
+        });
       }
 
       libraryForm.reset();
     } catch (err) {
-      console.error('Error al guardar libro:', err);
-      alert('Ocurrió un error al guardar el libro.');
+      console.error('Error al guardar libro/material:', err);
+      alert('Ocurrió un error al guardar.');
     }
   });
 
-  // ==================================================
-  // ============= PRÉSTAMOS DE BIBLIOTECA ============
-  // ==================================================
-
+  // ================== PRÉSTAMOS ==================
   async function loadLoans() {
     if (!loansTableBody) return;
     try {
@@ -277,17 +332,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       const loans = await resp.json();
       libraryLoans = Array.isArray(loans) ? loans : [];
+      restoreLoanFiltersFromStorage();
       renderLoansTable();
     } catch (err) {
       console.error('Error cargando préstamos:', err);
     }
-  }
-
-  function formatDate(dateValue) {
-    if (!dateValue) return '';
-    const d = new Date(dateValue);
-    if (Number.isNaN(d.getTime())) return '';
-    return d.toLocaleString('es-CL');
   }
 
   function getFilteredLoans() {
@@ -296,7 +345,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const mode = loansFilterMode ? loansFilterMode.value : 'both';
     const text = loansSearchInput ? loansSearchInput.value.trim().toLowerCase() : '';
 
-    // Buscador simple (ID, código, nombre, curso, observaciones, personaId)
     if (text && (mode === 'simple' || mode === 'both' || !loansFilterMode)) {
       loans = loans.filter(loan => {
         const codigo = loan.codigo || loan.bookCode || '';
@@ -312,9 +360,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // Filtros avanzados
     if (mode === 'advanced' || mode === 'both' || !loansFilterMode) {
-      // Filtro por devuelto / no devuelto
       if (loansFilterReturned && loansFilterReturned.value !== 'all') {
         const val = loansFilterReturned.value;
         loans = loans.filter(loan => {
@@ -325,7 +371,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       }
 
-      // Filtro por fechas
       const fromStr = loansFilterDateFrom ? loansFilterDateFrom.value : '';
       const toStr = loansFilterDateTo ? loansFilterDateTo.value : '';
       const fromDate = fromStr ? new Date(fromStr + 'T00:00:00') : null;
@@ -362,19 +407,21 @@ document.addEventListener('DOMContentLoaded', () => {
       const observaciones = loan.observaciones || loan.notes || '';
 
       tr.innerHTML = `
-        <td>${loanId}</td>
-        <td>${codigo}</td>
-        <td>${nombre}</td>
-        <td>${curso}</td>
+        <td>${safeInnerText(loanId)}</td>
+        <td>${safeInnerText(codigo)}</td>
+        <td>${safeInnerText(nombre)}</td>
+        <td>${safeInnerText(curso)}</td>
         <td>${formatDate(loan.loanDate)}</td>
         <td>${loan.returned ? 'Sí' : 'No'}</td>
         <td>${formatDate(loan.returnDate)}</td>
-        <td>${observaciones}</td>
+        <td>${safeInnerText(observaciones)}</td>
         <td>
-          ${loan.returned
-            ? ''
-            : `<button type="button" class="return-button" data-id="${loanId}">Marcar devuelto</button>`}
-          <button type="button" class="delete-loan-button" data-id="${loanId}">Eliminar</button>
+          ${
+            loan.returned
+              ? ''
+              : `<button type="button" class="return-button btn-ghost" data-id="${loanId}">Marcar devuelto</button>`
+          }
+          <button type="button" class="delete-loan-button btn-ghost" data-id="${loanId}">Eliminar</button>
         </td>
       `;
 
@@ -393,6 +440,13 @@ document.addEventListener('DOMContentLoaded', () => {
               return;
             }
             await loadLoans();
+
+            await logHistory({
+              action: 'update',
+              type: 'loan',
+              entityId: loanId,
+              detail: `Préstamo ${loanId} marcado como devuelto`
+            });
           } catch (err) {
             console.error('Error al registrar devolución:', err);
             alert('Ocurrió un error al registrar la devolución.');
@@ -404,9 +458,8 @@ document.addEventListener('DOMContentLoaded', () => {
       deleteBtn.addEventListener('click', async () => {
         if (!confirm('¿Seguro que deseas eliminar este préstamo del registro?')) return;
 
-        // Motivo de eliminación también para préstamos
         const motivo = prompt(
-          'Indica el motivo de eliminación del préstamo (por ejemplo: "error de registro", "anulado", etc.):'
+          'Indica el motivo de eliminación del préstamo (por ejemplo, "error de registro", "anulado", etc.):'
         );
         if (!motivo || !motivo.trim()) {
           alert('Debes indicar un motivo para poder eliminar el préstamo.');
@@ -416,9 +469,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
           const resp = await apiFetch(`/api/library/loan/${loanId}`, {
             method: 'DELETE',
-            headers: {
-              'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ motivo: motivo.trim() })
           });
 
@@ -430,6 +481,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
           libraryLoans = libraryLoans.filter(l => l.id !== loanId);
           renderLoansTable();
+
+          await logHistory({
+            action: 'delete',
+            type: 'loan',
+            entityId: loanId,
+            detail: `Préstamo ${loanId} eliminado – Motivo: ${motivo}`
+          });
         } catch (err) {
           console.error('Error al eliminar préstamo:', err);
           alert('Ocurrió un error al eliminar el préstamo.');
@@ -440,38 +498,32 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Listeners de filtros de préstamos
-  function attachLoansFiltersListeners() {
-    if (loansSearchInput) {
-      loansSearchInput.addEventListener('input', renderLoansTable);
-    }
-    if (loansFilterMode) {
-      loansFilterMode.addEventListener('change', () => {
-        const simpleGroup = document.querySelector('[data-loans-filters="simple"]');
-        const advancedGroup = document.querySelector('[data-loans-filters="advanced"]');
-        const mode = loansFilterMode.value;
+  // Persistencia de filtros de préstamos
+  function persistLoanFiltersToStorage() {
+    try {
+      const state = {
+        text: loansSearchInput ? loansSearchInput.value : '',
+        mode: loansFilterMode ? loansFilterMode.value : 'both',
+        returned: loansFilterReturned ? loansFilterReturned.value : 'all',
+        from: loansFilterDateFrom ? loansFilterDateFrom.value : '',
+        to: loansFilterDateTo ? loansFilterDateTo.value : ''
+      };
+      localStorage.setItem('loan_filters', JSON.stringify(state));
+    } catch (_) {}
+  }
 
-        if (simpleGroup) {
-          simpleGroup.style.display =
-            mode === 'simple' || mode === 'both' ? 'flex' : 'none';
-        }
-        if (advancedGroup) {
-          advancedGroup.style.display =
-            mode === 'advanced' || mode === 'both' ? 'flex' : 'none';
-        }
+  function restoreLoanFiltersFromStorage() {
+    try {
+      const raw = localStorage.getItem('loan_filters');
+      if (!raw) return;
+      const state = JSON.parse(raw);
 
-        renderLoansTable();
-      });
-    }
-    if (loansFilterReturned) {
-      loansFilterReturned.addEventListener('change', renderLoansTable);
-    }
-    if (loansFilterDateFrom) {
-      loansFilterDateFrom.addEventListener('input', renderLoansTable);
-    }
-    if (loansFilterDateTo) {
-      loansFilterDateTo.addEventListener('input', renderLoansTable);
-    }
+      if (loansSearchInput) loansSearchInput.value = state.text || '';
+      if (loansFilterMode) loansFilterMode.value = state.mode || 'both';
+      if (loansFilterReturned) loansFilterReturned.value = state.returned || 'all';
+      if (loansFilterDateFrom) loansFilterDateFrom.value = state.from || '';
+      if (loansFilterDateTo) loansFilterDateTo.value = state.to || '';
+    } catch (_) {}
   }
 
   // Formularios de préstamos
@@ -499,10 +551,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (result && result.loan) {
           libraryLoans.unshift(result.loan);
           renderLoansTable();
+
+          await logHistory({
+            action: 'create',
+            type: 'loan',
+            entityId: result.loan.id,
+            detail: `Préstamo creado (ID ${result.loan.id}) para ${result.loan.nombre || result.loan.borrowerName || ''}`
+          });
         }
 
         loanForm.reset();
-        // Si hay selector de persona y campo tipo, los limpiamos también
         if (loanPersonSelect) loanPersonSelect.value = '';
         if (loanTipoPersonaInput) loanTipoPersonaInput.value = '';
       } catch (err) {
@@ -536,6 +594,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         await loadLoans();
+
+        await logHistory({
+          action: 'update',
+          type: 'loan',
+          entityId: loanId,
+          detail: `Préstamo ${loanId} marcado como devuelto (formulario rápido)`
+        });
+
         returnForm.reset();
       } catch (err) {
         console.error('Error al registrar devolución:', err);
@@ -544,12 +610,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ==================================================
-  // ==== PERSONAS BIBLIOTECA (estudiantes/func.) =====
-  // ==================================================
-
+  // ================== PERSONAS (listado) ==================
   async function loadLibraryPeople() {
-    // Si no hay nada en la interfaz relacionado, no hacemos nada
     if (!peopleTableBody && !loanPersonSelect) return;
 
     try {
@@ -588,13 +650,13 @@ document.addEventListener('DOMContentLoaded', () => {
     libraryPeople.forEach(person => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td>${person.id}</td>
-        <td>${person.nombre || ''}</td>
-        <td>${person.tipo || ''}</td>
-        <td>${person.curso || ''}</td>
+        <td>${safeInnerText(person.id)}</td>
+        <td>${safeInnerText(person.nombre)}</td>
+        <td>${safeInnerText(person.tipo)}</td>
+        <td>${safeInnerText(person.curso)}</td>
         <td>
-          <button type="button" class="edit-person-button" data-id="${person.id}">Editar</button>
-          <button type="button" class="delete-person-button" data-id="${person.id}">Eliminar</button>
+          <button type="button" class="edit-person-button btn-ghost" data-id="${person.id}">Editar</button>
+          <button type="button" class="delete-person-button btn-ghost" data-id="${person.id}">Eliminar</button>
         </td>
       `;
 
@@ -607,7 +669,6 @@ document.addEventListener('DOMContentLoaded', () => {
           if (!p) return;
 
           editingPersonId = p.id;
-          // Rellenar formulario
           const idInput = peopleForm.elements['id'];
           const nombreInput = peopleForm.elements['nombre'];
           const tipoSelect = peopleForm.elements['tipo'];
@@ -627,9 +688,8 @@ document.addEventListener('DOMContentLoaded', () => {
         deleteBtn.addEventListener('click', async () => {
           if (!confirm('¿Seguro que deseas eliminar esta persona del listado?')) return;
 
-          const motivo = prompt(
-            'Opcional: indica el motivo de eliminación (por ejemplo, "egresado", "baja", etc.):'
-          ) || '';
+          const motivo =
+            prompt('Opcional: indica el motivo de eliminación (por ejemplo, "egresado", "baja", etc.):') || '';
 
           try {
             const resp = await apiFetch(`/api/library/people/${encodeURIComponent(person.id)}`, {
@@ -645,6 +705,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             await loadLibraryPeople();
+
+            await logHistory({
+              action: 'delete',
+              type: 'person',
+              entityId: person.id,
+              detail: `Persona "${person.nombre || ''}" eliminada del listado – Motivo: ${motivo || '—'}`
+            });
           } catch (err) {
             console.error('Error al eliminar persona:', err);
             alert('Ocurrió un error al eliminar la persona.');
@@ -686,7 +753,6 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         let resp;
         if (editingPersonId) {
-          // Actualizar existente
           resp = await apiFetch(`/api/library/people/${encodeURIComponent(editingPersonId)}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -697,7 +763,6 @@ document.addEventListener('DOMContentLoaded', () => {
             })
           });
         } else {
-          // Crear nueva persona
           resp = await apiFetch('/api/library/people', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -713,6 +778,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         await loadLibraryPeople();
         resetPeopleForm();
+
+        await logHistory({
+          action: editingPersonId ? 'update' : 'create',
+          type: 'person',
+          entityId: payload.id || '(auto)',
+          detail: `${editingPersonId ? 'Actualizada' : 'Creada'} persona "${payload.nombre}"`
+        });
       } catch (err) {
         console.error('Error al guardar persona:', err);
         alert('Ocurrió un error al guardar la persona.');
@@ -741,22 +813,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const nombreInput = loanForm.elements['nombre'];
       const cursoInput = loanForm.elements['curso'];
 
-      if (nombreInput && !nombreInput.value) {
-        nombreInput.value = person.nombre || '';
-      }
-      if (cursoInput && !cursoInput.value) {
-        cursoInput.value = person.curso || '';
-      }
-      if (loanTipoPersonaInput) {
-        loanTipoPersonaInput.value = person.tipo || '';
-      }
+      if (nombreInput && !nombreInput.value) nombreInput.value = person.nombre || '';
+      if (cursoInput && !cursoInput.value) cursoInput.value = person.curso || '';
+      if (loanTipoPersonaInput) loanTipoPersonaInput.value = person.tipo || '';
     });
   }
 
-  // ==================================================
-  // ALERTA DE PRÉSTAMOS VENCIDOS (> 7 DÍAS)
-  // ==================================================
-
+  // ================== Alertas (vencidos) ==================
   async function checkOverdueLoans() {
     if (!overdueBanner) return;
 
@@ -770,12 +833,9 @@ document.addEventListener('DOMContentLoaded', () => {
           `⚠️ Hay ${overdue.length} préstamo(s) con más de 7 días sin devolución. Revisa el listado.`;
         overdueBanner.style.display = 'block';
 
-        // Voz: intentamos usar innovaSpeak, o speak si existiera
         const speakFn = window.innovaSpeak || window.speak;
         if (typeof speakFn === 'function') {
-          speakFn(
-            `Atención. Hay ${overdue.length} préstamos con más de siete días sin devolución en la biblioteca.`
-          );
+          speakFn(`Atención. Hay ${overdue.length} préstamos con más de siete días sin devolución en la biblioteca.`);
         }
       } else {
         overdueBanner.style.display = 'none';
@@ -786,12 +846,289 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // ================== INICIALIZACIÓN ==================
+  // ================== Exportaciones (CSV / Print) ==================
+  function toCSVRow(values) {
+    return values
+      .map(v => {
+        const s = v == null ? '' : String(v);
+        if (s.includes('"') || s.includes(',') || s.includes('\n')) {
+          return `"${s.replace(/"/g, '""')}"`;
+        }
+        return s;
+      })
+      .join(',');
+  }
+
+  function downloadCSV(filename, headers, rows) {
+    const csv = [toCSVRow(headers), ...rows.map(r => toCSVRow(r))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function exportInventoryCSV() {
+    const data = getFilteredLibraryItems();
+    const headers = [
+      'ID',
+      'Código',
+      'Título/Material',
+      'Autor/Fabricante',
+      'Año',
+      'Serie',
+      'Categoría',
+      'Cantidad',
+      'Descripción',
+      'Foto'
+    ];
+    const rows = data.map(it => [
+      it.id,
+      it.codigo || '',
+      it.titulo || '',
+      it.autor || '',
+      it.anio || '',
+      it.serie || '',
+      it.categoria || '',
+      it.cantidad || '',
+      (it.descripcion || '').replace(/\s+/g, ' ').trim(),
+      it.photo || ''
+    ]);
+    downloadCSV(`biblioteca_inventario_${new Date().toISOString().slice(0,10)}.csv`, headers, rows);
+  }
+
+  function exportLoansCSV() {
+    const data = getFilteredLoans();
+    const headers = [
+      'ID Préstamo',
+      'Código',
+      'Nombre',
+      'Curso',
+      'Fecha Préstamo',
+      'Devuelto',
+      'Fecha Devolución',
+      'Observaciones'
+    ];
+    const rows = data.map(l => [
+      l.id || '',
+      l.codigo || l.bookCode || '',
+      l.nombre || l.borrowerName || '',
+      l.curso || l.borrowerCourse || '',
+      formatDate(l.loanDate),
+      l.returned ? 'Sí' : 'No',
+      formatDate(l.returnDate),
+      (l.observaciones || l.notes || '').replace(/\s+/g, ' ').trim()
+    ]);
+    downloadCSV(`biblioteca_prestamos_${new Date().toISOString().slice(0,10)}.csv`, headers, rows);
+  }
+
+  function printHTMLReport({ title, subtitle, columns, rows }) {
+    const win = window.open('', '_blank');
+    const styles = `
+      <style>
+        body { font-family: Arial, system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', sans-serif; margin: 24px; }
+        h1 { margin: 0 0 8px; }
+        h2 { margin: 0 0 16px; color: #666; font-weight: 500; }
+        table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+        th, td { border: 1px solid #ddd; padding: 8px 10px; font-size: 12px; vertical-align: top; }
+        th { background: #0b1226; color: #fff; text-align: left; }
+        tr:nth-child(even) { background: #f7f8fb; }
+        .meta { margin-top: 6px; color: #777; font-size: 12px; }
+      </style>
+    `;
+    const tableHead = `<tr>${columns.map(c => `<th>${c}</th>`).join('')}</tr>`;
+    const tableRows = rows.map(r => `<tr>${r.map(c => `<td>${safeInnerText(c)}</td>`).join('')}</tr>`).join('');
+
+    const html = `
+      <!doctype html>
+      <html>
+      <head><meta charset="utf-8">${styles}<title>${title}</title></head>
+      <body>
+        <h1>${title}</h1>
+        <h2>${subtitle}</h2>
+        <div class="meta">Generado: ${formatDate(new Date())}</div>
+        <table>
+          <thead>${tableHead}</thead>
+          <tbody>${tableRows}</tbody>
+        </table>
+        <script>window.onload = () => window.print();<\/script>
+      </body>
+      </html>
+    `;
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+  }
+
+  function printInventoryReport() {
+    const data = getFilteredLibraryItems();
+    const columns = [
+      'ID',
+      'Código',
+      'Título/Material',
+      'Autor/Fabricante',
+      'Año',
+      'Serie',
+      'Categoría',
+      'Cantidad',
+      'Descripción'
+    ];
+    const rows = data.map(it => [
+      it.id,
+      it.codigo || '',
+      it.titulo || '',
+      it.autor || '',
+      it.anio || '',
+      it.serie || '',
+      it.categoria || '',
+      it.cantidad || '',
+      (it.descripcion || '').replace(/\s+/g, ' ').trim()
+    ]);
+    printHTMLReport({
+      title: 'Informe de Inventario – Biblioteca',
+      subtitle: 'Listado filtrado',
+      columns,
+      rows
+    });
+  }
+
+  function printLoansReport() {
+    const data = getFilteredLoans();
+    const columns = [
+      'ID Préstamo',
+      'Código',
+      'Nombre',
+      'Curso',
+      'Fecha Préstamo',
+      'Devuelto',
+      'Fecha Devolución',
+      'Observaciones'
+    ];
+    const rows = data.map(l => [
+      l.id || '',
+      l.codigo || l.bookCode || '',
+      l.nombre || l.borrowerName || '',
+      l.curso || l.borrowerCourse || '',
+      formatDate(l.loanDate),
+      l.returned ? 'Sí' : 'No',
+      formatDate(l.returnDate),
+      (l.observaciones || l.notes || '').replace(/\s+/g, ' ').trim()
+    ]);
+    printHTMLReport({
+      title: 'Informe de Préstamos – Biblioteca',
+      subtitle: 'Listado filtrado',
+      columns,
+      rows
+    });
+  }
+
+  // Enganchar botones de reporte si existen en el DOM
+  if (btnExportLibraryCSV) btnExportLibraryCSV.addEventListener('click', exportInventoryCSV);
+  if (btnExportLoansCSV) btnExportLoansCSV.addEventListener('click', exportLoansCSV);
+  if (btnPrintLibraryReport) btnPrintLibraryReport.addEventListener('click', printInventoryReport);
+  if (btnPrintLoansReport) btnPrintLoansReport.addEventListener('click', printLoansReport);
+
+  // ================== Listeners de filtros ==================
+  function attachLibraryFiltersListeners() {
+    if (librarySearchInput) {
+      librarySearchInput.addEventListener('input', debounce(() => {
+        persistInventoryFiltersToStorage();
+        renderLibraryTable();
+      }, 200));
+    }
+    if (libraryFilterMode) {
+      libraryFilterMode.addEventListener('change', () => {
+        const simpleGroup = document.querySelector('[data-library-filters="simple"]');
+        const advancedGroup = document.querySelector('[data-library-filters="advanced"]');
+        const mode = libraryFilterMode.value;
+
+        if (simpleGroup) {
+          simpleGroup.style.display = mode === 'simple' || mode === 'both' ? 'flex' : 'none';
+        }
+        if (advancedGroup) {
+          advancedGroup.style.display = mode === 'advanced' || mode === 'both' ? 'flex' : 'none';
+        }
+
+        persistInventoryFiltersToStorage();
+        renderLibraryTable();
+      });
+    }
+    if (libraryFilterCategoria) {
+      libraryFilterCategoria.addEventListener('change', () => {
+        persistInventoryFiltersToStorage();
+        renderLibraryTable();
+      });
+    }
+    if (libraryFilterYearFrom) {
+      libraryFilterYearFrom.addEventListener('input', () => {
+        persistInventoryFiltersToStorage();
+        renderLibraryTable();
+      });
+    }
+    if (libraryFilterYearTo) {
+      libraryFilterYearTo.addEventListener('input', () => {
+        persistInventoryFiltersToStorage();
+        renderLibraryTable();
+      });
+    }
+    if (libraryFilterHasPhoto) {
+      libraryFilterHasPhoto.addEventListener('change', () => {
+        persistInventoryFiltersToStorage();
+        renderLibraryTable();
+      });
+    }
+  }
+
+  function attachLoansFiltersListeners() {
+    if (loansSearchInput) {
+      loansSearchInput.addEventListener('input', debounce(() => {
+        persistLoanFiltersToStorage();
+        renderLoansTable();
+      }, 200));
+    }
+    if (loansFilterMode) {
+      loansFilterMode.addEventListener('change', () => {
+        const simpleGroup = document.querySelector('[data-loans-filters="simple"]');
+        const advancedGroup = document.querySelector('[data-loans-filters="advanced"]');
+        const mode = loansFilterMode.value;
+
+        if (simpleGroup) {
+          simpleGroup.style.display = mode === 'simple' || mode === 'both' ? 'flex' : 'none';
+        }
+        if (advancedGroup) {
+          advancedGroup.style.display = mode === 'advanced' || mode === 'both' ? 'flex' : 'none';
+        }
+
+        persistLoanFiltersToStorage();
+        renderLoansTable();
+      });
+    }
+    if (loansFilterReturned) {
+      loansFilterReturned.addEventListener('change', () => {
+        persistLoanFiltersToStorage();
+        renderLoansTable();
+      });
+    }
+    if (loansFilterDateFrom) {
+      loansFilterDateFrom.addEventListener('input', () => {
+        persistLoanFiltersToStorage();
+        renderLoansTable();
+      });
+    }
+    if (loansFilterDateTo) {
+      loansFilterDateTo.addEventListener('input', () => {
+        persistLoanFiltersToStorage();
+        renderLoansTable();
+      });
+    }
+  }
+
+  // ================== Inicialización ==================
   loadLibraryItems();
   loadLoans();
   checkOverdueLoans();
   attachLibraryFiltersListeners();
   attachLoansFiltersListeners();
-  // NUEVO: cargar personas para combo y panel
   loadLibraryPeople();
 });
