@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -107,16 +107,29 @@
       <section class="loans-section">
         <h2>Registrar Préstamo de Material</h2>
         <form id="scienceLoanForm">
-          <label>ID del Material:</label>
-          <input type="text" id="scienceLoanItemId" name="itemId" required>
+          <label>Código del Material:</label>
+          <input type="text" id="scienceLoanCodigo" name="codigo" required>
 
           <label>Solicitante:</label>
-          <select id="scienceLoanUser" name="user" class="form-control persona-select" data-curso-target="scienceLoanCurso" required>
+          <select
+            id="scienceLoanUser"
+            name="solicitante"
+            class="form-control persona-select"
+            data-curso-target="scienceLoanCurso"
+            required
+          >
             <option selected disabled>Seleccione una persona</option>
           </select>
 
           <label>Curso:</label>
-          <input type="text" id="scienceLoanCurso" name="curso" class="form-control" readonly required>
+          <input
+            type="text"
+            id="scienceLoanCurso"
+            name="curso"
+            class="form-control"
+            readonly
+            required
+          >
 
           <button type="submit" class="button">Registrar Préstamo</button>
         </form>
@@ -126,7 +139,7 @@
           <thead>
             <tr>
               <th>ID</th>
-              <th>ID Material</th>
+              <th>Código Material</th>
               <th>Solicitante</th>
               <th>Curso</th>
               <th>Fecha Préstamo</th>
