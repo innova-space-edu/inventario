@@ -10,6 +10,8 @@
     <!-- Fondo espacial + glass UI -->
     <link rel="stylesheet" href="/css/app.css">
 
+    <!-- JS utilitarios -->
+    <script defer src="/js/peopleUtils.js"></script>
     <!-- JS específico del laboratorio -->
     <script defer src="/js/computing.js"></script>
     <!-- JS general (fondo, voz, sugerencias, etc.) -->
@@ -95,6 +97,15 @@
             <form id="computingReservationForm">
                 <label>Fecha de Reserva:</label>
                 <input type="datetime-local" name="date" required>
+
+                <label>Solicitante:</label>
+                <select id="solicitante" name="solicitante" class="form-control persona-select" data-curso-target="curso" required>
+                  <option selected disabled>Seleccione una persona</option>
+                </select>
+
+                <label>Curso:</label>
+                <input type="text" id="curso" name="curso" class="form-control" readonly required>
+
                 <label>Descripción/Actividad:</label>
                 <input type="text" name="activity" required>
                 <button type="submit" class="button">Reservar</button>
@@ -105,5 +116,10 @@
 <!-- Scripts principales -->
     <script src="/js/script.js"></script>
     <script src="/js/roleGuard.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        cargarPersonasEnSelect("solicitante");
+      });
+    </script>
   </body>
 </html>
