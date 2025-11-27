@@ -103,26 +103,81 @@
                 <label>ID del Material:</label>
                 <input type="text" id="loanBookId" name="bookId" required>
 
-                <label>Usuario (correo):</label>
-                <input type="email" id="loanUser" name="userEmail" required>
+                <label>Persona:</label>
+                <select id="loanPersonSelect" name="personId">
+                    <!-- opciones generadas dinámicamente -->
+                </select>
+
+                <label>Nombre:</label>
+                <input type="text" id="loanNombre" name="nombre" required>
+
+                <label>Curso / Unidad:</label>
+                <input type="text" id="loanCurso" name="curso">
+
+                <label>Tipo de persona:</label>
+                <input type="text" id="loanTipoPersona" name="tipo">
+
+                <label>Observaciones:</label>
+                <input type="text" id="loanObservaciones" name="observaciones">
 
                 <button type="submit" class="button">Registrar Préstamo</button>
             </form>
 
             <h3>Préstamos Activos</h3>
-            <table id="loanTable">
+            <table id="loansTable">
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>ID Material</th>
-                        <th>Usuario</th>
-                        <th>Fecha Préstamo</th>
+                        <th>Código</th>
+                        <th>Nombre</th>
+                        <th>Curso</th>
+                        <th>Fecha</th>
                         <th>Devuelto</th>
-                        <th>Acción</th>
+                        <th>Devuelto el</th>
+                        <th>Observaciones</th>
+                        <th>Acciones</th>
                     </tr>
                 </thead>
-                <tbody id="loanTableBody">
-                    <!-- Préstamos dinámicos -->
+                <tbody>
+                    <!-- Carga dinámica JS -->
+                </tbody>
+            </table>
+
+            <div id="libraryOverdueBanner" class="overdue-banner" style="display: none;"></div>
+        </section>
+
+        <section class="people-section">
+            <h2>Personas Registradas</h2>
+            <form id="peopleForm">
+                <input type="hidden" name="id">
+                <label>Nombre:</label>
+                <input type="text" name="nombre" required>
+
+                <label>Tipo:</label>
+                <select name="tipo" required>
+                    <option value="estudiante">Estudiante</option>
+                    <option value="funcionario">Funcionario</option>
+                </select>
+
+                <label>Curso / Unidad:</label>
+                <input type="text" name="curso">
+
+                <button type="submit" id="peopleFormSubmit" class="button">Guardar persona</button>
+                <button type="button" id="peopleFormCancel" class="button" style="display: none;">Cancelar</button>
+            </form>
+
+            <table id="peopleTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Tipo</th>
+                        <th>Curso</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Carga dinámica JS -->
                 </tbody>
             </table>
         </section>
@@ -135,5 +190,5 @@
 <!-- Scripts principales -->
     <script src="/js/script.js"></script>
     <script src="/js/roleGuard.js"></script>
-  </body>
+</body>
 </html>
