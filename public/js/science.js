@@ -126,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ========== RESERVAS ==========
   async function loadReservations() {
     const body = document.getElementById('scienceReservationsTableBody');
-    if (!body) return;
+    if (!body) return; // si no hay tabla, no hacemos nada
     try {
       const resp = await apiFetch('/api/science/reservations');
       if (!resp.ok) {
@@ -143,9 +143,9 @@ document.addEventListener('DOMContentLoaded', () => {
           <td>${res.id}</td>
           <td>${res.solicitante || ''}</td>
           <td>${res.curso || ''}</td>
-          <td>${res.fechaUso || ''}</td>
+          <td>${res.fechaUso || res.date || ''}</td>
           <td>${res.horario || ''}</td>
-          <td>${res.observaciones || ''}</td>
+          <td>${res.observaciones || res.activity || ''}</td>
           <td>${res.user || ''}</td>
         `;
         body.appendChild(tr);
@@ -198,35 +198,70 @@ document.addEventListener('DOMContentLoaded', () => {
       const resp = await apiFetch('/api/science/loans');
       if (!resp.ok) return;
       const loans = await resp.json();
+      if (!Array.isArray(loans)) return;
+
       scienceLoanTableBody.innerHTML = '';
       loans.forEach(loan => {
         const tr = document.createElement('tr');
+
+        const codigo = loan.codigo || loan.itemCode || loan.itemId || '';
+        const solicitante = loan.solicitante || loan.borrowerName || '';
+        const curso = loan.curso || loan.borrowerGroup || '';
+        const fecha = loan.loanDate
+          ? new Date(loan.loanDate).toLocaleString('es-CL', {
+              dateStyle: 'short',
+              timeStyle: 'short'
+            })
+          : (loan.fecha || '');
+        const devueltoTxt = loan.returned ? 'Sí' : 'No';
+
         tr.innerHTML = `
           <td>${loan.id}</td>
-          <td>${loan.itemId}</td>
-          <td>${loan.user}</td>
-          <td>${loan.curso}</td>
-          <td>${loan.fecha}</td>
-          <td>${loan.devuelto ? 'Sí' : 'No'}</td>
-          <td><button class="btn-ghost devolver-btn" data-id="${loan.id}">Devolver</button></td>
+          <td>${codigo}</td>
+          <td>${solicitante}</td>
+          <td>${curso}</td>
+          <td>${fecha}</td>
+          <td>${devueltoTxt}</td>
+          <td class="accion-cell"></td>
         `;
-        tr.querySelector('.devolver-btn').addEventListener('click', async () => {
-          try {
-            const r = await apiFetch(`/api/science/loans/${loan.id}/return`, { method: 'POST' });
-            if (r.ok) {
-              alert('Material devuelto');
-              loadLoans();
-              await logHistory({
-                action: 'update',
-                type: 'loan',
-                entityId: loan.id,
-                detail: `Devolución de préstamo ID ${loan.id}`
+
+        const accionCell = tr.querySelector('.accion-cell');
+
+        if (!loan.returned) {
+          const btn = document.createElement('button');
+          btn.className = 'btn-ghost devolver-btn';
+          btn.textContent = 'Devolver';
+          btn.dataset.id = loan.id;
+
+          btn.addEventListener('click', async () => {
+            if (!confirm('¿Marcar este préstamo como devuelto?')) return;
+            try {
+              const r = await apiFetch(`/api/science/return/${loan.id}`, {
+                method: 'POST'
               });
+              if (r.ok) {
+                alert('Material devuelto');
+                await logHistory({
+                  action: 'update',
+                  type: 'loan',
+                  entityId: loan.id,
+                  detail: `Devolución de préstamo de ciencias ID ${loan.id} (código ${codigo})`
+                });
+                loadLoans();
+              } else {
+                alert('Error al registrar la devolución.');
+              }
+            } catch (err) {
+              console.error('Error devolviendo material de ciencias:', err);
+              alert('Error devolviendo el material.');
             }
-          } catch (err) {
-            console.error('Error devolviendo material:', err);
-          }
-        });
+          });
+
+          accionCell.appendChild(btn);
+        } else {
+          accionCell.textContent = '—';
+        }
+
         scienceLoanTableBody.appendChild(tr);
       });
     } catch (err) {
@@ -238,15 +273,41 @@ document.addEventListener('DOMContentLoaded', () => {
     scienceLoanForm.addEventListener('submit', async e => {
       e.preventDefault();
       try {
-        const data = Object.fromEntries(new FormData(scienceLoanForm));
-        const resp = await apiFetch('/api/science/loans', {
+        const codigoInput = document.getElementById('scienceLoanCodigo');
+        const cursoInput = document.getElementById('scienceLoanCurso');
+        const selectPersona = document.getElementById('scienceLoanUser');
+
+        const codigo = (codigoInput?.value || '').trim();
+        const curso = (cursoInput?.value || '').trim();
+
+        if (!codigo) {
+          alert('Debe ingresar el código del material.');
+          return;
+        }
+        if (!selectPersona || !selectPersona.value) {
+          alert('Debe seleccionar un solicitante.');
+          return;
+        }
+
+        const personaId = selectPersona.value;
+        const solicitanteTexto = selectPersona.options[selectPersona.selectedIndex].textContent || '';
+
+        const payload = {
+          codigo,
+          solicitante: solicitanteTexto,
+          curso,
+          personaId
+        };
+
+        const resp = await apiFetch('/api/science/loan', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
+          body: JSON.stringify(payload)
         });
 
         if (!resp.ok) {
-          alert('Error registrando préstamo');
+          const msg = await resp.json().catch(() => ({}));
+          alert(msg.message || 'Error registrando préstamo');
           return;
         }
 
@@ -256,7 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
             action: 'create',
             type: 'loan',
             entityId: result.loan.id,
-            detail: `Préstamo registrado ID ${result.loan.id} – ${result.loan.user}`
+            detail: `Préstamo registrado ID ${result.loan.id} – ${solicitanteTexto} (código ${codigo})`
           });
         }
 
