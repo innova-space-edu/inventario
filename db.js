@@ -67,6 +67,18 @@ async function initDb() {
     );
   `;
 
+  // ⭐ NUEVA TABLA — PRÉSTAMOS DE CIENCIAS
+  const createScienceLoans = `
+    CREATE TABLE IF NOT EXISTS science_loans (
+      id TEXT PRIMARY KEY,
+      data JSONB NOT NULL,
+      user_email TEXT,
+      loan_date TIMESTAMPTZ,
+      returned BOOLEAN DEFAULT FALSE,
+      return_date TIMESTAMPTZ
+    );
+  `;
+
   const createHistory = `
     CREATE TABLE IF NOT EXISTS history (
       id TEXT PRIMARY KEY,
@@ -85,11 +97,19 @@ async function initDb() {
     // items
     `CREATE INDEX IF NOT EXISTS idx_items_lab ON items(lab);`,
     `CREATE INDEX IF NOT EXISTS idx_items_lab_codigo ON items ((data->>'codigo')) WHERE lab = 'library';`,
+
     // reservations
     `CREATE INDEX IF NOT EXISTS idx_reservations_lab ON reservations(lab);`,
-    // loans
+
+    // loans Biblioteca
     `CREATE INDEX IF NOT EXISTS idx_library_loans_returned_loandate ON library_loans(returned, loan_date);`,
     `CREATE INDEX IF NOT EXISTS idx_library_loans_bookcode ON library_loans ((data->>'codigo'));`,
+
+    // ⭐ Índices para Science Loans
+    `CREATE INDEX IF NOT EXISTS idx_science_loans_returned_loandate ON science_loans(returned, loan_date);`,
+    `CREATE INDEX IF NOT EXISTS idx_science_loans_code ON science_loans ((data->>'codigo'));`,
+    `CREATE INDEX IF NOT EXISTS idx_science_loans_person ON science_loans ((data->>'nombre'));`,
+
     // history
     `CREATE INDEX IF NOT EXISTS idx_history_created_at ON history(created_at);`,
     `CREATE INDEX IF NOT EXISTS idx_history_lab ON history(lab);`,
@@ -103,6 +123,7 @@ async function initDb() {
     await pool.query(createItems);
     await pool.query(createReservations);
     await pool.query(createLoans);
+    await pool.query(createScienceLoans); // ⭐ SE AGREGA SIN BORRAR NADA
     await pool.query(createHistory);
 
     for (const sql of indexes) {
