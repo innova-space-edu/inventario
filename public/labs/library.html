@@ -12,9 +12,9 @@
 
     <!-- JS específico de biblioteca (API + BD + Supabase) -->
     <script defer src="/js/library.js"></script>
-    <!-- JS general (fondo, voz, sugerencias, etc.) -->
-    <script defer src="/js/script.js"></script>
+    <!-- NO repetimos script.js aquí para evitar doble carga -->
 </head>
+
 <!-- Cambiamos data-page para NO activar la biblioteca vieja de localStorage -->
 <body data-page="library-api" class="body-space">
     <!-- Fondo espacial animado -->
@@ -29,6 +29,9 @@
             </nav>
         </header>
 
+        <!-- =========================
+             SECCIÓN: INVENTARIO
+        ========================== -->
         <section class="form-section">
             <h2>Agregar Libro o Material</h2>
             <!-- enctype para subir foto -->
@@ -75,6 +78,20 @@
 
         <section class="inventory-section">
             <h2>Inventario General de Biblioteca</h2>
+
+            <!-- Filtros simples (opcionales, usados por library.js si existen) -->
+            <div class="filters-bar">
+                <input
+                  type="text"
+                  id="librarySearch"
+                  placeholder="Buscar por código, título, autor..."
+                  class="input-search"
+                >
+                <button type="button" id="btnExportLibraryCSV" class="button secondary">
+                    Exportar CSV
+                </button>
+            </div>
+
             <table id="libraryTable">
                 <thead>
                     <tr>
@@ -97,14 +114,20 @@
             </table>
         </section>
 
+        <!-- =========================
+             SECCIÓN: PRÉSTAMOS
+        ========================== -->
         <section class="loans-section">
             <h2>Registrar Préstamo</h2>
             <form id="loanForm">
-                <label>ID del Material:</label>
-                <input type="text" id="loanBookId" name="bookId" required>
+                <!-- IMPORTANTE: el backend usa "codigo" / "bookCode" -->
+                <label>Código del libro / material:</label>
+                <input type="text" id="loanCodigo" name="codigo" required>
 
-                <label>Persona:</label>
-                <select id="loanPersonSelect" name="personId">
+                <!-- Selector de persona (estudiantes/funcionarios) -->
+                <label>Persona (desde listado):</label>
+                <select id="loanPersonSelect" name="personaId">
+                    <option value="">-- Seleccionar desde lista --</option>
                     <!-- opciones generadas dinámicamente -->
                 </select>
 
@@ -115,7 +138,8 @@
                 <input type="text" id="loanCurso" name="curso">
 
                 <label>Tipo de persona:</label>
-                <input type="text" id="loanTipoPersona" name="tipo">
+                <!-- el backend espera "tipoPersona" o "personType" -->
+                <input type="text" id="loanTipoPersona" name="tipoPersona" placeholder="estudiante / funcionario">
 
                 <label>Observaciones:</label>
                 <input type="text" id="loanObservaciones" name="observaciones">
@@ -123,7 +147,23 @@
                 <button type="submit" class="button">Registrar Préstamo</button>
             </form>
 
-            <h3>Préstamos Activos</h3>
+            <!-- Banner de préstamos vencidos (7 días o más) -->
+            <div id="libraryOverdueBanner" class="overdue-banner" style="display: none;"></div>
+
+            <!-- Búsqueda y reportes de préstamos -->
+            <div class="filters-bar">
+                <input
+                  type="text"
+                  id="loansSearch"
+                  placeholder="Buscar préstamo por ID, nombre, código, curso..."
+                  class="input-search"
+                >
+                <button type="button" id="btnExportLoansCSV" class="button secondary">
+                    Exportar préstamos (CSV)
+                </button>
+            </div>
+
+            <h3>Préstamos</h3>
             <table id="loansTable">
                 <thead>
                     <tr>
@@ -142,25 +182,28 @@
                     <!-- Carga dinámica JS -->
                 </tbody>
             </table>
-
-            <div id="libraryOverdueBanner" class="overdue-banner" style="display: none;"></div>
         </section>
 
+        <!-- =========================
+             SECCIÓN: PERSONAS
+        ========================== -->
         <section class="people-section">
             <h2>Personas Registradas</h2>
             <form id="peopleForm">
-                <input type="hidden" name="id">
+                <!-- IMPORTANTE: IDs para que library.js pueda editar -->
+                <input type="hidden" name="id" id="personId">
+
                 <label>Nombre:</label>
-                <input type="text" name="nombre" required>
+                <input type="text" name="nombre" id="personNombre" required>
 
                 <label>Tipo:</label>
-                <select name="tipo" required>
+                <select name="tipo" id="personTipo" required>
                     <option value="estudiante">Estudiante</option>
                     <option value="funcionario">Funcionario</option>
                 </select>
 
                 <label>Curso / Unidad:</label>
-                <input type="text" name="curso">
+                <input type="text" name="curso" id="personCurso">
 
                 <button type="submit" id="peopleFormSubmit" class="button">Guardar persona</button>
                 <button type="button" id="peopleFormCancel" class="button" style="display: none;">Cancelar</button>
@@ -187,7 +230,8 @@
         </footer>
       </div>
     </div>
-<!-- Scripts principales -->
+
+    <!-- Scripts principales -->
     <script src="/js/script.js"></script>
     <script src="/js/roleGuard.js"></script>
 </body>
