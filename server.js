@@ -300,6 +300,15 @@ async function addHistory({ lab, action, entityType, entityId, userEmail, data }
   }
 }
 
+// ✅ helper para cliente transaccional (usa db.pool)
+function getPgClient() {
+  if (!db.pool || typeof db.pool.connect !== 'function') {
+    console.warn('⚠️ db.pool no está disponible. Asegúrate que db.js exporte el Pool de pg como "pool".');
+    return null;
+  }
+  return db.pool.connect();
+}
+
 // GET /api/history?lab=&limit=
 app.get('/api/history', requireLogin, async (req, res) => {
   const { lab, limit } = req.query;
@@ -711,7 +720,7 @@ app.get('/api/library/loans', requireLogin, async (req, res) => {
   }
 });
 
-// Registrar préstamo
+// ⬇️⬇️⬇️ REEMPLAZO — Registrar préstamo (con control de stock, transacción)
 app.post('/api/library/loan', requireLogin, canEditLibrary, async (req, res) => {
   const id = Date.now().toString();
   const raw = { ...req.body };
@@ -720,10 +729,10 @@ app.post('/api/library/loan', requireLogin, canEditLibrary, async (req, res) => 
 
   try {
     // Normalización de campos
-    let codigo = raw.codigo || raw.bookCode || '';
-    let nombre = raw.nombre || raw.borrowerName || '';
-    let curso = raw.curso || raw.borrowerCourse || '';
-    let observaciones = raw.observaciones || raw.notes || '';
+    let codigo = (raw.codigo || raw.bookCode || '').trim();
+    let nombre = (raw.nombre || raw.borrowerName || '').trim();
+    let curso = (raw.curso || raw.borrowerCourse || '').trim();
+    let observaciones = (raw.observaciones || raw.notes || '').trim();
 
     const personaId = raw.personaId || raw.personId || null;
     let tipoPersona = raw.tipoPersona || raw.personType || null;
@@ -739,45 +748,109 @@ app.post('/api/library/loan', requireLogin, canEditLibrary, async (req, res) => 
       }
     }
 
-    // Construimos el objeto de datos, manteniendo compatibilidad
+    if (!codigo) {
+      return res.status(400).json({ message: 'Falta el código del libro/material.' });
+    }
+
+    // Construimos el objeto de datos
     const data = {
-      // Nuevos campos
       codigo,
       nombre,
       curso,
       observaciones,
       personaId: personaId || undefined,
       tipoPersona: tipoPersona || undefined,
-      // Alias para compatibilidad con código antiguo
+      // alias compatibilidad
       bookCode: codigo,
       borrowerName: nombre,
       borrowerCourse: curso,
       notes: observaciones
     };
 
-    await db.query(
-      'INSERT INTO library_loans (id, data, user_email, loan_date, returned) VALUES ($1,$2::jsonb,$3,$4,$5)',
-      [id, JSON.stringify(data), userEmail, loanDate, false]
-    );
+    // Transacción para controlar stock
+    const client = await getPgClient();
+    if (!client) {
+      // Fallback sin transacción (no recomendado, deja aviso):
+      console.warn('⚠️ Préstamo sin transacción: db.pool no disponible, no se ajustará stock automáticamente.');
+      await db.query(
+        'INSERT INTO library_loans (id, data, user_email, loan_date, returned) VALUES ($1,$2::jsonb,$3,$4,$5)',
+        [id, JSON.stringify(data), userEmail, loanDate, false]
+      );
 
-    const newLoan = {
-      id,
-      ...data,
-      user: userEmail,
-      loanDate,
-      returned: false
-    };
+      const newLoan = { id, ...data, user: userEmail, loanDate, returned: false };
+      await addHistory({
+        lab: 'library',
+        action: 'create-loan',
+        entityType: 'loan',
+        entityId: id,
+        userEmail,
+        data: newLoan
+      });
+      return res.json({ message: 'Préstamo registrado (sin control de stock)', loan: newLoan });
+    }
 
-    await addHistory({
-      lab: 'library',
-      action: 'create-loan',
-      entityType: 'loan',
-      entityId: id,
-      userEmail,
-      data: newLoan
-    });
+    try {
+      await client.query('BEGIN');
 
-    res.json({ message: 'Préstamo registrado', loan: newLoan });
+      // 1) Buscar item por código (lab=library)
+      const qItem = await client.query(
+        `SELECT id, data, photo
+         FROM items
+         WHERE lab='library' AND data->>'codigo' = $1
+         FOR UPDATE`,
+        [codigo]
+      );
+      if (qItem.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ message: `No existe un item en Biblioteca con código "${codigo}".` });
+      }
+
+      const itemRow = qItem.rows[0];
+      const itemData = itemRow.data || {};
+      const cant = parseInt(itemData.cantidad, 10);
+      if (Number.isNaN(cant) || cant <= 0) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ message: `Sin stock disponible para el código "${codigo}".` });
+      }
+
+      // 2) Descontar 1 del stock
+      const nuevaCant = cant - 1;
+      itemData.cantidad = nuevaCant;
+      await client.query(
+        `UPDATE items
+         SET data = $1::jsonb
+         WHERE id = $2 AND lab='library'`,
+        [JSON.stringify(itemData), itemRow.id]
+      );
+
+      // 3) Crear préstamo
+      await client.query(
+        `INSERT INTO library_loans (id, data, user_email, loan_date, returned)
+         VALUES ($1, $2::jsonb, $3, $4, FALSE)`,
+        [id, JSON.stringify(data), userEmail, loanDate]
+      );
+
+      // 4) Historial
+      await addHistory({
+        lab: 'library',
+        action: 'create-loan',
+        entityType: 'loan',
+        entityId: id,
+        userEmail,
+        data: { ...data, linkedItemId: itemRow.id }
+      });
+
+      await client.query('COMMIT');
+
+      const newLoan = { id, ...data, user: userEmail, loanDate, returned: false };
+      res.json({ message: 'Préstamo registrado', loan: newLoan });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      console.error('Error al registrar préstamo (tx):', err);
+      res.status(500).json({ message: 'Error al registrar préstamo' });
+    } finally {
+      client.release();
+    }
   } catch (err) {
     console.error('Error al registrar préstamo de biblioteca:', err);
     res.status(500).json({ message: 'Error al registrar préstamo' });
@@ -849,47 +922,128 @@ app.put('/api/library/loan/:loanId', requireLogin, canEditLibrary, async (req, r
   }
 });
 
-// Registrar devolución
+// ⬇️⬇️⬇️ REEMPLAZO — Registrar devolución (suma stock, transacción)
 app.post(
   '/api/library/return/:loanId',
   requireLogin,
   canEditLibrary,
   async (req, res) => {
     const loanId = req.params.loanId;
+    const userEmail = req.session.user ? req.session.user.email : null;
     const returnDate = new Date();
 
     try {
-      const { rows } = await db.query(
-        'UPDATE library_loans SET returned = TRUE, return_date = $1 WHERE id = $2 RETURNING id, data, user_email, loan_date, returned, return_date',
-        [returnDate, loanId]
-      );
+      const client = await getPgClient();
+      if (!client) {
+        // Fallback sin transacción (no recomendado, deja aviso y no suma stock):
+        console.warn('⚠️ Devolución sin transacción: db.pool no disponible, no se ajustará stock automáticamente.');
+        const { rows } = await db.query(
+          'UPDATE library_loans SET returned = TRUE, return_date = $1 WHERE id = $2 RETURNING id, data, user_email, loan_date, returned, return_date',
+          [returnDate, loanId]
+        );
+        if (rows.length === 0) return res.status(404).json({ message: 'Préstamo no encontrado' });
 
-      if (rows.length === 0) {
-        return res.status(404).json({ message: 'Préstamo no encontrado' });
+        const row = rows[0];
+        const data = row.data || {};
+        const loan = {
+          id: row.id,
+          ...data,
+          user: row.user_email || null,
+          loanDate: row.loan_date,
+          returned: row.returned,
+          returnDate: row.return_date
+        };
+
+        await addHistory({
+          lab: 'library',
+          action: 'return-loan',
+          entityType: 'loan',
+          entityId: loanId,
+          userEmail,
+          data: loan
+        });
+
+        return res.json({ message: 'Préstamo devuelto (sin ajuste de stock)', loan });
       }
 
-      const row = rows[0];
-      const data = row.data || {};
+      try {
+        await client.query('BEGIN');
 
-      const loan = {
-        id: row.id,
-        ...data,
-        user: row.user_email || null,
-        loanDate: row.loan_date,
-        returned: row.returned,
-        returnDate: row.return_date
-      };
+        // 1) Leer préstamo
+        const qLoan = await client.query(
+          `SELECT id, data, user_email, loan_date, returned, return_date
+           FROM library_loans WHERE id = $1 FOR UPDATE`,
+          [loanId]
+        );
+        if (qLoan.rows.length === 0) {
+          await client.query('ROLLBACK');
+          return res.status(404).json({ message: 'Préstamo no encontrado' });
+        }
+        const loanRow = qLoan.rows[0];
+        const loanData = loanRow.data || {};
+        const codigo = (loanData.codigo || loanData.bookCode || '').trim();
 
-      await addHistory({
-        lab: 'library',
-        action: 'return-loan',
-        entityType: 'loan',
-        entityId: loanId,
-        userEmail: req.session.user.email,
-        data: loan
-      });
+        // 2) Marcar devuelto
+        await client.query(
+          `UPDATE library_loans
+           SET returned = TRUE, return_date = $1
+           WHERE id = $2`,
+          [returnDate, loanId]
+        );
 
-      res.json({ message: 'Préstamo devuelto', loan });
+        // 3) Sumar stock si existe el ítem
+        if (codigo) {
+          const qItem = await client.query(
+            `SELECT id, data
+             FROM items
+             WHERE lab='library' AND data->>'codigo' = $1
+             FOR UPDATE`,
+            [codigo]
+          );
+          if (qItem.rows.length > 0) {
+            const itemRow = qItem.rows[0];
+            const itemData = itemRow.data || {};
+            const cant = parseInt(itemData.cantidad, 10) || 0;
+            itemData.cantidad = cant + 1;
+
+            await client.query(
+              `UPDATE items
+               SET data = $1::jsonb
+               WHERE id = $2 AND lab='library'`,
+              [JSON.stringify(itemData), itemRow.id]
+            );
+          }
+        }
+
+        // 4) Historial
+        await addHistory({
+          lab: 'library',
+          action: 'return-loan',
+          entityType: 'loan',
+          entityId: loanId,
+          userEmail,
+          data: { codigo }
+        });
+
+        await client.query('COMMIT');
+
+        // Responder en el formato que espera el front:
+        const loan = {
+          id: loanRow.id,
+          ...loanData,
+          user: loanRow.user_email || null,
+          loanDate: loanRow.loan_date,
+          returned: true,
+          returnDate
+        };
+        res.json({ message: 'Préstamo devuelto', loan });
+      } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('Error al registrar devolución (tx):', err);
+        res.status(500).json({ message: 'Error al registrar devolución' });
+      } finally {
+        client.release();
+      }
     } catch (err) {
       console.error('Error al registrar devolución de préstamo:', err);
       res.status(500).json({ message: 'Error al registrar devolución' });
