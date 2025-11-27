@@ -1,52 +1,45 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Inventario - Laboratorio de Computación</title>
 
-  <!-- Estilos originales -->
-  <link rel="stylesheet" href="/css/styles.css">
-  <!-- Fondo espacial + glass UI -->
-  <link rel="stylesheet" href="/css/app.css">
+  <!-- Estilos -->
+  <link rel="stylesheet" href="/css/styles.css" />
+  <link rel="stylesheet" href="/css/app.css" />
 
-  <!-- JS utilitarios -->
+  <!-- Scripts -->
   <script defer src="/js/peopleUtils.js"></script>
-  <!-- JS específico de computación -->
   <script defer src="/js/computing.js"></script>
-  <!-- JS general (fondo, voz, sugerencias, etc.) -->
   <script defer src="/js/script.js"></script>
 </head>
 <body data-page="computer" class="body-space">
-  <!-- Fondo espacial animado -->
   <div class="background space-bg"></div>
 
   <div class="app-shell">
     <div class="glass-panel">
       <header>
         <h1>Laboratorio de Computación</h1>
-        <nav>
-          <a href="/">Inicio</a>
-        </nav>
+        <nav><a href="/">Inicio</a></nav>
       </header>
 
       <section class="form-section">
         <h2>Agregar Equipo</h2>
         <form id="computingForm" enctype="multipart/form-data" method="post">
           <label>ID del Equipo:</label>
-          <input type="text" name="idEquip" required>
+          <input type="text" name="idEquip" required />
           <label>Código:</label>
-          <input type="text" name="codigo" required>
+          <input type="text" name="codigo" required />
           <label>Marca:</label>
-          <input type="text" name="marca" required>
+          <input type="text" name="marca" required />
           <label>Modelo:</label>
-          <input type="text" name="modelo" required>
+          <input type="text" name="modelo" required />
           <label>Año:</label>
-          <input type="number" name="anio" required>
+          <input type="number" name="anio" required />
           <label>Serie:</label>
-          <input type="text" name="serie" required>
-
-          <label>Categoria:</label>
+          <input type="text" name="serie" required />
+          <label>Categoría:</label>
           <select name="categoria" required>
             <option value="equipo de cómputo">Equipo de Cómputo</option>
             <option value="audiovisual">Material Audiovisual</option>
@@ -55,13 +48,10 @@
             <option value="cableado o adaptador">Cableado o Adaptador</option>
             <option value="varios">Otros Materiales</option>
           </select>
-
           <label>Descripción:</label>
           <textarea name="descripcion" required></textarea>
-
           <label>Fotografía:</label>
-          <input type="file" name="photo" accept="image/*">
-
+          <input type="file" name="photo" accept="image/*" />
           <button type="submit" class="button">Guardar</button>
         </form>
       </section>
@@ -84,46 +74,57 @@
               <th>Acciones</th>
             </tr>
           </thead>
-          <tbody>
-            <!-- Datos se insertan vía JS -->
-          </tbody>
+          <tbody><!-- Datos por JS --></tbody>
         </table>
       </section>
 
       <section class="reservations-section">
-        <h2>Reservar Laboratorio de Computación</h2>
+        <h2>Reservar Sala de Computación</h2>
         <form id="computingReservationForm">
           <label>Fecha de Reserva:</label>
-          <input type="datetime-local" name="date" required>
-
+          <input type="datetime-local" name="fechaUso" required />
           <label>Solicitante:</label>
-          <select id="computingSolicitante" name="solicitante" class="form-control persona-select" data-curso-target="computingCurso" required>
+          <select id="solicitanteComputing" name="solicitante" class="persona-select" data-curso-target="cursoComputing" required>
             <option selected disabled>Seleccione una persona</option>
           </select>
-
           <label>Curso:</label>
-          <input type="text" id="computingCurso" name="curso" class="form-control" readonly required>
-
-          <label>Descripción/Actividad:</label>
-          <input type="text" name="activity" required>
+          <input type="text" id="cursoComputing" name="curso" readonly required />
+          <label>Descripción / Actividad:</label>
+          <input type="text" name="observaciones" required />
           <button type="submit" class="button">Reservar</button>
         </form>
+
+        <h3>Reservas Registradas</h3>
+        <table id="computingReservationsTable">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Solicitante</th>
+              <th>Curso</th>
+              <th>Fecha</th>
+              <th>Horario</th>
+              <th>Observaciones</th>
+              <th>Usuario</th>
+            </tr>
+          </thead>
+          <tbody><!-- Cargado por JS --></tbody>
+        </table>
       </section>
 
       <section class="loans-section">
-        <h2>Registrar Préstamo de Equipo</h2>
+        <h2>Préstamos de Equipos</h2>
         <form id="computingLoanForm">
           <label>ID del Equipo:</label>
-          <input type="text" id="computingLoanItemId" name="itemId" required>
-
+          <input type="text" name="itemId" required />
           <label>Solicitante:</label>
-          <select id="computingLoanUser" name="user" class="form-control persona-select" data-curso-target="computingLoanCurso" required>
-            <option selected disabled>Seleccione una persona</option>
+          <select id="loanPersonComputing" name="persona" required>
+            <option disabled selected>Seleccione persona</option>
           </select>
-
-          <label>Curso:</label>
-          <input type="text" id="computingLoanCurso" name="curso" class="form-control" readonly required>
-
+          <label>Tipo de Persona:</label>
+          <select name="tipoPersona" required>
+            <option value="estudiante">Estudiante</option>
+            <option value="funcionario">Funcionario</option>
+          </select>
           <button type="submit" class="button">Registrar Préstamo</button>
         </form>
 
@@ -132,19 +133,21 @@
           <thead>
             <tr>
               <th>ID</th>
-              <th>ID Equipo</th>
+              <th>Equipo</th>
               <th>Solicitante</th>
-              <th>Curso</th>
+              <th>Tipo</th>
               <th>Fecha Préstamo</th>
               <th>Devuelto</th>
               <th>Acción</th>
             </tr>
           </thead>
-          <tbody id="computingLoanTableBody">
-            <!-- Filas dinámicas -->
-          </tbody>
+          <tbody><!-- Cargado por JS --></tbody>
         </table>
       </section>
+
+      <footer>
+        <p>© 2025 Innova Space Education - Computación</p>
+      </footer>
     </div>
   </div>
 
@@ -152,8 +155,8 @@
   <script src="/js/roleGuard.js"></script>
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      cargarPersonasEnSelect("computingSolicitante");
-      cargarPersonasEnSelect("computingLoanUser");
+      cargarPersonasEnSelect("solicitanteComputing");
+      cargarPersonasEnSelect("loanPersonComputing");
     });
   </script>
 </body>
