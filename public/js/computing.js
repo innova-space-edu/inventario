@@ -3,20 +3,15 @@
 document.addEventListener('DOMContentLoaded', () => {
   const computingForm = document.getElementById('computingForm');
   const computingTableBody = document.querySelector('#computingTable tbody');
-  const computingReservationForm = document.getElementById(
-    'computingReservationForm'
-  );
-  const computingReservationsBody = document.querySelector(
-    '#computingReservationsTable tbody'
-  );
+  const computingReservationForm = document.getElementById('computingReservationForm');
+  const computingReservationsBody = document.querySelector('#computingReservationsTable tbody');
+  const loanForm = document.getElementById('computingLoanForm');
+  const loanTableBody = document.getElementById('computingLoanTableBody');
 
-  // Helper para usar guardedFetch si existe, o fetch normal con credenciales
   const apiFetch =
     window.guardedFetch ||
-    ((url, options = {}) =>
-      fetch(url, { credentials: 'include', ...options }));
+    ((url, options = {}) => fetch(url, { credentials: 'include', ...options }));
 
-  // ---- helper para historial ----
   async function logHistory(entry) {
     try {
       await apiFetch('/api/history', {
@@ -56,7 +51,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Agregar equipo
   if (computingForm && computingTableBody) {
     computingForm.addEventListener('submit', async e => {
       e.preventDefault();
@@ -81,11 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
             action: 'create',
             type: 'item',
             entityId: result.item.id,
-            detail: `Ingresado equipo de computación: ${
-              result.item.marca || ''
-            } ${result.item.modelo || ''} (código ${
-              result.item.codigo || ''
-            })`
+            detail: `Ingresado equipo de computación: ${result.item.marca || ''} ${result.item.modelo || ''} (código ${result.item.codigo || ''})`
           });
         }
 
@@ -127,9 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
             action: 'delete',
             type: 'item',
             entityId: item.id,
-            detail: `Eliminado equipo de computación: ${
-              item.marca || ''
-            } ${item.modelo || ''} (código ${item.codigo || ''})`
+            detail: `Eliminado equipo de computación: ${item.marca || ''} ${item.modelo || ''} (código ${item.codigo || ''})`
           });
         } else {
           alert('Error al eliminar el equipo.');
@@ -151,10 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const resp = await apiFetch('/api/computing/reservations');
       if (!resp.ok) {
-        console.error(
-          'Error cargando reservas de computación:',
-          resp.status
-        );
+        console.error('Error cargando reservas de computación:', resp.status);
         return;
       }
       const reservations = await resp.json();
@@ -186,9 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
 
       try {
-        const data = Object.fromEntries(
-          new FormData(computingReservationForm)
-        );
+        const data = Object.fromEntries(new FormData(computingReservationForm));
         const resp = await apiFetch('/api/computing/reservations', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -208,9 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
             action: 'create',
             type: 'reservation',
             entityId: result.reservation.id,
-            detail: `Reserva sala de computación para ${
-              result.reservation.curso || ''
-            } – ${result.reservation.solicitante || ''}`
+            detail: `Reserva sala de computación para ${result.reservation.curso || ''} – ${result.reservation.solicitante || ''}`
           });
         }
 
@@ -223,7 +204,104 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // ================== PRÉSTAMOS ==================
+
+  async function loadLoans() {
+    if (!loanTableBody) return;
+
+    try {
+      const resp = await apiFetch('/api/computing/loans');
+      if (!resp.ok) {
+        console.error('Error al cargar préstamos de computación:', resp.status);
+        return;
+      }
+      const loans = await resp.json();
+      if (!Array.isArray(loans)) return;
+
+      loanTableBody.innerHTML = '';
+      loans.forEach(addLoanRow);
+    } catch (err) {
+      console.error('Error cargando préstamos de computación:', err);
+    }
+  }
+
+  function addLoanRow(loan) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${loan.id}</td>
+      <td>${loan.itemId || ''}</td>
+      <td>${loan.persona || ''}</td>
+      <td>${loan.fecha_prestamo || ''}</td>
+      <td>${loan.devuelto ? 'Sí' : 'No'}</td>
+      <td><button class="devolver-btn btn-small" data-id="${loan.id}">Devolver</button></td>
+    `;
+
+    const btn = tr.querySelector('.devolver-btn');
+    btn.addEventListener('click', async () => {
+      try {
+        const resp = await apiFetch(`/api/computing/loans/${loan.id}/return`, {
+          method: 'POST'
+        });
+        if (resp.ok) {
+          await logHistory({
+            action: 'update',
+            type: 'loan',
+            entityId: loan.id,
+            detail: `Devolución registrada para préstamo de equipo ${loan.itemId || ''}`
+          });
+          await loadLoans();
+        } else {
+          alert('Error al registrar devolución');
+        }
+      } catch (err) {
+        console.error('Error al devolver equipo:', err);
+        alert('Error al devolver equipo');
+      }
+    });
+
+    loanTableBody.appendChild(tr);
+  }
+
+  if (loanForm) {
+    loanForm.addEventListener('submit', async e => {
+      e.preventDefault();
+
+      try {
+        const data = Object.fromEntries(new FormData(loanForm));
+        const resp = await apiFetch('/api/computing/loans', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        if (!resp.ok) {
+          alert('Error al registrar préstamo');
+          return;
+        }
+
+        const result = await resp.json();
+        if (result && result.loan) {
+          addLoanRow(result.loan);
+
+          await logHistory({
+            action: 'create',
+            type: 'loan',
+            entityId: result.loan.id,
+            detail: `Préstamo de equipo ${result.loan.itemId || ''} a ${result.loan.persona || ''}`
+          });
+        }
+
+        alert('Préstamo registrado');
+        loanForm.reset();
+      } catch (err) {
+        console.error('Error al registrar préstamo:', err);
+        alert('Error al registrar préstamo');
+      }
+    });
+  }
+
   // Carga inicial
   loadItems();
   loadReservations();
+  loadLoans();
 });
