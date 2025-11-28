@@ -131,6 +131,14 @@
             required
           >
 
+          <label>Observaciones:</label>
+          <input
+            type="text"
+            id="scienceLoanObs"
+            name="observaciones"
+            placeholder="Opcional"
+          >
+
           <button type="submit" class="button">Registrar Préstamo</button>
         </form>
 
@@ -155,6 +163,65 @@
     </div>
   </div>
 
+  <!-- 🔵 Modal para préstamo directo desde la tabla de inventario -->
+  <div id="scienceLoanModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-card glass-panel">
+      <h3>Prestar material de ciencias</h3>
+      <form id="scienceLoanModalForm">
+        <input type="hidden" id="scienceLoanModalCodigo" name="codigo">
+
+        <div class="form-row">
+          <label>Material:</label>
+          <input type="text" id="scienceLoanModalNombre" readonly>
+        </div>
+
+        <div class="form-row">
+          <label>Solicitante:</label>
+          <select
+            id="scienceLoanModalUser"
+            name="solicitante"
+            class="form-control persona-select"
+            data-curso-target="scienceLoanModalCurso"
+            required
+          >
+            <option selected disabled>Seleccione una persona</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label>Curso:</label>
+          <input
+            type="text"
+            id="scienceLoanModalCurso"
+            name="curso"
+            class="form-control"
+            readonly
+            required
+          >
+        </div>
+
+        <div class="form-row">
+          <label>Observaciones:</label>
+          <textarea
+            id="scienceLoanModalObs"
+            name="observaciones"
+            rows="2"
+            placeholder="Opcional"
+          ></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" id="scienceLoanModalCancel" class="btn-ghost">
+            Cancelar
+          </button>
+          <button type="submit" class="button">
+            Confirmar préstamo
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Scripts principales -->
   <script src="/js/script.js"></script>
   <script src="/js/roleGuard.js"></script>
@@ -162,6 +229,7 @@
     document.addEventListener("DOMContentLoaded", () => {
       cargarPersonasEnSelect("solicitante");
       cargarPersonasEnSelect("scienceLoanUser");
+      cargarPersonasEnSelect("scienceLoanModalUser");
     });
   </script>
 </body>
