@@ -31,9 +31,12 @@
            SECCIÓN: INVENTARIO
       ========================== -->
       <section class="form-section">
-        <h2>Agregar material de laboratorio</h2>
+        <h2>Agregar / Editar material de laboratorio</h2>
 
         <form id="scienceForm" enctype="multipart/form-data" method="post">
+          <!-- id oculto para modo edición -->
+          <input type="hidden" name="id" id="sciId" />
+
           <label>Código:</label>
           <input type="text" name="codigo" id="sciCode" required />
 
@@ -63,7 +66,19 @@
           <label>Fotografía:</label>
           <input type="file" id="sciPhoto" name="photo" accept="image/*" />
 
-          <button type="submit" class="button">Guardar</button>
+          <div style="display:flex; gap:.75rem; margin-top:1rem;">
+            <button type="submit" id="scienceFormSubmit" class="button">
+              Guardar
+            </button>
+            <button
+              type="button"
+              id="scienceFormCancelEdit"
+              class="button secondary"
+              style="display:none;"
+            >
+              Cancelar edición
+            </button>
+          </div>
         </form>
       </section>
 
@@ -140,7 +155,7 @@
           <button type="submit" class="button">Registrar préstamo</button>
         </form>
 
-        <!-- Cuadro de devolución rápida por ID (igual idea que en Biblioteca) -->
+        <!-- Cuadro de devolución rápida por ID -->
         <form id="scienceReturnForm" style="margin-top: 1rem;">
           <h3>Registrar devolución</h3>
           <label>ID del préstamo:</label>
