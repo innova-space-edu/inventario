@@ -195,12 +195,22 @@ function canEditLab(req, res, next) {
   next();
 }
 
-// ✅ NUEVO: helper específico para laboratorio de ciencias
+// ✅ helper específico para laboratorio de ciencias
 function canEditScience(req, res, next) {
   const user = req.session.user;
   if (!user) return res.status(401).json({ message: 'No autenticado' });
   if (!userCanEditLab(user.role, 'science')) {
     return res.status(403).json({ message: 'No tienes permiso para editar el laboratorio de ciencias.' });
+  }
+  next();
+}
+
+// ✅ NUEVO: helper específico para sala de computación
+function canEditComputing(req, res, next) {
+  const user = req.session.user;
+  if (!user) return res.status(401).json({ message: 'No autenticado' });
+  if (!userCanEditLab(user.role, 'computing')) {
+    return res.status(403).json({ message: 'No tienes permiso para editar la sala de computación.' });
   }
   next();
 }
@@ -1766,6 +1776,422 @@ app.delete(
       res.json({ message: 'Préstamo de ciencias eliminado', loan: removed });
     } catch (err) {
       console.error('Error al eliminar préstamo de ciencias:', err);
+      res.status(500).json({ message: 'Error al eliminar préstamo' });
+    }
+  }
+);
+
+// =========================================================
+// API: PRÉSTAMOS COMPUTACIÓN (PostgreSQL, tabla computing_loans)
+// =========================================================
+
+// ✅ Préstamos vencidos de Computación (> 7 días)
+app.get('/api/computing/overdue', requireLogin, async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `
+      SELECT id, data, user_email, loan_date, returned, return_date
+      FROM computing_loans
+      WHERE returned = FALSE
+        AND loan_date < NOW() - INTERVAL '7 days'
+      ORDER BY loan_date ASC, id
+      `
+    );
+
+    const overdue = rows.map(r => ({
+      id: r.id,
+      ...r.data,
+      user: r.user_email || null,
+      loanDate: r.loan_date,
+      returned: r.returned,
+      returnDate: r.return_date
+    }));
+
+    res.json(overdue);
+  } catch (err) {
+    console.error('Error al obtener préstamos vencidos de computación:', err);
+    res.status(500).json({ message: 'Error al obtener préstamos vencidos' });
+  }
+});
+
+// GET préstamos de Computación
+app.get('/api/computing/loans', requireLogin, async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      'SELECT id, data, user_email, loan_date, returned, return_date FROM computing_loans ORDER BY loan_date DESC NULLS LAST, id'
+    );
+
+    const loans = rows.map(r => ({
+      id: r.id,
+      ...r.data,
+      user: r.user_email || null,
+      loanDate: r.loan_date,
+      returned: r.returned,
+      returnDate: r.return_date
+    }));
+
+    res.json(loans);
+  } catch (err) {
+    console.error('Error al obtener préstamos de computación:', err);
+    res.status(500).json({ message: 'Error al obtener préstamos' });
+  }
+});
+
+// Registrar préstamo de Computación (con control de stock en items lab='computing')
+app.post('/api/computing/loan', requireLogin, canEditComputing, async (req, res) => {
+  const id = Date.now().toString();
+  const raw = { ...req.body };
+  const userEmail = req.session.user ? req.session.user.email : null;
+  const loanDate = new Date();
+
+  try {
+    let codigo = (raw.codigo || raw.code || raw.itemCode || '').trim();
+    let detalle = (raw.detalle || raw.descripcion || raw.itemName || '').trim();
+    let solicitante = (raw.solicitante || raw.borrowerName || '').trim();
+    let curso = (raw.curso || raw.grupo || raw.borrowerGroup || '').trim();
+    let observaciones = (raw.observaciones || raw.notes || '').trim();
+
+    if (!codigo) {
+      return res.status(400).json({ message: 'Falta el código del equipo de computación.' });
+    }
+
+    const data = {
+      codigo,
+      detalle,
+      solicitante,
+      curso,
+      observaciones,
+      itemCode: codigo,
+      itemName: detalle,
+      borrowerName: solicitante,
+      borrowerGroup: curso,
+      notes: observaciones
+    };
+
+    const client = await getPgClient();
+    if (!client) {
+      console.warn('⚠️ Préstamo computación sin transacción: db.pool no disponible, no se ajustará stock automáticamente.');
+      await db.query(
+        'INSERT INTO computing_loans (id, data, user_email, loan_date, returned) VALUES ($1,$2::jsonb,$3,$4,$5)',
+        [id, JSON.stringify(data), userEmail, loanDate, false]
+      );
+
+      const newLoan = { id, ...data, user: userEmail, loanDate, returned: false };
+      await addHistory({
+        lab: 'computing',
+        action: 'create-loan',
+        entityType: 'loan',
+        entityId: id,
+        userEmail,
+        data: newLoan
+      });
+      return res.json({ message: 'Préstamo registrado (sin control de stock)', loan: newLoan });
+    }
+
+    try {
+      await client.query('BEGIN');
+
+      // 1) Buscar item por código en lab='computing'
+      const qItem = await client.query(
+        `SELECT id, data, photo
+         FROM items
+         WHERE lab='computing' AND data->>'codigo' = $1
+         FOR UPDATE`,
+        [codigo]
+      );
+      if (qItem.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ message: `No existe un equipo en Computación con código "${codigo}".` });
+      }
+
+      const itemRow = qItem.rows[0];
+      const itemData = itemRow.data || {};
+      const cant = parseInt(itemData.cantidad, 10);
+      if (Number.isNaN(cant) || cant <= 0) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ message: `Sin stock disponible para el código "${codigo}".` });
+      }
+
+      // 2) Descontar 1 del stock
+      const nuevaCant = cant - 1;
+      itemData.cantidad = nuevaCant;
+      await client.query(
+        `UPDATE items
+         SET data = $1::jsonb
+         WHERE id = $2 AND lab='computing'`,
+        [JSON.stringify(itemData), itemRow.id]
+      );
+
+      // 3) Crear préstamo
+      await client.query(
+        `INSERT INTO computing_loans (id, data, user_email, loan_date, returned)
+         VALUES ($1, $2::jsonb, $3, $4, FALSE)`,
+        [id, JSON.stringify(data), userEmail, loanDate]
+      );
+
+      await addHistory({
+        lab: 'computing',
+        action: 'create-loan',
+        entityType: 'loan',
+        entityId: id,
+        userEmail,
+        data: { ...data, linkedItemId: itemRow.id }
+      });
+
+      await client.query('COMMIT');
+
+      const newLoan = { id, ...data, user: userEmail, loanDate, returned: false };
+      res.json({ message: 'Préstamo registrado', loan: newLoan });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      console.error('Error al registrar préstamo de computación (tx):', err);
+      res.status(500).json({ message: 'Error al registrar préstamo' });
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error('Error al registrar préstamo de computación:', err);
+    res.status(500).json({ message: 'Error al registrar préstamo' });
+  }
+});
+
+// Actualizar préstamo de Computación
+app.put('/api/computing/loan/:loanId', requireLogin, canEditComputing, async (req, res) => {
+  const loanId = req.params.loanId;
+  const { codigo, detalle, solicitante, curso, observaciones } = req.body;
+
+  try {
+    const { rows } = await db.query(
+      'SELECT id, data, user_email, loan_date, returned, return_date FROM computing_loans WHERE id = $1',
+      [loanId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Préstamo de computación no encontrado' });
+    }
+
+    const row = rows[0];
+    const data = row.data || {};
+
+    if (codigo !== undefined) {
+      data.codigo = codigo;
+      data.itemCode = codigo;
+    }
+    if (detalle !== undefined) {
+      data.detalle = detalle;
+      data.itemName = detalle;
+    }
+    if (solicitante !== undefined) {
+      data.solicitante = solicitante;
+      data.borrowerName = solicitante;
+    }
+    if (curso !== undefined) {
+      data.curso = curso;
+      data.borrowerGroup = curso;
+    }
+    if (observaciones !== undefined) {
+      data.observaciones = observaciones;
+      data.notes = observaciones;
+    }
+
+    await db.query('UPDATE computing_loans SET data = $1::jsonb WHERE id = $2', [
+      JSON.stringify(data),
+      loanId
+    ]);
+
+    const updatedLoan = {
+      id: row.id,
+      ...data,
+      user: row.user_email || null,
+      loanDate: row.loan_date,
+      returned: row.returned,
+      returnDate: row.return_date
+    };
+
+    await addHistory({
+      lab: 'computing',
+      action: 'update-loan',
+      entityType: 'loan',
+      entityId: loanId,
+      userEmail: req.session.user.email,
+      data: updatedLoan
+    });
+
+    res.json({ message: 'Préstamo de computación actualizado', loan: updatedLoan });
+  } catch (err) {
+    console.error('Error al actualizar préstamo de computación:', err);
+    res.status(500).json({ message: 'Error al actualizar préstamo' });
+  }
+});
+
+// Registrar devolución de Computación (suma stock en items lab='computing')
+app.post(
+  '/api/computing/return/:loanId',
+  requireLogin,
+  canEditComputing,
+  async (req, res) => {
+    const loanId = req.params.loanId;
+    const userEmail = req.session.user ? req.session.user.email : null;
+    const returnDate = new Date();
+
+    try {
+      const client = await getPgClient();
+      if (!client) {
+        console.warn('⚠️ Devolución computación sin transacción: db.pool no disponible, no se ajustará stock automáticamente.');
+        const { rows } = await db.query(
+          'UPDATE computing_loans SET returned = TRUE, return_date = $1 WHERE id = $2 RETURNING id, data, user_email, loan_date, returned, return_date',
+          [returnDate, loanId]
+        );
+        if (rows.length === 0) return res.status(404).json({ message: 'Préstamo de computación no encontrado' });
+
+        const row = rows[0];
+        const data = row.data || {};
+        const loan = {
+          id: row.id,
+          ...data,
+          user: row.user_email || null,
+          loanDate: row.loan_date,
+          returned: row.returned,
+          returnDate: row.return_date
+        };
+
+        await addHistory({
+          lab: 'computing',
+          action: 'return-loan',
+          entityType: 'loan',
+          entityId: loanId,
+          userEmail,
+          data: loan
+        });
+
+        return res.json({ message: 'Préstamo de computación devuelto (sin ajuste de stock)', loan });
+      }
+
+      try {
+        await client.query('BEGIN');
+
+        // 1) Leer préstamo
+        const qLoan = await client.query(
+          `SELECT id, data, user_email, loan_date, returned, return_date
+           FROM computing_loans WHERE id = $1 FOR UPDATE`,
+          [loanId]
+        );
+        if (qLoan.rows.length === 0) {
+          await client.query('ROLLBACK');
+          return res.status(404).json({ message: 'Préstamo de computación no encontrado' });
+        }
+        const loanRow = qLoan.rows[0];
+        const loanData = loanRow.data || {};
+        const codigo = (loanData.codigo || loanData.itemCode || '').trim();
+
+        // 2) Marcar devuelto
+        await client.query(
+          `UPDATE computing_loans
+           SET returned = TRUE, return_date = $1
+           WHERE id = $2`,
+          [returnDate, loanId]
+        );
+
+        // 3) Sumar stock si existe el ítem en lab='computing'
+        if (codigo) {
+          const qItem = await client.query(
+            `SELECT id, data
+             FROM items
+             WHERE lab='computing' AND data->>'codigo' = $1
+             FOR UPDATE`,
+            [codigo]
+          );
+          if (qItem.rows.length > 0) {
+            const itemRow = qItem.rows[0];
+            const itemData = itemRow.data || {};
+            const cant = parseInt(itemData.cantidad, 10) || 0;
+            itemData.cantidad = cant + 1;
+
+            await client.query(
+              `UPDATE items
+               SET data = $1::jsonb
+               WHERE id = $2 AND lab='computing'`,
+              [JSON.stringify(itemData), itemRow.id]
+            );
+          }
+        }
+
+        await addHistory({
+          lab: 'computing',
+          action: 'return-loan',
+          entityType: 'loan',
+          entityId: loanId,
+          userEmail,
+          data: { codigo }
+        });
+
+        await client.query('COMMIT');
+
+        const loan = {
+          id: loanRow.id,
+          ...loanData,
+          user: loanRow.user_email || null,
+          loanDate: loanRow.loan_date,
+          returned: true,
+          returnDate
+        };
+        res.json({ message: 'Préstamo de computación devuelto', loan });
+      } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('Error al registrar devolución de computación (tx):', err);
+        res.status(500).json({ message: 'Error al registrar devolución' });
+      } finally {
+        client.release();
+      }
+    } catch (err) {
+      console.error('Error al registrar devolución de computación:', err);
+      res.status(500).json({ message: 'Error al registrar devolución' });
+    }
+  }
+);
+
+// Eliminar préstamo de Computación
+app.delete(
+  '/api/computing/loan/:loanId',
+  requireLogin,
+  canEditComputing,
+  async (req, res) => {
+    const loanId = req.params.loanId;
+
+    try {
+      const { rows } = await db.query(
+        'DELETE FROM computing_loans WHERE id = $1 RETURNING id, data, user_email, loan_date, returned, return_date',
+        [loanId]
+      );
+
+      if (rows.length === 0) {
+        return res.status(404).json({ message: 'Préstamo de computación no encontrado' });
+      }
+
+      const row = rows[0];
+      const data = row.data || {};
+
+      const removed = {
+        id: row.id,
+        ...data,
+        user: row.user_email || null,
+        loanDate: row.loan_date,
+        returned: row.returned,
+        returnDate: row.return_date
+      };
+
+      await addHistory({
+        lab: 'computing',
+        action: 'delete-loan',
+        entityType: 'loan',
+        entityId: loanId,
+        userEmail: req.session.user.email,
+        data: removed
+      });
+
+      res.json({ message: 'Préstamo de computación eliminado', loan: removed });
+    } catch (err) {
+      console.error('Error al eliminar préstamo de computación:', err);
       res.status(500).json({ message: 'Error al eliminar préstamo' });
     }
   }
