@@ -1,30 +1,55 @@
 // /public/js/science.js
+// Laboratorio de Ciencias – Inventario + Préstamos + Personas (solo lectura)
 
 document.addEventListener('DOMContentLoaded', () => {
+  // ---------- Referencias base ----------
   const scienceForm = document.getElementById('scienceForm');
   const scienceTableBody = document.querySelector('#scienceTable tbody');
-  const scienceReservationForm = document.getElementById('scienceReservationForm');
-  const scienceLoanForm = document.getElementById('scienceLoanForm');
-  const scienceLoanTableBody = document.getElementById('scienceLoanTableBody');
-  const scienceReturnForm = document.getElementById('scienceReturnForm');
-  const scienceReturnIdInput = document.getElementById('scienceReturnId');
-  const sciencePeopleTableBody = document.querySelector('#sciencePeopleTable tbody');
+  const scienceSearchInput = document.getElementById('scienceSearch');
 
-  // 🔵 Referencias al modal de préstamo desde inventario
-  const loanModal = document.getElementById('scienceLoanModal');
-  const loanModalForm = document.getElementById('scienceLoanModalForm');
-  const loanModalCodigo = document.getElementById('scienceLoanModalCodigo');
-  const loanModalNombre = document.getElementById('scienceLoanModalNombre');
-  const loanModalUser = document.getElementById('scienceLoanModalUser');
-  const loanModalCurso = document.getElementById('scienceLoanModalCurso');
-  const loanModalObs = document.getElementById('scienceLoanModalObs');
-  const loanModalCancel = document.getElementById('scienceLoanModalCancel');
+  const loanForm = document.getElementById('scienceLoanForm');
+  const loansTableBody = document.querySelector('#scienceLoansTable tbody');
+  const loansSearchInput = document.getElementById('scienceLoansSearch');
+  const returnForm = document.getElementById('scienceReturnForm');
+  const returnIdInput = document.getElementById('scienceReturnId');
+
+  const loanPersonSelect = document.getElementById('sciLoanPersonSelect');
+  const loanNombreInput = document.getElementById('sciLoanNombre');
+  const loanCursoInput = document.getElementById('sciLoanCurso');
+  const loanTipoPersonaInput = document.getElementById('sciLoanTipoPersona');
+
+  const peopleTableBody = document.querySelector('#sciencePeopleTable tbody');
 
   const apiFetch =
     window.guardedFetch ||
-    ((url, options = {}) =>
-      fetch(url, { credentials: 'include', ...options }));
+    ((url, options = {}) => fetch(url, { credentials: 'include', ...options }));
 
+  if (!scienceForm || !scienceTableBody) return; // seguridad
+
+  // ---------- Estado ----------
+  let scienceItems = [];
+  let scienceLoans = [];
+  let sciencePeople = [];
+
+  // ---------- Utils ----------
+  const debounce = (fn, wait = 250) => {
+    let t;
+    return (...args) => {
+      clearTimeout(t);
+      t = setTimeout(() => fn(...args), wait);
+    };
+  };
+
+  const safe = v => (v == null ? '' : String(v));
+
+  const formatDate = d => {
+    if (!d) return '';
+    const date = new Date(d);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleString('es-CL');
+  };
+
+  // pequeño helper de historial (opcional)
   async function logHistory(entry) {
     try {
       await apiFetch('/api/history', {
@@ -39,523 +64,406 @@ document.addEventListener('DOMContentLoaded', () => {
         })
       });
     } catch (err) {
-      console.error('Error registrando historial (science):', err);
+      console.warn('No se pudo registrar historial (science):', err);
     }
   }
 
-  // ===== Helpers modal =====
-  function openLoanModal(item) {
-    if (!loanModal || !loanModalForm) return;
-    const codigo = item.codigo || '';
-    const nombre = item.nombre || item.descripcion || '';
-
-    if (loanModalCodigo) loanModalCodigo.value = codigo;
-    if (loanModalNombre) loanModalNombre.value = nombre;
-    if (loanModalObs) loanModalObs.value = '';
-
-    if (loanModalUser) {
-      loanModalUser.selectedIndex = 0;
-    }
-    if (loanModalCurso) {
-      loanModalCurso.value = '';
-    }
-
-    loanModal.style.display = 'flex';
-    loanModal.setAttribute('aria-hidden', 'false');
-  }
-
-  function closeLoanModal() {
-    if (!loanModal) return;
-    loanModal.style.display = 'none';
-    loanModal.setAttribute('aria-hidden', 'true');
-  }
-
-  if (loanModalCancel) {
-    loanModalCancel.addEventListener('click', () => {
-      closeLoanModal();
-    });
-  }
-
-  if (loanModal) {
-    loanModal.addEventListener('click', ev => {
-      if (ev.target === loanModal) {
-        closeLoanModal();
-      }
-    });
-  }
-
-  // =======================
-  //    ITEMS
-  // =======================
+  // ================== INVENTARIO ==================
   async function loadScienceItems() {
-    if (!scienceTableBody) return;
     try {
       const resp = await apiFetch('/api/science/items');
       if (!resp.ok) {
-        console.error('Error cargando items de ciencias:', resp.status);
+        console.error('Error al cargar inventario de ciencias:', resp.status);
         return;
       }
       const items = await resp.json();
-      if (!Array.isArray(items)) return;
-      scienceTableBody.innerHTML = '';
-      items.forEach(addRow);
+      scienceItems = Array.isArray(items) ? items : [];
+      renderScienceTable();
     } catch (err) {
-      console.error('Error cargando items:', err);
+      console.error('Error cargando materiales de ciencias:', err);
     }
   }
 
-  if (scienceForm) {
-    scienceForm.addEventListener('submit', async e => {
-      e.preventDefault();
-      try {
-        const formData = new FormData(scienceForm);
-        const response = await apiFetch('/api/science/items', {
-          method: 'POST',
-          body: formData
-        });
+  function getFilteredItems() {
+    const text = (scienceSearchInput?.value || '').trim().toLowerCase();
+    if (!text) return [...scienceItems];
 
-        if (!response.ok) {
-          alert('Error al guardar el material de ciencias.');
-          return;
-        }
-
-        const result = await response.json();
-        if (result && result.item) {
-          addRow(result.item);
-
-          await logHistory({
-            action: 'create',
-            type: 'item',
-            entityId: result.item.id,
-            detail: `Ingresado material de ciencias: ${result.item.nombre || ''} (código ${result.item.codigo || ''})`
-          });
-        }
-
-        scienceForm.reset();
-      } catch (err) {
-        console.error('Error al guardar material de ciencias:', err);
-        alert('Error al guardar el material.');
-      }
+    return scienceItems.filter(item => {
+      const vals = [
+        item.id,
+        item.codigo,
+        item.nombre,
+        item.descripcion,
+        item.categoria,
+        item.fecha
+      ];
+      return vals.some(v => v && String(v).toLowerCase().includes(text));
     });
   }
 
-  function addRow(item) {
-    if (!scienceTableBody) return;
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${item.id}</td>
-      <td>${item.codigo || ''}</td>
-      <td>${item.nombre || ''}</td>
-      <td>${item.descripcion || ''}</td>
-      <td>${item.categoria || ''}</td>
-      <td>${item.cantidad || ''}</td>
-      <td>${item.fecha || ''}</td>
-      <td>${item.photo ? `<img src="${item.photo}" width="50">` : ''}</td>
-      <td>
-        <button data-id="${item.id}" class="btn-ghost prestar-button">Prestar</button>
-        <button data-id="${item.id}" class="delete-button btn-ghost">Eliminar</button>
-      </td>
-    `;
+  function renderScienceTable() {
+    scienceTableBody.innerHTML = '';
 
-    const deleteBtn = tr.querySelector('.delete-button');
-    if (deleteBtn) {
-      deleteBtn.addEventListener('click', async () => {
-        if (!confirm('¿Seguro que deseas eliminar este material de ciencias?')) return;
-        try {
-          const resp = await apiFetch(`/api/science/items/${item.id}`, { method: 'DELETE' });
-          if (resp.ok) {
-            tr.remove();
-            await logHistory({
-              action: 'delete',
-              type: 'item',
-              entityId: item.id,
-              detail: `Eliminado material de ciencias: ${item.nombre || ''} (código ${item.codigo || ''})`
-            });
-          } else {
-            alert('Error al eliminar el material.');
+    const items = getFilteredItems();
+    items.forEach(item => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${safe(item.id)}</td>
+        <td>${safe(item.codigo)}</td>
+        <td>${safe(item.nombre)}</td>
+        <td>${safe(item.descripcion)}</td>
+        <td>${safe(item.categoria)}</td>
+        <td>${safe(item.cantidad)}</td>
+        <td>${safe(item.fecha)}</td>
+        <td>
+          ${
+            item.photo
+              ? `<img src="${item.photo}" width="50" alt="Foto material" />`
+              : ''
           }
+        </td>
+        <td>
+          <button type="button" class="btn-ghost delete-sci-item" data-id="${item.id}">
+            Eliminar
+          </button>
+        </td>
+      `;
+
+      const delBtn = tr.querySelector('.delete-sci-item');
+      delBtn.addEventListener('click', async () => {
+        if (!confirm('¿Seguro que deseas eliminar este material de ciencias?')) return;
+
+        try {
+          const resp = await apiFetch(`/api/science/items/${item.id}`, {
+            method: 'DELETE'
+          });
+          if (!resp.ok) {
+            alert('No se pudo eliminar el material.');
+            return;
+          }
+          scienceItems = scienceItems.filter(it => it.id !== item.id);
+          renderScienceTable();
+
+          await logHistory({
+            action: 'delete',
+            type: 'item',
+            entityId: item.id,
+            detail: `Eliminado material de ciencias "${item.nombre || ''}" (código ${item.codigo || ''})`
+          });
         } catch (err) {
           console.error('Error al eliminar material de ciencias:', err);
-          alert('Error al eliminar el material.');
+          alert('Ocurrió un error al eliminar el material.');
         }
       });
-    }
 
-    const prestarBtn = tr.querySelector('.prestar-button');
-    if (prestarBtn) {
-      prestarBtn.addEventListener('click', () => {
-        openLoanModal(item);
-      });
-    }
-
-    scienceTableBody.appendChild(tr);
+      scienceTableBody.appendChild(tr);
+    });
   }
 
-  // =======================
-  //    RESERVAS
-  // =======================
-  async function loadReservations() {
-    const body = document.getElementById('scienceReservationsTableBody');
-    if (!body) return; // si no hay tabla, no hacemos nada
+  scienceForm.addEventListener('submit', async e => {
+    e.preventDefault();
+
+    const formData = new FormData(scienceForm);
     try {
-      const resp = await apiFetch('/api/science/reservations');
+      const resp = await apiFetch('/api/science/items', {
+        method: 'POST',
+        body: formData
+      });
+
       if (!resp.ok) {
-        console.error('Error cargando reservas de ciencias:', resp.status);
+        const data = await resp.json().catch(() => ({}));
+        alert(data.message || 'No se pudo guardar el material.');
         return;
       }
-      const reservations = await resp.json();
-      if (!Array.isArray(reservations)) return;
 
-      body.innerHTML = '';
-      reservations.forEach(res => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${res.id}</td>
-          <td>${res.solicitante || ''}</td>
-          <td>${res.curso || ''}</td>
-          <td>${res.fechaUso || res.date || ''}</td>
-          <td>${res.horario || ''}</td>
-          <td>${res.observaciones || res.activity || ''}</td>
-          <td>${res.user || ''}</td>
-        `;
-        body.appendChild(tr);
-      });
+      const result = await resp.json();
+      if (result && result.item) {
+        scienceItems.push(result.item);
+        renderScienceTable();
+
+        await logHistory({
+          action: 'create',
+          type: 'item',
+          entityId: result.item.id,
+          detail: `Ingresado material de ciencias "${result.item.nombre || ''}" (código ${result.item.codigo || ''})`
+        });
+      }
+
+      scienceForm.reset();
     } catch (err) {
-      console.error('Error cargando reservas de ciencias:', err);
+      console.error('Error al guardar material de ciencias:', err);
+      alert('Ocurrió un error al guardar.');
+    }
+  });
+
+  if (scienceSearchInput) {
+    scienceSearchInput.addEventListener(
+      'input',
+      debounce(() => renderScienceTable(), 200)
+    );
+  }
+
+  // ================== PRÉSTAMOS ==================
+  async function loadScienceLoans() {
+    if (!loansTableBody) return;
+    try {
+      const resp = await apiFetch('/api/science/loans');
+      if (!resp.ok) {
+        console.error('Error al cargar préstamos de ciencias:', resp.status);
+        return;
+      }
+      const loans = await resp.json();
+      scienceLoans = Array.isArray(loans) ? loans : [];
+      renderLoansTable();
+    } catch (err) {
+      console.error('Error cargando préstamos de ciencias:', err);
     }
   }
 
-  if (scienceReservationForm) {
-    scienceReservationForm.addEventListener('submit', async e => {
+  function getFilteredLoans() {
+    const text = (loansSearchInput?.value || '').trim().toLowerCase();
+    if (!text) return [...scienceLoans];
+
+    return scienceLoans.filter(loan => {
+      const vals = [
+        loan.id,
+        loan.codigo || loan.itemCode,
+        loan.nombre || loan.borrowerName,
+        loan.curso || loan.borrowerCourse,
+        loan.observaciones || loan.notes
+      ];
+      return vals.some(v => v && String(v).toLowerCase().includes(text));
+    });
+  }
+
+  function renderLoansTable() {
+    if (!loansTableBody) return;
+    loansTableBody.innerHTML = '';
+
+    const loans = getFilteredLoans();
+    loans.forEach(loan => {
+      const loanId = loan.id || '';
+      const codigo = loan.codigo || loan.itemCode || '';
+      const nombre = loan.nombre || loan.borrowerName || '';
+      const curso = loan.curso || loan.borrowerCourse || '';
+      const observaciones = loan.observaciones || loan.notes || '';
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${safe(loanId)}</td>
+        <td>${safe(codigo)}</td>
+        <td>${safe(nombre)}</td>
+        <td>${safe(curso)}</td>
+        <td>${formatDate(loan.loanDate)}</td>
+        <td>${loan.returned ? 'Sí' : 'No'}</td>
+        <td>${formatDate(loan.returnDate)}</td>
+        <td>${safe(observaciones)}</td>
+        <td>
+          ${
+            loan.returned
+              ? ''
+              : `<button type="button" class="btn-ghost sci-return-btn" data-id="${loanId}">
+                   Marcar devuelto
+                 </button>`
+          }
+        </td>
+      `;
+
+      const retBtn = tr.querySelector('.sci-return-btn');
+      if (retBtn) {
+        retBtn.addEventListener('click', async () => {
+          if (!confirm('¿Marcar este préstamo como devuelto?')) return;
+          await doReturnLoan(loanId);
+        });
+      }
+
+      loansTableBody.appendChild(tr);
+    });
+  }
+
+  async function doReturnLoan(loanId) {
+    try {
+      const resp = await apiFetch(`/api/science/return/${loanId}`, {
+        method: 'POST'
+      });
+      if (!resp.ok) {
+        const d = await resp.json().catch(() => ({}));
+        alert(d.message || 'No se pudo registrar la devolución.');
+        return;
+      }
+
+      await loadScienceLoans();
+      await loadScienceItems();
+
+      await logHistory({
+        action: 'update',
+        type: 'loan',
+        entityId: loanId,
+        detail: `Préstamo de ciencias ${loanId} marcado como devuelto`
+      });
+    } catch (err) {
+      console.error('Error al devolver préstamo de ciencias:', err);
+      alert('Ocurrió un error al registrar la devolución.');
+    }
+  }
+
+  if (loanForm) {
+    loanForm.addEventListener('submit', async e => {
       e.preventDefault();
+
+      const formData = new FormData(loanForm);
+      const data = Object.fromEntries(formData.entries());
+
       try {
-        const data = Object.fromEntries(new FormData(scienceReservationForm));
-        const resp = await apiFetch('/api/science/reservations', {
+        const resp = await apiFetch('/api/science/loan', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
         });
 
         if (!resp.ok) {
-          alert('Error al registrar reserva');
-          return;
-        }
-
-        const result = await resp.json();
-        if (result && result.reservation) {
-          await logHistory({
-            action: 'create',
-            type: 'reservation',
-            entityId: result.reservation.id,
-            detail: `Reserva de laboratorio de ciencias para ${result.reservation.curso || ''} – ${result.reservation.solicitante || ''}`
-          });
-        }
-
-        alert('Reserva registrada');
-        scienceReservationForm.reset();
-        loadReservations();
-      } catch (err) {
-        console.error('Error al registrar reserva de ciencias:', err);
-        alert('Error al registrar la reserva.');
-      }
-    });
-  }
-
-  // =======================
-  //    PRÉSTAMOS
-  // =======================
-  async function loadLoans() {
-    if (!scienceLoanTableBody) return;
-    try {
-      const resp = await apiFetch('/api/science/loans');
-      if (!resp.ok) return;
-      const loans = await resp.json();
-      if (!Array.isArray(loans)) return;
-
-      scienceLoanTableBody.innerHTML = '';
-      loans.forEach(loan => {
-        const tr = document.createElement('tr');
-
-        const codigo = loan.codigo || loan.itemCode || loan.itemId || '';
-        const solicitante = loan.solicitante || loan.borrowerName || '';
-        const curso = loan.curso || loan.borrowerGroup || '';
-        const fechaPrestamo = loan.loanDate
-          ? new Date(loan.loanDate).toLocaleString('es-CL', {
-              dateStyle: 'short',
-              timeStyle: 'short'
-            })
-          : (loan.fecha || '');
-        const fechaDevolucion = loan.returnDate
-          ? new Date(loan.returnDate).toLocaleString('es-CL', {
-              dateStyle: 'short',
-              timeStyle: 'short'
-            })
-          : '';
-        const devueltoTxt = loan.returned ? 'Sí' : 'No';
-        const observaciones = loan.observaciones || loan.notes || '';
-
-        tr.innerHTML = `
-          <td>${loan.id}</td>
-          <td>${codigo}</td>
-          <td>${solicitante}</td>
-          <td>${curso}</td>
-          <td>${fechaPrestamo}</td>
-          <td>${devueltoTxt}</td>
-          <td>${fechaDevolucion}</td>
-          <td>${observaciones}</td>
-          <td class="accion-cell"></td>
-        `;
-
-        const accionCell = tr.querySelector('.accion-cell');
-
-        if (!loan.returned) {
-          const btn = document.createElement('button');
-          btn.className = 'btn-ghost devolver-btn';
-          btn.textContent = 'Devolver';
-          btn.dataset.id = loan.id;
-
-          btn.addEventListener('click', async () => {
-            if (!confirm('¿Marcar este préstamo como devuelto?')) return;
-            try {
-              const r = await apiFetch(`/api/science/return/${loan.id}`, {
-                method: 'POST'
-              });
-              if (r.ok) {
-                const data = await r.json().catch(() => ({}));
-                const codigoDev = codigo || (data.loan && (data.loan.codigo || data.loan.itemCode)) || '';
-
-                await logHistory({
-                  action: 'update',
-                  type: 'loan',
-                  entityId: loan.id,
-                  detail: `Devolución de préstamo de ciencias ID ${loan.id} (código ${codigoDev})`
-                });
-
-                loadLoans();
-                loadScienceItems(); // actualizar stock
-              } else {
-                alert('Error al registrar la devolución.');
-              }
-            } catch (err) {
-              console.error('Error devolviendo material de ciencias:', err);
-              alert('Error devolviendo el material.');
-            }
-          });
-
-          accionCell.appendChild(btn);
-        } else {
-          accionCell.textContent = '—';
-        }
-
-        scienceLoanTableBody.appendChild(tr);
-      });
-    } catch (err) {
-      console.error('Error cargando préstamos:', err);
-    }
-  }
-
-  // formulario de préstamo “normal”
-  if (scienceLoanForm) {
-    scienceLoanForm.addEventListener('submit', async e => {
-      e.preventDefault();
-      try {
-        const codigoInput = document.getElementById('scienceLoanCodigo');
-        const cursoInput = document.getElementById('scienceLoanCurso');
-        const obsInput = document.getElementById('scienceLoanObs');
-        const selectPersona = document.getElementById('scienceLoanUser');
-
-        const codigo = (codigoInput?.value || '').trim();
-        const curso = (cursoInput?.value || '').trim();
-        const observaciones = (obsInput?.value || '').trim();
-
-        if (!codigo) {
-          alert('Debe ingresar el código del material.');
-          return;
-        }
-        if (!selectPersona || !selectPersona.value) {
-          alert('Debe seleccionar un solicitante.');
-          return;
-        }
-
-        const personaId = selectPersona.value;
-        const solicitanteTexto = selectPersona.options[selectPersona.selectedIndex].textContent || '';
-
-        const payload = {
-          codigo,
-          solicitante: solicitanteTexto,
-          curso,
-          personaId,
-          observaciones
-        };
-
-        const resp = await apiFetch('/api/science/loan', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-
-        if (!resp.ok) {
-          const msg = await resp.json().catch(() => ({}));
-          alert(msg.message || 'Error registrando préstamo');
+          const d = await resp.json().catch(() => ({}));
+          alert(d.message || 'No se pudo registrar el préstamo.');
           return;
         }
 
         const result = await resp.json();
         if (result && result.loan) {
+          scienceLoans.unshift(result.loan);
+          renderLoansTable();
+
           await logHistory({
             action: 'create',
             type: 'loan',
             entityId: result.loan.id,
-            detail: `Préstamo registrado ID ${result.loan.id} – ${solicitanteTexto} (código ${codigo})`
+            detail: `Préstamo de ciencias creado (ID ${result.loan.id}) para ${result.loan.nombre || ''}`
           });
         }
 
-        alert('Préstamo registrado');
-        scienceLoanForm.reset();
-        loadLoans();
-        loadScienceItems();
+        loanForm.reset();
+        if (loanPersonSelect) loanPersonSelect.value = '';
+        if (loanTipoPersonaInput) loanTipoPersonaInput.value = '';
       } catch (err) {
-        console.error('Error registrando préstamo:', err);
-        alert('Error registrando el préstamo.');
+        console.error('Error al registrar préstamo de ciencias:', err);
+        alert('Ocurrió un error al registrar el préstamo.');
       }
     });
   }
 
-  // formulario de devolución por ID (similar a Biblioteca)
-  if (scienceReturnForm && scienceReturnIdInput) {
-    scienceReturnForm.addEventListener('submit', async e => {
+  if (returnForm && returnIdInput) {
+    returnForm.addEventListener('submit', async e => {
       e.preventDefault();
-      const loanId = scienceReturnIdInput.value.trim();
+      const loanId = returnIdInput.value.trim();
       if (!loanId) {
-        alert('Debes ingresar el ID del préstamo.');
+        alert('Debes indicar el ID del préstamo.');
         return;
       }
-
-      try {
-        const resp = await apiFetch(`/api/science/return/${loanId}`, {
-          method: 'POST'
-        });
-
-        if (!resp.ok) {
-          const msg = await resp.json().catch(() => ({}));
-          alert(msg.message || 'Error al registrar devolución');
-          return;
-        }
-
-        const data = await resp.json().catch(() => ({}));
-        const loan = data.loan || {};
-        const codigo = loan.codigo || loan.itemCode || '';
-
-        await logHistory({
-          action: 'update',
-          type: 'loan',
-          entityId: loanId,
-          detail: `Devolución (formulario) de préstamo de ciencias ID ${loanId} (código ${codigo})`
-        });
-
-        alert('Devolución registrada');
-        scienceReturnForm.reset();
-        loadLoans();
-        loadScienceItems();
-      } catch (err) {
-        console.error('Error registrando devolución (form):', err);
-        alert('Error registrando la devolución.');
-      }
+      await doReturnLoan(loanId);
+      returnForm.reset();
     });
   }
 
-  // Modal: confirmar préstamo desde inventario
-  if (loanModalForm) {
-    loanModalForm.addEventListener('submit', async e => {
-      e.preventDefault();
-      const codigo = (loanModalCodigo && loanModalCodigo.value.trim()) || '';
-      const curso = (loanModalCurso && loanModalCurso.value.trim()) || '';
-      const observaciones = (loanModalObs && loanModalObs.value.trim()) || '';
-      const selectPersona = loanModalUser;
-
-      if (!codigo) {
-        alert('Falta el código del material.');
-        return;
-      }
-      if (!selectPersona || !selectPersona.value) {
-        alert('Debes seleccionar una persona.');
-        return;
-      }
-
-      const personaId = selectPersona.value;
-      const solicitanteTexto = selectPersona.options[selectPersona.selectedIndex].textContent || '';
-
-      try {
-        const resp = await apiFetch('/api/science/loan', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            codigo,
-            solicitante: solicitanteTexto,
-            curso,
-            personaId,
-            observaciones
-          })
-        });
-
-        if (!resp.ok) {
-          const msg = await resp.json().catch(() => ({}));
-          alert(msg.message || 'Error registrando préstamo');
-          return;
-        }
-
-        const result = await resp.json();
-        if (result && result.loan) {
-          await logHistory({
-            action: 'create',
-            type: 'loan',
-            entityId: result.loan.id,
-            detail: `Préstamo desde inventario – código ${codigo} para ${solicitanteTexto}`
-          });
-        }
-
-        closeLoanModal();
-        loadLoans();
-        loadScienceItems();
-        alert('Préstamo registrado');
-      } catch (err) {
-        console.error('Error registrando préstamo (modal):', err);
-        alert('Error registrando el préstamo.');
-      }
-    });
+  if (loansSearchInput) {
+    loansSearchInput.addEventListener(
+      'input',
+      debounce(() => renderLoansTable(), 200)
+    );
   }
 
-  // =======================
-  //   PERSONAS REGISTRADAS
-  //   (lee /api/library/people)
-  // =======================
-  async function loadPeople() {
-    if (!sciencePeopleTableBody) return;
+  // ================== PERSONAS (compartidas con Biblioteca) ==================
+  async function loadSciencePeople() {
     try {
       const resp = await apiFetch('/api/library/people');
-      if (!resp.ok) return;
-      const people = await resp.json();
-      if (!Array.isArray(people)) return;
+      if (!resp.ok) {
+        console.error('Error al cargar personas para Ciencias:', resp.status);
+        return;
+      }
+      const data = await resp.json();
+      sciencePeople = Array.isArray(data) ? data : [];
 
-      sciencePeopleTableBody.innerHTML = '';
-      people.forEach(p => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${p.id || ''}</td>
-          <td>${p.nombre || ''}</td>
-          <td>${p.tipo || ''}</td>
-          <td>${p.curso || ''}</td>
-        `;
-        sciencePeopleTableBody.appendChild(tr);
-      });
+      renderPeopleTable();
+      fillLoanPersonSelect();
     } catch (err) {
-      console.error('Error cargando personas para ciencias:', err);
+      console.error('Error cargando personas para Ciencias:', err);
     }
   }
 
-  // cargar datos al entrar
+  function renderPeopleTable() {
+    if (!peopleTableBody) return;
+    peopleTableBody.innerHTML = '';
+
+    sciencePeople.forEach(p => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${safe(p.id)}</td>
+        <td>${safe(p.nombre)}</td>
+        <td>${safe(p.tipo)}</td>
+        <td>${safe(p.curso)}</td>
+      `;
+      peopleTableBody.appendChild(tr);
+    });
+  }
+
+  function fillLoanPersonSelect() {
+    if (!loanPersonSelect) return;
+
+    loanPersonSelect.innerHTML =
+      '<option value="">-- Seleccionar desde lista --</option>';
+
+    const estudiantes = sciencePeople.filter(
+      p => (p.tipo || '').toLowerCase() === 'estudiante'
+    );
+    const funcionarios = sciencePeople.filter(
+      p => (p.tipo || '').toLowerCase() === 'funcionario'
+    );
+
+    if (estudiantes.length) {
+      const og = document.createElement('optgroup');
+      og.label = 'Estudiantes';
+      estudiantes.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        const extra = p.curso ? ` (${p.curso})` : '';
+        opt.textContent = `${p.nombre}${extra}`;
+        og.appendChild(opt);
+      });
+      loanPersonSelect.appendChild(og);
+    }
+
+    if (funcionarios.length) {
+      const og = document.createElement('optgroup');
+      og.label = 'Funcionarios';
+      funcionarios.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        const extra = p.curso ? ` (${p.curso})` : '';
+        opt.textContent = `${p.nombre}${extra}`;
+        og.appendChild(opt);
+      });
+      loanPersonSelect.appendChild(og);
+    }
+  }
+
+  if (loanPersonSelect) {
+    loanPersonSelect.addEventListener('change', () => {
+      const id = loanPersonSelect.value;
+      const p = sciencePeople.find(x => x.id === id);
+      if (!p) return;
+
+      if (loanNombreInput && !loanNombreInput.value) {
+        loanNombreInput.value = p.nombre || '';
+      }
+      if (loanCursoInput && !loanCursoInput.value) {
+        loanCursoInput.value = p.curso || '';
+      }
+      if (loanTipoPersonaInput) {
+        loanTipoPersonaInput.value = p.tipo || '';
+      }
+    });
+  }
+
+  // ================== INICIALIZACIÓN ==================
   loadScienceItems();
-  loadReservations();
-  loadLoans();
-  loadPeople();
+  loadScienceLoans();
+  loadSciencePeople();
 });
