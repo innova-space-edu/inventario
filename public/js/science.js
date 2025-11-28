@@ -7,6 +7,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const scienceLoanForm = document.getElementById('scienceLoanForm');
   const scienceLoanTableBody = document.getElementById('scienceLoanTableBody');
 
+  // 🔵 Referencias al modal de préstamo desde inventario
+  const loanModal = document.getElementById('scienceLoanModal');
+  const loanModalForm = document.getElementById('scienceLoanModalForm');
+  const loanModalCodigo = document.getElementById('scienceLoanModalCodigo');
+  const loanModalNombre = document.getElementById('scienceLoanModalNombre');
+  const loanModalUser = document.getElementById('scienceLoanModalUser');
+  const loanModalCurso = document.getElementById('scienceLoanModalCurso');
+  const loanModalObs = document.getElementById('scienceLoanModalObs');
+  const loanModalCancel = document.getElementById('scienceLoanModalCancel');
+
   const apiFetch =
     window.guardedFetch ||
     ((url, options = {}) =>
@@ -28,6 +38,47 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) {
       console.error('Error registrando historial (science):', err);
     }
+  }
+
+  // ===== Helpers modal =====
+  function openLoanModal(item) {
+    if (!loanModal || !loanModalForm) return;
+    const codigo = item.codigo || '';
+    const nombre = item.nombre || item.descripcion || '';
+
+    if (loanModalCodigo) loanModalCodigo.value = codigo;
+    if (loanModalNombre) loanModalNombre.value = nombre;
+    if (loanModalObs) loanModalObs.value = '';
+
+    if (loanModalUser) {
+      loanModalUser.selectedIndex = 0;
+    }
+    if (loanModalCurso) {
+      loanModalCurso.value = '';
+    }
+
+    loanModal.style.display = 'flex';
+    loanModal.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeLoanModal() {
+    if (!loanModal) return;
+    loanModal.style.display = 'none';
+    loanModal.setAttribute('aria-hidden', 'true');
+  }
+
+  if (loanModalCancel) {
+    loanModalCancel.addEventListener('click', () => {
+      closeLoanModal();
+    });
+  }
+
+  if (loanModal) {
+    loanModal.addEventListener('click', ev => {
+      if (ev.target === loanModal) {
+        closeLoanModal();
+      }
+    });
   }
 
   // ========== ITEMS ==========
@@ -95,30 +146,42 @@ document.addEventListener('DOMContentLoaded', () => {
       <td>${item.cantidad || ''}</td>
       <td>${item.fecha || ''}</td>
       <td>${item.photo ? `<img src="${item.photo}" width="50">` : ''}</td>
-      <td><button data-id="${item.id}" class="delete-button btn-ghost">Eliminar</button></td>
+      <td>
+        <button data-id="${item.id}" class="btn-ghost prestar-button">Prestar</button>
+        <button data-id="${item.id}" class="delete-button btn-ghost">Eliminar</button>
+      </td>
     `;
 
     const deleteBtn = tr.querySelector('.delete-button');
-    deleteBtn.addEventListener('click', async () => {
-      if (!confirm('¿Seguro que deseas eliminar este material de ciencias?')) return;
-      try {
-        const resp = await apiFetch(`/api/science/items/${item.id}`, { method: 'DELETE' });
-        if (resp.ok) {
-          tr.remove();
-          await logHistory({
-            action: 'delete',
-            type: 'item',
-            entityId: item.id,
-            detail: `Eliminado material de ciencias: ${item.nombre || ''} (código ${item.codigo || ''})`
-          });
-        } else {
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', async () => {
+        if (!confirm('¿Seguro que deseas eliminar este material de ciencias?')) return;
+        try {
+          const resp = await apiFetch(`/api/science/items/${item.id}`, { method: 'DELETE' });
+          if (resp.ok) {
+            tr.remove();
+            await logHistory({
+              action: 'delete',
+              type: 'item',
+              entityId: item.id,
+              detail: `Eliminado material de ciencias: ${item.nombre || ''} (código ${item.codigo || ''})`
+            });
+          } else {
+            alert('Error al eliminar el material.');
+          }
+        } catch (err) {
+          console.error('Error al eliminar material de ciencias:', err);
           alert('Error al eliminar el material.');
         }
-      } catch (err) {
-        console.error('Error al eliminar material de ciencias:', err);
-        alert('Error al eliminar el material.');
-      }
-    });
+      });
+    }
+
+    const prestarBtn = tr.querySelector('.prestar-button');
+    if (prestarBtn) {
+      prestarBtn.addEventListener('click', () => {
+        openLoanModal(item);
+      });
+    }
 
     scienceTableBody.appendChild(tr);
   }
@@ -248,6 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   detail: `Devolución de préstamo de ciencias ID ${loan.id} (código ${codigo})`
                 });
                 loadLoans();
+                loadScienceItems(); // actualizar stock
               } else {
                 alert('Error al registrar la devolución.');
               }
@@ -275,10 +339,12 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         const codigoInput = document.getElementById('scienceLoanCodigo');
         const cursoInput = document.getElementById('scienceLoanCurso');
+        const obsInput = document.getElementById('scienceLoanObs');
         const selectPersona = document.getElementById('scienceLoanUser');
 
         const codigo = (codigoInput?.value || '').trim();
         const curso = (cursoInput?.value || '').trim();
+        const observaciones = (obsInput?.value || '').trim();
 
         if (!codigo) {
           alert('Debe ingresar el código del material.');
@@ -296,7 +362,8 @@ document.addEventListener('DOMContentLoaded', () => {
           codigo,
           solicitante: solicitanteTexto,
           curso,
-          personaId
+          personaId,
+          observaciones
         };
 
         const resp = await apiFetch('/api/science/loan', {
@@ -324,8 +391,70 @@ document.addEventListener('DOMContentLoaded', () => {
         alert('Préstamo registrado');
         scienceLoanForm.reset();
         loadLoans();
+        loadScienceItems();
       } catch (err) {
         console.error('Error registrando préstamo:', err);
+        alert('Error registrando el préstamo.');
+      }
+    });
+  }
+
+  // Modal: confirmar préstamo desde inventario
+  if (loanModalForm) {
+    loanModalForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      const codigo = (loanModalCodigo && loanModalCodigo.value.trim()) || '';
+      const curso = (loanModalCurso && loanModalCurso.value.trim()) || '';
+      const observaciones = (loanModalObs && loanModalObs.value.trim()) || '';
+      const selectPersona = loanModalUser;
+
+      if (!codigo) {
+        alert('Falta el código del material.');
+        return;
+      }
+      if (!selectPersona || !selectPersona.value) {
+        alert('Debes seleccionar una persona.');
+        return;
+      }
+
+      const personaId = selectPersona.value;
+      const solicitanteTexto = selectPersona.options[selectPersona.selectedIndex].textContent || '';
+
+      try {
+        const resp = await apiFetch('/api/science/loan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            codigo,
+            solicitante: solicitanteTexto,
+            curso,
+            personaId,
+            observaciones
+          })
+        });
+
+        if (!resp.ok) {
+          const msg = await resp.json().catch(() => ({}));
+          alert(msg.message || 'Error registrando préstamo');
+          return;
+        }
+
+        const result = await resp.json();
+        if (result && result.loan) {
+          await logHistory({
+            action: 'create',
+            type: 'loan',
+            entityId: result.loan.id,
+            detail: `Préstamo desde inventario – código ${codigo} para ${solicitanteTexto}`
+          });
+        }
+
+        closeLoanModal();
+        loadLoans();
+        loadScienceItems();
+        alert('Préstamo registrado');
+      } catch (err) {
+        console.error('Error registrando préstamo (modal):', err);
         alert('Error registrando el préstamo.');
       }
     });
