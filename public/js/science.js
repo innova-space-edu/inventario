@@ -4,6 +4,17 @@
 document.addEventListener('DOMContentLoaded', () => {
   // ---------- Referencias base ----------
   const scienceForm = document.getElementById('scienceForm');
+  const scienceFormSubmit = document.getElementById('scienceFormSubmit');
+  const scienceFormCancelEdit = document.getElementById('scienceFormCancelEdit');
+
+  const sciIdInput = document.getElementById('sciId');
+  const sciCodeInput = document.getElementById('sciCode');
+  const sciNameInput = document.getElementById('sciName');
+  const sciDescInput = document.getElementById('sciDescription');
+  const sciCatSelect = document.getElementById('sciCategory');
+  const sciQtyInput = document.getElementById('sciQuantity');
+  const sciDateInput = document.getElementById('sciDate');
+  // foto se maneja solo en alta o si el usuario decide cambiarla
   const scienceTableBody = document.querySelector('#scienceTable tbody');
   const scienceSearchInput = document.getElementById('scienceSearch');
 
@@ -30,6 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let scienceItems = [];
   let scienceLoans = [];
   let sciencePeople = [];
+  let editingItemId = null; // para saber si estamos editando
 
   // ---------- Utils ----------
   const debounce = (fn, wait = 250) => {
@@ -77,6 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       const items = await resp.json();
+      // Suponemos que el backend ya devuelve objetos planos
       scienceItems = Array.isArray(items) ? items : [];
       renderScienceTable();
     } catch (err) {
@@ -123,13 +136,31 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         </td>
         <td>
-          <button type="button" class="btn-ghost delete-sci-item" data-id="${item.id}">
+          <button
+            type="button"
+            class="btn-ghost sci-edit-item"
+            data-id="${item.id}"
+          >
+            Editar
+          </button>
+          <button
+            type="button"
+            class="btn-ghost sci-delete-item"
+            data-id="${item.id}"
+          >
             Eliminar
           </button>
         </td>
       `;
 
-      const delBtn = tr.querySelector('.delete-sci-item');
+      // botón Editar
+      const editBtn = tr.querySelector('.sci-edit-item');
+      editBtn.addEventListener('click', () => {
+        enterEditMode(item);
+      });
+
+      // botón Eliminar
+      const delBtn = tr.querySelector('.sci-delete-item');
       delBtn.addEventListener('click', async () => {
         if (!confirm('¿Seguro que deseas eliminar este material de ciencias?')) return;
 
@@ -138,7 +169,8 @@ document.addEventListener('DOMContentLoaded', () => {
             method: 'DELETE'
           });
           if (!resp.ok) {
-            alert('No se pudo eliminar el material.');
+            const data = await resp.json().catch(() => ({}));
+            alert(data.message || 'No se pudo eliminar el material.');
             return;
           }
           scienceItems = scienceItems.filter(it => it.id !== item.id);
@@ -160,15 +192,57 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  function enterEditMode(item) {
+    editingItemId = item.id || null;
+    if (!editingItemId) return;
+
+    if (sciIdInput) sciIdInput.value = item.id || '';
+    if (sciCodeInput) sciCodeInput.value = item.codigo || '';
+    if (sciNameInput) sciNameInput.value = item.nombre || '';
+    if (sciDescInput) sciDescInput.value = item.descripcion || '';
+    if (sciCatSelect) sciCatSelect.value = item.categoria || 'instrumento';
+    if (sciQtyInput) sciQtyInput.value = item.cantidad || '';
+    if (sciDateInput) sciDateInput.value = item.fecha || '';
+
+    if (scienceFormSubmit) scienceFormSubmit.textContent = 'Actualizar material';
+    if (scienceFormCancelEdit) scienceFormCancelEdit.style.display = 'inline-block';
+  }
+
+  function resetEditMode() {
+    editingItemId = null;
+    if (scienceForm) scienceForm.reset();
+    if (sciIdInput) sciIdInput.value = '';
+    if (scienceFormSubmit) scienceFormSubmit.textContent = 'Guardar';
+    if (scienceFormCancelEdit) scienceFormCancelEdit.style.display = 'none';
+  }
+
+  if (scienceFormCancelEdit) {
+    scienceFormCancelEdit.addEventListener('click', () => {
+      resetEditMode();
+    });
+  }
+
   scienceForm.addEventListener('submit', async e => {
     e.preventDefault();
 
+    // Usamos FormData para permitir cambiar foto también en edición
     const formData = new FormData(scienceForm);
+
     try {
-      const resp = await apiFetch('/api/science/items', {
-        method: 'POST',
-        body: formData
-      });
+      let resp;
+      if (editingItemId) {
+        // EDITAR (PUT)
+        resp = await apiFetch(`/api/science/items/${encodeURIComponent(editingItemId)}`, {
+          method: 'PUT',
+          body: formData
+        });
+      } else {
+        // CREAR (POST)
+        resp = await apiFetch('/api/science/items', {
+          method: 'POST',
+          body: formData
+        });
+      }
 
       if (!resp.ok) {
         const data = await resp.json().catch(() => ({}));
@@ -177,19 +251,36 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       const result = await resp.json();
-      if (result && result.item) {
-        scienceItems.push(result.item);
-        renderScienceTable();
 
-        await logHistory({
-          action: 'create',
-          type: 'item',
-          entityId: result.item.id,
-          detail: `Ingresado material de ciencias "${result.item.nombre || ''}" (código ${result.item.codigo || ''})`
-        });
+      if (result && result.item) {
+        const item = result.item;
+
+        if (editingItemId) {
+          // actualizar en el arreglo local
+          const idx = scienceItems.findIndex(i => i.id === editingItemId);
+          if (idx >= 0) {
+            scienceItems[idx] = item;
+          }
+          await logHistory({
+            action: 'update',
+            type: 'item',
+            entityId: item.id,
+            detail: `Actualizado material de ciencias "${item.nombre || ''}" (código ${item.codigo || ''})`
+          });
+        } else {
+          scienceItems.push(item);
+          await logHistory({
+            action: 'create',
+            type: 'item',
+            entityId: item.id,
+            detail: `Ingresado material de ciencias "${item.nombre || ''}" (código ${item.codigo || ''})`
+          });
+        }
+
+        renderScienceTable();
       }
 
-      scienceForm.reset();
+      resetEditMode();
     } catch (err) {
       console.error('Error al guardar material de ciencias:', err);
       alert('Ocurrió un error al guardar.');
