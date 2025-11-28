@@ -435,3 +435,387 @@ body {
   border-color: #6366f1;
   box-shadow: 0 0 0 1px #6366f1;
 }
+
+/* =========================================================
+   EXTENSIONES PARA BIBLIOTECA / CIENCIAS (CUADROS Y TABLAS)
+   ========================================================= */
+
+/* Header simple dentro de glass-panel (Biblioteca / Ciencias) */
+
+.glass-panel > header {
+  padding: 1rem 1.4rem 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid rgba(30, 64, 175, 0.5);
+}
+
+.glass-panel > header h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  letter-spacing: 0.04em;
+}
+
+.glass-panel > header nav a {
+  color: #bfdbfe;
+  font-size: 0.85rem;
+  text-decoration: none;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid rgba(59, 130, 246, 0.6);
+  background: rgba(15, 23, 42, 0.9);
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.glass-panel > header nav a:hover {
+  background: rgba(37, 99, 235, 0.75);
+  color: #eff6ff;
+  transform: translateY(-1px);
+}
+
+/* Secciones de formulario / inventario / préstamos / personas */
+
+.form-section,
+.inventory-section,
+.loans-section,
+.people-section {
+  padding: 1.2rem 1.4rem;
+  border-bottom: 1px solid rgba(30, 64, 175, 0.35);
+}
+
+.form-section:last-of-type,
+.inventory-section:last-of-type,
+.loans-section:last-of-type,
+.people-section:last-of-type {
+  border-bottom: none;
+}
+
+.form-section h2,
+.inventory-section h2,
+.loans-section h2,
+.people-section h2 {
+  margin: 0 0 0.8rem;
+  font-size: 1.05rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #e5e7eb;
+}
+
+/* Fila de filtros / acciones */
+
+.filters-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+  margin-bottom: 0.7rem;
+}
+
+.input-search {
+  min-width: 220px;
+  max-width: 320px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.7);
+  background: rgba(15, 23, 42, 0.95);
+  padding: 0.45rem 0.9rem;
+  font-size: 0.85rem;
+  color: #f9fafb;
+}
+
+.input-search::placeholder {
+  color: #9ca3af;
+}
+
+.input-search:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 1px #6366f1;
+}
+
+/* Formularios verticales (Biblioteca / Ciencias) */
+
+.form-section form,
+.loans-section form,
+.people-section form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  max-width: 780px;
+}
+
+.form-section label,
+.loans-section label,
+.people-section label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #9ca3af;
+}
+
+.form-section input,
+.form-section textarea,
+.form-section select,
+.loans-section input,
+.loans-section textarea,
+.loans-section select,
+.people-section input,
+.people-section textarea,
+.people-section select {
+  border-radius: 0.7rem;
+  border: 1px solid rgba(148, 163, 184, 0.7);
+  padding: 0.45rem 0.65rem;
+  background: rgba(15, 23, 42, 0.98);
+  color: #f9fafb;
+  font-size: 0.85rem;
+}
+
+.form-section textarea,
+.loans-section textarea,
+.people-section textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.form-section input:focus,
+.form-section textarea:focus,
+.form-section select:focus,
+.loans-section input:focus,
+.loans-section textarea:focus,
+.loans-section select:focus,
+.people-section input:focus,
+.people-section textarea:focus,
+.people-section select:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 1px #6366f1;
+}
+
+/* Botón genérico redondeado (Biblioteca / Ciencias) */
+
+.button {
+  border-radius: 999px;
+  border: 1px solid transparent;
+  padding: 0.5rem 1.2rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  text-decoration: none;
+  white-space: nowrap;
+  background: linear-gradient(135deg, #22c55e, #06b6d4);
+  color: #f9fafb;
+  box-shadow: 0 10px 28px rgba(15, 118, 110, 0.6);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 32px rgba(15, 118, 110, 0.85);
+}
+
+.button.secondary {
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.6);
+  color: #e0f2fe;
+  box-shadow: none;
+}
+
+/* Tablas de Biblioteca / Ciencias */
+
+.inventory-section table,
+.loans-section table,
+.people-section table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  margin-top: 0.6rem;
+  background: rgba(15, 23, 42, 0.95);
+  border-radius: 0.8rem;
+  overflow: hidden;
+}
+
+.inventory-section thead,
+.loans-section thead,
+.people-section thead {
+  background: linear-gradient(90deg, rgba(30, 64, 175, 0.95), rgba(15, 23, 42, 0.98));
+}
+
+.inventory-section th,
+.inventory-section td,
+.loans-section th,
+.loans-section td,
+.people-section th,
+.people-section td {
+  padding: 0.45rem 0.55rem;
+  border-bottom: 1px solid rgba(30, 64, 175, 0.4);
+  text-align: left;
+}
+
+.inventory-section tbody tr:nth-child(even),
+.loans-section tbody tr:nth-child(even),
+.people-section tbody tr:nth-child(even) {
+  background: rgba(15, 23, 42, 0.9);
+}
+
+.inventory-section tbody tr:nth-child(odd),
+.loans-section tbody tr:nth-child(odd),
+.people-section tbody tr:nth-child(odd) {
+  background: rgba(15, 23, 42, 0.8);
+}
+
+.inventory-section tbody tr:hover,
+.loans-section tbody tr:hover,
+.people-section tbody tr:hover {
+  background: rgba(30, 64, 175, 0.55);
+}
+
+.inventory-section img,
+.loans-section img {
+  border-radius: 0.4rem;
+}
+
+/* Banner de préstamos vencidos (Biblioteca) */
+
+.overdue-banner {
+  margin-top: 0.7rem;
+  margin-bottom: 0.2rem;
+  padding: 0.55rem 0.9rem;
+  border-radius: 0.9rem;
+  background: linear-gradient(90deg, #f97316, #ea580c);
+  color: #111827;
+  font-size: 0.82rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  box-shadow: 0 12px 30px rgba(248, 113, 113, 0.45);
+}
+
+/* Estado solo-lectura (roleGuard) */
+
+.readonly,
+.readonly:disabled,
+button.readonly {
+  opacity: 0.55 !important;
+  cursor: not-allowed !important;
+}
+
+/* =============== MODAL FUTURISTA (CIENCIAS) =============== */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at top, rgba(56, 189, 248, 0.18), transparent 60%),
+    rgba(2, 6, 23, 0.92);
+  backdrop-filter: blur(16px);
+  z-index: 2000;
+}
+
+.modal-backdrop[aria-hidden="false"] {
+  display: flex;
+}
+
+.modal-card {
+  width: min(480px, 92vw);
+  background: rgba(15, 23, 42, 0.97);
+  border-radius: 1.1rem;
+  border: 1px solid rgba(148, 163, 184, 0.7);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.9);
+  padding: 1.1rem 1.3rem 1rem;
+  color: #f9fafb;
+  position: relative;
+}
+
+.modal-card h3 {
+  margin: 0 0 0.9rem;
+  font-size: 1.05rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #e5e7eb;
+}
+
+.modal-card .form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.55rem;
+}
+
+.modal-card .form-row label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #9ca3af;
+}
+
+.modal-card .form-row input,
+.modal-card .form-row textarea,
+.modal-card .form-row select {
+  border-radius: 0.7rem;
+  border: 1px solid rgba(148, 163, 184, 0.7);
+  padding: 0.45rem 0.65rem;
+  background: rgba(15, 23, 42, 0.98);
+  color: #f9fafb;
+  font-size: 0.85rem;
+}
+
+.modal-card .form-row textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.modal-card .form-row input:focus,
+.modal-card .form-row textarea:focus,
+.modal-card .form-row select:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 1px #6366f1;
+}
+
+.modal-card .modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 0.7rem;
+}
+
+.modal-card .btn-ghost {
+  border-radius: 999px;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid rgba(148, 163, 184, 0.7);
+  background: transparent;
+  color: #e5e7eb;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.modal-card .btn-ghost:hover {
+  background: rgba(148, 163, 184, 0.16);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 480px) {
+  .glass-panel > header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .form-section,
+  .inventory-section,
+  .loans-section,
+  .people-section {
+    padding-inline: 1rem;
+  }
+
+  .modal-card {
+    padding-inline: 1rem;
+  }
+}
