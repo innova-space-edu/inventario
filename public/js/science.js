@@ -6,6 +6,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const scienceReservationForm = document.getElementById('scienceReservationForm');
   const scienceLoanForm = document.getElementById('scienceLoanForm');
   const scienceLoanTableBody = document.getElementById('scienceLoanTableBody');
+  const scienceReturnForm = document.getElementById('scienceReturnForm');
+  const scienceReturnIdInput = document.getElementById('scienceReturnId');
+  const sciencePeopleTableBody = document.querySelector('#sciencePeopleTable tbody');
 
   // 🔵 Referencias al modal de préstamo desde inventario
   const loanModal = document.getElementById('scienceLoanModal');
@@ -40,9 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // ==========================
-  //  HELPERS MODAL
-  // ==========================
+  // ===== Helpers modal =====
   function openLoanModal(item) {
     if (!loanModal || !loanModalForm) return;
     const codigo = item.codigo || '';
@@ -53,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (loanModalObs) loanModalObs.value = '';
 
     if (loanModalUser) {
-      loanModalUser.selectedIndex = 0; // vuelve a "Seleccione una persona"
+      loanModalUser.selectedIndex = 0;
     }
     if (loanModalCurso) {
       loanModalCurso.value = '';
@@ -75,7 +76,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Cerrar modal clickeando fuera
   if (loanModal) {
     loanModal.addEventListener('click', ev => {
       if (ev.target === loanModal) {
@@ -84,16 +84,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Cerrar modal con Escape
-  document.addEventListener('keydown', ev => {
-    if (ev.key === 'Escape' && loanModal && loanModal.style.display === 'flex') {
-      closeLoanModal();
-    }
-  });
-
-  // ==========================
-  //  ITEMS
-  // ==========================
+  // =======================
+  //    ITEMS
+  // =======================
   async function loadScienceItems() {
     if (!scienceTableBody) return;
     try {
@@ -164,7 +157,6 @@ document.addEventListener('DOMContentLoaded', () => {
       </td>
     `;
 
-    // Eliminar material
     const deleteBtn = tr.querySelector('.delete-button');
     if (deleteBtn) {
       deleteBtn.addEventListener('click', async () => {
@@ -189,7 +181,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // Abrir modal de préstamo
     const prestarBtn = tr.querySelector('.prestar-button');
     if (prestarBtn) {
       prestarBtn.addEventListener('click', () => {
@@ -200,9 +191,9 @@ document.addEventListener('DOMContentLoaded', () => {
     scienceTableBody.appendChild(tr);
   }
 
-  // ==========================
-  //  RESERVAS
-  // ==========================
+  // =======================
+  //    RESERVAS
+  // =======================
   async function loadReservations() {
     const body = document.getElementById('scienceReservationsTableBody');
     if (!body) return; // si no hay tabla, no hacemos nada
@@ -270,9 +261,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ==========================
-  //  PRÉSTAMOS (TABLA)
-  // ==========================
+  // =======================
+  //    PRÉSTAMOS
+  // =======================
   async function loadLoans() {
     if (!scienceLoanTableBody) return;
     try {
@@ -288,21 +279,30 @@ document.addEventListener('DOMContentLoaded', () => {
         const codigo = loan.codigo || loan.itemCode || loan.itemId || '';
         const solicitante = loan.solicitante || loan.borrowerName || '';
         const curso = loan.curso || loan.borrowerGroup || '';
-        const fecha = loan.loanDate
+        const fechaPrestamo = loan.loanDate
           ? new Date(loan.loanDate).toLocaleString('es-CL', {
               dateStyle: 'short',
               timeStyle: 'short'
             })
           : (loan.fecha || '');
+        const fechaDevolucion = loan.returnDate
+          ? new Date(loan.returnDate).toLocaleString('es-CL', {
+              dateStyle: 'short',
+              timeStyle: 'short'
+            })
+          : '';
         const devueltoTxt = loan.returned ? 'Sí' : 'No';
+        const observaciones = loan.observaciones || loan.notes || '';
 
         tr.innerHTML = `
           <td>${loan.id}</td>
           <td>${codigo}</td>
           <td>${solicitante}</td>
           <td>${curso}</td>
-          <td>${fecha}</td>
+          <td>${fechaPrestamo}</td>
           <td>${devueltoTxt}</td>
+          <td>${fechaDevolucion}</td>
+          <td>${observaciones}</td>
           <td class="accion-cell"></td>
         `;
 
@@ -321,13 +321,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 method: 'POST'
               });
               if (r.ok) {
-                alert('Material devuelto');
+                const data = await r.json().catch(() => ({}));
+                const codigoDev = codigo || (data.loan && (data.loan.codigo || data.loan.itemCode)) || '';
+
                 await logHistory({
                   action: 'update',
                   type: 'loan',
                   entityId: loan.id,
-                  detail: `Devolución de préstamo de ciencias ID ${loan.id} (código ${codigo})`
+                  detail: `Devolución de préstamo de ciencias ID ${loan.id} (código ${codigoDev})`
                 });
+
                 loadLoans();
                 loadScienceItems(); // actualizar stock
               } else {
@@ -351,9 +354,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // ==========================
-  //  PRÉSTAMO MANUAL (FORM)
-  // ==========================
+  // formulario de préstamo “normal”
   if (scienceLoanForm) {
     scienceLoanForm.addEventListener('submit', async e => {
       e.preventDefault();
@@ -377,8 +378,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const personaId = selectPersona.value;
-        const solicitanteTexto =
-          selectPersona.options[selectPersona.selectedIndex].textContent || '';
+        const solicitanteTexto = selectPersona.options[selectPersona.selectedIndex].textContent || '';
 
         const payload = {
           codigo,
@@ -421,9 +421,50 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ==========================
-  //  PRÉSTAMO DESDE MODAL (INVENTARIO)
-  // ==========================
+  // formulario de devolución por ID (similar a Biblioteca)
+  if (scienceReturnForm && scienceReturnIdInput) {
+    scienceReturnForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      const loanId = scienceReturnIdInput.value.trim();
+      if (!loanId) {
+        alert('Debes ingresar el ID del préstamo.');
+        return;
+      }
+
+      try {
+        const resp = await apiFetch(`/api/science/return/${loanId}`, {
+          method: 'POST'
+        });
+
+        if (!resp.ok) {
+          const msg = await resp.json().catch(() => ({}));
+          alert(msg.message || 'Error al registrar devolución');
+          return;
+        }
+
+        const data = await resp.json().catch(() => ({}));
+        const loan = data.loan || {};
+        const codigo = loan.codigo || loan.itemCode || '';
+
+        await logHistory({
+          action: 'update',
+          type: 'loan',
+          entityId: loanId,
+          detail: `Devolución (formulario) de préstamo de ciencias ID ${loanId} (código ${codigo})`
+        });
+
+        alert('Devolución registrada');
+        scienceReturnForm.reset();
+        loadLoans();
+        loadScienceItems();
+      } catch (err) {
+        console.error('Error registrando devolución (form):', err);
+        alert('Error registrando la devolución.');
+      }
+    });
+  }
+
+  // Modal: confirmar préstamo desde inventario
   if (loanModalForm) {
     loanModalForm.addEventListener('submit', async e => {
       e.preventDefault();
@@ -442,8 +483,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       const personaId = selectPersona.value;
-      const solicitanteTexto =
-        selectPersona.options[selectPersona.selectedIndex].textContent || '';
+      const solicitanteTexto = selectPersona.options[selectPersona.selectedIndex].textContent || '';
 
       try {
         const resp = await apiFetch('/api/science/loan', {
@@ -485,10 +525,37 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ==========================
-  //  CARGA INICIAL
-  // ==========================
+  // =======================
+  //   PERSONAS REGISTRADAS
+  //   (lee /api/library/people)
+  // =======================
+  async function loadPeople() {
+    if (!sciencePeopleTableBody) return;
+    try {
+      const resp = await apiFetch('/api/library/people');
+      if (!resp.ok) return;
+      const people = await resp.json();
+      if (!Array.isArray(people)) return;
+
+      sciencePeopleTableBody.innerHTML = '';
+      people.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${p.id || ''}</td>
+          <td>${p.nombre || ''}</td>
+          <td>${p.tipo || ''}</td>
+          <td>${p.curso || ''}</td>
+        `;
+        sciencePeopleTableBody.appendChild(tr);
+      });
+    } catch (err) {
+      console.error('Error cargando personas para ciencias:', err);
+    }
+  }
+
+  // cargar datos al entrar
   loadScienceItems();
   loadReservations();
   loadLoans();
+  loadPeople();
 });
