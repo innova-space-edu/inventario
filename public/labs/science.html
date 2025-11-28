@@ -1,22 +1,19 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Inventario - Laboratorio de Ciencias</title>
 
   <!-- Estilos originales -->
-  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/styles.css" />
   <!-- Fondo espacial + glass UI -->
-  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/css/app.css" />
 
-  <!-- JS utilitarios -->
-  <script defer src="/js/peopleUtils.js"></script>
-  <!-- JS específico de ciencias -->
+  <!-- JS específico de Ciencias -->
   <script defer src="/js/science.js"></script>
-  <!-- JS general (fondo, voz, sugerencias, etc.) -->
-  <script defer src="/js/script.js"></script>
 </head>
+
 <body data-page="science" class="body-space">
   <!-- Fondo espacial animado -->
   <div class="background space-bg"></div>
@@ -30,46 +27,58 @@
         </nav>
       </header>
 
-      <!-- ==========================
-           AGREGAR MATERIAL
-      =========================== -->
+      <!-- =========================
+           SECCIÓN: INVENTARIO
+      ========================== -->
       <section class="form-section">
-        <h2>Agregar Producto</h2>
-        <!-- enctype para subir foto -->
+        <h2>Agregar material de laboratorio</h2>
+
         <form id="scienceForm" enctype="multipart/form-data" method="post">
           <label>Código:</label>
-          <input type="text" name="codigo" required>
-          <label>Nombre:</label>
-          <input type="text" name="nombre" required>
+          <input type="text" name="codigo" id="sciCode" required />
+
+          <label>Nombre del material:</label>
+          <input type="text" name="nombre" id="sciName" required />
+
           <label>Descripción:</label>
-          <textarea name="descripcion" required></textarea>
+          <textarea name="descripcion" id="sciDescription" required></textarea>
 
           <label>Categoría:</label>
-          <select name="categoria" required>
-            <option value="instrumento">Instrumento de Laboratorio</option>
-            <option value="material químico">Material Químico</option>
-            <option value="material biológico">Material Biológico</option>
-            <option value="instrumento electrónico">Instrumento Electrónico</option>
-            <option value="modelo educativo">Modelo o Material Didáctico</option>
-            <option value="seguridad">Elemento de Seguridad</option>
-            <option value="otro">Otro</option>
+          <select id="sciCategory" name="categoria" required>
+            <option value="instrumento">Instrumento de laboratorio</option>
+            <option value="material químico">Material químico</option>
+            <option value="material biológico">Material biológico</option>
+            <option value="instrumento electrónico">Instrumento electrónico</option>
+            <option value="modelo didáctico">Modelo didáctico / maqueta</option>
+            <option value="seguridad">Elemento de seguridad</option>
+            <option value="otros">Otros</option>
           </select>
 
           <label>Cantidad:</label>
-          <input type="number" name="cantidad" required>
-          <label>Fecha de Ingreso:</label>
-          <input type="date" name="fecha" required>
+          <input type="number" name="cantidad" id="sciQuantity" required />
+
+          <label>Fecha de ingreso:</label>
+          <input type="date" name="fecha" id="sciDate" required />
+
           <label>Fotografía:</label>
-          <input type="file" name="photo" accept="image/*">
+          <input type="file" id="sciPhoto" name="photo" accept="image/*" />
+
           <button type="submit" class="button">Guardar</button>
         </form>
       </section>
 
-      <!-- ==========================
-           INVENTARIO
-      =========================== -->
       <section class="inventory-section">
-        <h2>Inventario Actual</h2>
+        <h2>Inventario general de Ciencias</h2>
+
+        <div class="filters-bar">
+          <input
+            type="text"
+            id="scienceSearch"
+            placeholder="Buscar por código, nombre, descripción..."
+            class="input-search"
+          />
+        </div>
+
         <table id="scienceTable">
           <thead>
             <tr>
@@ -84,135 +93,108 @@
               <th>Acciones</th>
             </tr>
           </thead>
-          <tbody>
-            <!-- Items se llenarán dinámicamente -->
+          <tbody id="scienceTableBody">
+            <!-- Elementos cargados dinámicamente -->
           </tbody>
         </table>
       </section>
 
-      <!-- ==========================
-           RESERVAS
-      =========================== -->
-      <section class="reservations-section">
-        <h2>Reservar Laboratorio</h2>
-        <form id="scienceReservationForm">
-          <label>Fecha de Reserva:</label>
-          <input type="datetime-local" name="date" required>
+      <!-- =========================
+           SECCIÓN: PRÉSTAMOS
+      ========================== -->
+      <section class="loans-section">
+        <h2>Registrar préstamo</h2>
 
-          <label>Solicitante:</label>
-          <select id="solicitante" name="solicitante" class="form-control persona-select" data-curso-target="curso" required>
-            <option selected disabled>Seleccione una persona</option>
+        <form id="scienceLoanForm">
+          <label>Código del material:</label>
+          <input type="text" id="sciLoanCodigo" name="codigo" required />
+
+          <!-- Selector de persona (compartido con Biblioteca) -->
+          <label>Persona (desde listado):</label>
+          <select id="sciLoanPersonSelect" name="personaId">
+            <option value="">-- Seleccionar desde lista --</option>
           </select>
 
-          <label>Curso:</label>
-          <input type="text" id="curso" name="curso" class="form-control" readonly required>
+          <label>Nombre:</label>
+          <input type="text" id="sciLoanNombre" name="nombre" required />
 
-          <label>Descripción/Actividad:</label>
-          <input type="text" name="activity" required>
-          <button type="submit" class="button">Reservar</button>
+          <label>Curso / Unidad:</label>
+          <input type="text" id="sciLoanCurso" name="curso" />
+
+          <label>Tipo de persona:</label>
+          <input
+            type="text"
+            id="sciLoanTipoPersona"
+            name="tipoPersona"
+            placeholder="estudiante / funcionario"
+          />
+
+          <label>Observaciones:</label>
+          <input
+            type="text"
+            id="sciLoanObservaciones"
+            name="observaciones"
+            placeholder="Opcional"
+          />
+
+          <button type="submit" class="button">Registrar préstamo</button>
         </form>
-      </section>
 
-      <!-- ==========================
-           PRÉSTAMOS / DEVOLUCIONES
-           (similar a Biblioteca)
-      =========================== -->
-      <section class="loans-section">
-        <h2>Gestión de préstamos</h2>
+        <!-- Cuadro de devolución rápida por ID (igual idea que en Biblioteca) -->
+        <form id="scienceReturnForm" style="margin-top: 1rem;">
+          <h3>Registrar devolución</h3>
+          <label>ID del préstamo:</label>
+          <input
+            type="text"
+            id="scienceReturnId"
+            name="loanId"
+            placeholder="Ej: 17640888254868"
+            required
+          />
+          <button type="submit" class="button">Registrar devolución</button>
+        </form>
 
-        <div class="loan-grid">
-          <!-- Registro de préstamo -->
-          <div class="loan-card glass-subpanel">
-            <h3>Registrar préstamo</h3>
-            <form id="scienceLoanForm">
-              <label>Código del material:</label>
-              <input type="text" id="scienceLoanCodigo" name="codigo" required>
-
-              <label>Solicitante:</label>
-              <select
-                id="scienceLoanUser"
-                name="solicitante"
-                class="form-control persona-select"
-                data-curso-target="scienceLoanCurso"
-                required
-              >
-                <option selected disabled>Seleccione una persona</option>
-              </select>
-
-              <label>Curso:</label>
-              <input
-                type="text"
-                id="scienceLoanCurso"
-                name="curso"
-                class="form-control"
-                readonly
-                required
-              >
-
-              <label>Observaciones:</label>
-              <input
-                type="text"
-                id="scienceLoanObs"
-                name="observaciones"
-                placeholder="Opcional"
-              >
-
-              <button type="submit" class="button">Registrar préstamo</button>
-            </form>
-          </div>
-
-          <!-- Registro de devolución por ID -->
-          <div class="loan-card glass-subpanel">
-            <h3>Registrar devolución</h3>
-            <form id="scienceReturnForm">
-              <label>ID del préstamo:</label>
-              <input
-                type="text"
-                id="scienceReturnId"
-                name="loanId"
-                placeholder="Ej: 17640888254868"
-                required
-              >
-              <button type="submit" class="button">Registrar devolución</button>
-            </form>
-            <p class="hint-text">
-              También puedes devolver usando el botón <b>“Devolver”</b> en la tabla de préstamos.
-            </p>
-          </div>
+        <div class="filters-bar" style="margin-top: 1.5rem;">
+          <input
+            type="text"
+            id="scienceLoansSearch"
+            placeholder="Buscar préstamo por ID, nombre, código, curso..."
+            class="input-search"
+          />
         </div>
 
-        <!-- Listado de préstamos estilo Biblioteca -->
-        <h3>Listado de préstamos</h3>
-        <table id="scienceLoanTable">
+        <h3>Préstamos</h3>
+        <table id="scienceLoansTable">
           <thead>
             <tr>
               <th>ID</th>
-              <th>Código material</th>
-              <th>Nombre quien pide</th>
-              <th>Curso / Funcionario</th>
-              <th>Fecha préstamo</th>
+              <th>Código</th>
+              <th>Nombre</th>
+              <th>Curso</th>
+              <th>Fecha</th>
               <th>Devuelto</th>
-              <th>Fecha devolución</th>
+              <th>Devuelto el</th>
               <th>Observaciones</th>
               <th>Acciones</th>
             </tr>
           </thead>
-          <tbody id="scienceLoanTableBody">
-            <!-- Filas dinámicas -->
+          <tbody id="scienceLoansTableBody">
+            <!-- Carga dinámica JS -->
           </tbody>
         </table>
       </section>
 
-      <!-- ==========================
-           PERSONAS REGISTRADAS (solo lectura)
-           usando las mismas personas de Biblioteca
-      =========================== -->
-      <section class="people-section glass-subpanel">
-        <h2>Personas registradas (Estudiantes / Funcionarios)</h2>
+      <!-- =========================
+           SECCIÓN: PERSONAS
+           (solo lectura, compartidas con Biblioteca)
+      ========================== -->
+      <section class="people-section">
+        <h2>Personas registradas</h2>
         <p class="hint-text">
-          Esta lista se comparte con Biblioteca. Para editar o agregar personas,
-          usa el módulo <b>Biblioteca</b>.
+          Este listado se comparte con Biblioteca. Para agregar o editar
+          estudiantes/funcionarios, utiliza el módulo de <b>Biblioteca</b>.
         </p>
+
         <table id="sciencePeopleTable">
           <thead>
             <tr>
@@ -223,82 +205,19 @@
             </tr>
           </thead>
           <tbody>
-            <!-- se llena desde /api/library/people -->
+            <!-- Carga dinámica JS -->
           </tbody>
         </table>
       </section>
+
+      <footer>
+        <p>© 2025 Innova Space Education - Laboratorio de Ciencias</p>
+      </footer>
     </div>
   </div>
 
-  <!-- 🔵 Modal para préstamo directo desde la tabla de inventario -->
-  <div id="scienceLoanModal" class="modal-backdrop" style="display: none;">
-    <div class="modal-card glass-panel">
-      <h3>Prestar material de ciencias</h3>
-      <form id="scienceLoanModalForm">
-        <input type="hidden" id="scienceLoanModalCodigo" name="codigo">
-
-        <div class="form-row">
-          <label>Material:</label>
-          <input type="text" id="scienceLoanModalNombre" readonly>
-        </div>
-
-        <div class="form-row">
-          <label>Solicitante:</label>
-          <select
-            id="scienceLoanModalUser"
-            name="solicitante"
-            class="form-control persona-select"
-            data-curso-target="scienceLoanModalCurso"
-            required
-          >
-            <option selected disabled>Seleccione una persona</option>
-          </select>
-        </div>
-
-        <div class="form-row">
-          <label>Curso:</label>
-          <input
-            type="text"
-            id="scienceLoanModalCurso"
-            name="curso"
-            class="form-control"
-            readonly
-            required
-          >
-        </div>
-
-        <div class="form-row">
-          <label>Observaciones:</label>
-          <textarea
-            id="scienceLoanModalObs"
-            name="observaciones"
-            rows="2"
-            placeholder="Opcional"
-          ></textarea>
-        </div>
-
-        <div class="modal-actions">
-          <button type="button" id="scienceLoanModalCancel" class="btn-ghost">
-            Cancelar
-          </button>
-          <button type="submit" class="button">
-            Confirmar préstamo
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Scripts principales -->
+  <!-- Scripts generales -->
   <script src="/js/script.js"></script>
   <script src="/js/roleGuard.js"></script>
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      // mismos datos de personas que Biblioteca
-      cargarPersonasEnSelect("solicitante");
-      cargarPersonasEnSelect("scienceLoanUser");
-      cargarPersonasEnSelect("scienceLoanModalUser");
-    });
-  </script>
 </body>
 </html>
