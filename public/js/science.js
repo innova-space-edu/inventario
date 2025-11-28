@@ -40,7 +40,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // ===== Helpers modal =====
+  // ==========================
+  //  HELPERS MODAL
+  // ==========================
   function openLoanModal(item) {
     if (!loanModal || !loanModalForm) return;
     const codigo = item.codigo || '';
@@ -51,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (loanModalObs) loanModalObs.value = '';
 
     if (loanModalUser) {
-      loanModalUser.selectedIndex = 0;
+      loanModalUser.selectedIndex = 0; // vuelve a "Seleccione una persona"
     }
     if (loanModalCurso) {
       loanModalCurso.value = '';
@@ -73,6 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Cerrar modal clickeando fuera
   if (loanModal) {
     loanModal.addEventListener('click', ev => {
       if (ev.target === loanModal) {
@@ -81,7 +84,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ========== ITEMS ==========
+  // Cerrar modal con Escape
+  document.addEventListener('keydown', ev => {
+    if (ev.key === 'Escape' && loanModal && loanModal.style.display === 'flex') {
+      closeLoanModal();
+    }
+  });
+
+  // ==========================
+  //  ITEMS
+  // ==========================
   async function loadScienceItems() {
     if (!scienceTableBody) return;
     try {
@@ -152,6 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
       </td>
     `;
 
+    // Eliminar material
     const deleteBtn = tr.querySelector('.delete-button');
     if (deleteBtn) {
       deleteBtn.addEventListener('click', async () => {
@@ -176,6 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
+    // Abrir modal de préstamo
     const prestarBtn = tr.querySelector('.prestar-button');
     if (prestarBtn) {
       prestarBtn.addEventListener('click', () => {
@@ -186,7 +200,9 @@ document.addEventListener('DOMContentLoaded', () => {
     scienceTableBody.appendChild(tr);
   }
 
-  // ========== RESERVAS ==========
+  // ==========================
+  //  RESERVAS
+  // ==========================
   async function loadReservations() {
     const body = document.getElementById('scienceReservationsTableBody');
     if (!body) return; // si no hay tabla, no hacemos nada
@@ -254,7 +270,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ========== PRÉSTAMOS ==========
+  // ==========================
+  //  PRÉSTAMOS (TABLA)
+  // ==========================
   async function loadLoans() {
     if (!scienceLoanTableBody) return;
     try {
@@ -333,6 +351,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // ==========================
+  //  PRÉSTAMO MANUAL (FORM)
+  // ==========================
   if (scienceLoanForm) {
     scienceLoanForm.addEventListener('submit', async e => {
       e.preventDefault();
@@ -356,7 +377,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const personaId = selectPersona.value;
-        const solicitanteTexto = selectPersona.options[selectPersona.selectedIndex].textContent || '';
+        const solicitanteTexto =
+          selectPersona.options[selectPersona.selectedIndex].textContent || '';
 
         const payload = {
           codigo,
@@ -399,7 +421,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Modal: confirmar préstamo desde inventario
+  // ==========================
+  //  PRÉSTAMO DESDE MODAL (INVENTARIO)
+  // ==========================
   if (loanModalForm) {
     loanModalForm.addEventListener('submit', async e => {
       e.preventDefault();
@@ -418,7 +442,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       const personaId = selectPersona.value;
-      const solicitanteTexto = selectPersona.options[selectPersona.selectedIndex].textContent || '';
+      const solicitanteTexto =
+        selectPersona.options[selectPersona.selectedIndex].textContent || '';
 
       try {
         const resp = await apiFetch('/api/science/loan', {
@@ -460,7 +485,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // cargar datos al entrar
+  // ==========================
+  //  CARGA INICIAL
+  // ==========================
   loadScienceItems();
   loadReservations();
   loadLoans();
