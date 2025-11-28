@@ -50,6 +50,69 @@ router.post("/items", upload.single("photo"), async (req, res) => {
 });
 
 // ========================================
+//      EDITAR MATERIAL DE CIENCIAS
+// ========================================
+// Permite actualizar datos y opcionalmente la foto.
+// Si no se envía foto nueva, se mantiene la anterior.
+router.put("/items/:id", upload.single("photo"), async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    // Traer registro actual para conservar foto si no se envía nueva
+    const current = await query(
+      `SELECT data, photo FROM items WHERE id=$1 AND lab='science'`,
+      [id]
+    );
+
+    if (current.rowCount === 0) {
+      return res.status(404).json({ message: "Material de ciencias no encontrado" });
+    }
+
+    const prevData = current.rows[0].data || {};
+    const prevPhoto = current.rows[0].photo || null;
+
+    const newData = {
+      codigo: req.body.codigo ?? prevData.codigo,
+      nombre: req.body.nombre ?? prevData.nombre,
+      descripcion: req.body.descripcion ?? prevData.descripcion,
+      categoria: req.body.categoria ?? prevData.categoria,
+      cantidad:
+        typeof req.body.cantidad !== "undefined"
+          ? Number(req.body.cantidad)
+          : prevData.cantidad,
+      fecha: req.body.fecha ?? prevData.fecha
+    };
+
+    const newPhoto = req.file ? `/uploads/${req.file.filename}` : prevPhoto;
+
+    await query(
+      `
+      UPDATE items
+      SET data = $1,
+          photo = $2
+      WHERE id = $3
+        AND lab = 'science'
+      `,
+      [newData, newPhoto, id]
+    );
+
+    // Historial
+    await query(
+      `
+      INSERT INTO history (id, lab, action, entity_type, entity_id, user_email, data)
+      VALUES ($1, 'science', 'editar', 'material', $2, $3, $4)
+      `,
+      [uuidv4(), id, req.session?.email || "admin", newData]
+    );
+
+    res.json({ ok: true, item: { id, ...newData, photo: newPhoto } });
+  } catch (err) {
+    console.error("❌ Error PUT /science/items/:id:", err);
+    res.status(500).json({ error: "Error al editar material" });
+  }
+});
+
+// ========================================
 //        LISTAR MATERIALES
 // ========================================
 router.get("/items", async (req, res) => {
