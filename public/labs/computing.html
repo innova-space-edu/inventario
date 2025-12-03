@@ -1,115 +1,140 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Inventario - Laboratorio de Ciencias</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inventario - Laboratorio de Computación</title>
 
-  <!-- Estilos originales -->
-  <link rel="stylesheet" href="/css/styles.css">
-  <!-- Fondo espacial + glass UI -->
-  <link rel="stylesheet" href="/css/app.css">
+  <!-- Estilos base y tema espacial/glass -->
+  <link rel="stylesheet" href="/css/styles.css" />
+  <link rel="stylesheet" href="/css/app.css" />
 
-  <!-- JS utilitarios -->
+  <!-- Utilidades de personas (para llenar selects de estudiantes/funcionarios) -->
   <script defer src="/js/peopleUtils.js"></script>
-  <!-- JS específico de ciencias -->
-  <script defer src="/js/science.js"></script>
-  <!-- JS general (fondo, voz, sugerencias, etc.) -->
+  <!-- Script específico de computación -->
+  <script defer src="/js/computing.js"></script>
+  <!-- Script general (fondo animado, voz, etc.) -->
   <script defer src="/js/script.js"></script>
 </head>
-<body data-page="science" class="body-space">
-  <!-- Fondo espacial animado -->
+
+<!-- Establecemos data-page distinto para no activar la versión antigua -->
+<body data-page="computing-api" class="body-space">
+  <!-- Fondo animado con estrellas -->
   <div class="background space-bg"></div>
 
   <div class="app-shell">
     <div class="glass-panel">
       <header class="page-header">
-        <h1>Laboratorio de Ciencias</h1>
+        <h1>Laboratorio de Computación</h1>
         <nav>
           <a href="/">Inicio</a>
         </nav>
       </header>
 
       <!-- ==========================
-           AGREGAR MATERIAL
+           SECCIÓN: INVENTARIO DE EQUIPOS
       =========================== -->
       <section class="form-section">
-        <h2>Agregar Producto</h2>
+        <h2>Agregar Equipo de Computación</h2>
         <!-- enctype para subir foto -->
-        <form id="scienceForm" enctype="multipart/form-data" method="post" class="space-form">
+        <form id="computingForm" enctype="multipart/form-data" method="post" class="space-form">
+          <label>ID del Equipo:</label>
+          <input type="text" name="idEquip" id="compIdEquip" required />
+
           <label>Código:</label>
-          <input type="text" name="codigo" required>
+          <input type="text" name="codigo" id="compCodigo" required />
 
-          <label>Nombre:</label>
-          <input type="text" name="nombre" required>
+          <label>Marca:</label>
+          <input type="text" name="marca" id="compMarca" required />
 
-          <label>Descripción:</label>
-          <textarea name="descripcion" required></textarea>
+          <label>Modelo:</label>
+          <input type="text" name="modelo" id="compModelo" required />
+
+          <label>Año:</label>
+          <input type="number" name="anio" id="compAnio" required />
+
+          <label>Serie:</label>
+          <input type="text" name="serie" id="compSerie" />
 
           <label>Categoría:</label>
-          <select name="categoria" required>
-            <option value="instrumento">Instrumento de Laboratorio</option>
-            <option value="material químico">Material Químico</option>
-            <option value="material biológico">Material Biológico</option>
-            <option value="instrumento electrónico">Instrumento Electrónico</option>
-            <option value="modelo educativo">Modelo o Material Didáctico</option>
-            <option value="seguridad">Elemento de Seguridad</option>
-            <option value="otro">Otro</option>
+          <select name="categoria" id="compCategoria" required>
+            <option value="pc">PC de escritorio</option>
+            <option value="laptop">Laptop</option>
+            <option value="monitor">Monitor</option>
+            <option value="impresora">Impresora</option>
+            <option value="accesorio">Accesorio</option>
+            <option value="otros">Otros</option>
           </select>
 
-          <label>Cantidad:</label>
-          <input type="number" name="cantidad" required>
-
-          <label>Fecha de Ingreso:</label>
-          <input type="date" name="fecha" required>
+          <label>Descripción:</label>
+          <textarea name="descripcion" id="compDescripcion" required></textarea>
 
           <label>Fotografía:</label>
-          <input type="file" name="photo" accept="image/*">
+          <input type="file" id="compPhoto" name="photo" accept="image/*" />
 
           <button type="submit" class="button">Guardar</button>
         </form>
       </section>
 
       <!-- ==========================
-           INVENTARIO ACTUAL
+           SECCIÓN: INVENTARIO ACTUAL
       =========================== -->
       <section class="inventory-section">
-        <h2>Inventario Actual</h2>
-        <table id="scienceTable" class="space-table">
+        <h2>Inventario de Equipos</h2>
+
+        <!-- Barra de búsqueda y exportación (opcional) -->
+        <div class="filters-bar">
+          <input
+            type="text"
+            id="computingSearch"
+            placeholder="Buscar por código, marca, modelo..."
+            class="input-search"
+          />
+          <button type="button" id="btnExportComputingCSV" class="button secondary">
+            Exportar CSV
+          </button>
+        </div>
+
+        <table id="computingTable" class="space-table">
           <thead>
             <tr>
               <th>ID</th>
+              <th>ID Equipo</th>
               <th>Código</th>
-              <th>Nombre</th>
-              <th>Descripción</th>
+              <th>Marca</th>
+              <th>Modelo</th>
+              <th>Año</th>
+              <th>Serie</th>
               <th>Categoría</th>
-              <th>Cantidad</th>
-              <th>Fecha</th>
+              <th>Descripción</th>
               <th>Foto</th>
               <th>Acciones</th>
             </tr>
           </thead>
-          <tbody>
-            <!-- Items se llenarán dinámicamente -->
+          <tbody id="computingTableBody">
+            <!-- Filas cargadas dinámicamente -->
           </tbody>
         </table>
       </section>
 
       <!-- ==========================
-           RESERVA LABORATORIO
+           SECCIÓN: RESERVAS
       =========================== -->
       <section class="reservations-section">
-        <h2>Reservar Laboratorio</h2>
-        <form id="scienceReservationForm" class="space-form">
-          <label>Fecha de Reserva:</label>
-          <input type="datetime-local" name="date" required>
+        <h2>Reservar Sala de Computación</h2>
+        <form id="computingReservationForm" class="space-form">
+          <label>Fecha de Uso:</label>
+          <input type="date" name="fechaUso" id="computingFechaUso" required />
+
+          <label>Horario:</label>
+          <input type="time" name="horario" id="computingHorario" required />
 
           <label>Solicitante:</label>
           <select
-            id="solicitante"
+            id="computingSolicitante"
             name="solicitante"
             class="form-control persona-select"
-            data-curso-target="curso"
+            data-curso-target="computingCurso"
             required
           >
             <option selected disabled>Seleccione una persona</option>
@@ -118,35 +143,54 @@
           <label>Curso:</label>
           <input
             type="text"
-            id="curso"
+            id="computingCurso"
             name="curso"
             class="form-control"
             readonly
             required
-          >
+          />
 
-          <label>Descripción/Actividad:</label>
-          <input type="text" name="activity" required>
+          <label>Observaciones:</label>
+          <input type="text" name="observaciones" id="computingObservaciones" />
 
           <button type="submit" class="button">Reservar</button>
         </form>
+
+        <h3>Reservas Actuales</h3>
+        <table id="computingReservationsTable" class="space-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Solicitante</th>
+              <th>Curso</th>
+              <th>Fecha de Uso</th>
+              <th>Horario</th>
+              <th>Observaciones</th>
+              <th>Registrado por</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Filas dinámicas -->
+          </tbody>
+        </table>
       </section>
 
       <!-- ==========================
-           PRÉSTAMOS MANUALES
+           SECCIÓN: PRÉSTAMOS DE EQUIPO
+           (opcional, se mostrará si el backend lo soporta)
       =========================== -->
       <section class="loans-section">
-        <h2>Registrar Préstamo de Material</h2>
-        <form id="scienceLoanForm" class="space-form">
-          <label>Código del Material:</label>
-          <input type="text" id="scienceLoanCodigo" name="codigo" required>
+        <h2>Registrar Préstamo de Equipo</h2>
+        <form id="computingLoanForm" class="space-form">
+          <label>ID del Equipo:</label>
+          <input type="text" id="computingLoanItemId" name="itemId" required />
 
-          <label>Solicitante:</label>
+          <label>Persona:</label>
           <select
-            id="scienceLoanUser"
-            name="solicitante"
+            id="computingLoanUser"
+            name="persona"
             class="form-control persona-select"
-            data-curso-target="scienceLoanCurso"
+            data-curso-target="computingLoanCurso"
             required
           >
             <option selected disabled>Seleccione una persona</option>
@@ -155,129 +199,44 @@
           <label>Curso:</label>
           <input
             type="text"
-            id="scienceLoanCurso"
+            id="computingLoanCurso"
             name="curso"
             class="form-control"
             readonly
             required
-          >
+          />
 
           <label>Observaciones:</label>
-          <input
-            type="text"
-            id="scienceLoanObs"
-            name="observaciones"
-            placeholder="Opcional"
-          >
+          <input type="text" id="computingLoanObs" name="observaciones" />
 
           <button type="submit" class="button">Registrar Préstamo</button>
         </form>
 
         <h3>Préstamos Activos</h3>
-        <table id="scienceLoanTable" class="space-table">
+        <table id="computingLoanTable" class="space-table">
           <thead>
             <tr>
               <th>ID</th>
-              <th>Código Material</th>
-              <th>Solicitante</th>
-              <th>Curso</th>
+              <th>ID Equipo</th>
+              <th>Persona</th>
               <th>Fecha Préstamo</th>
               <th>Devuelto</th>
               <th>Acción</th>
             </tr>
           </thead>
-          <tbody id="scienceLoanTableBody">
-            <!-- Filas dinámicas -->
+          <tbody id="computingLoanTableBody">
+            <!-- Filas generadas dinámicamente -->
           </tbody>
         </table>
       </section>
     </div>
   </div>
-
-  <!-- ==========================
-       MODAL FUTURISTA PRÉSTAMO
-  =========================== -->
-  <div
-    id="scienceLoanModal"
-    class="modal-backdrop space-modal-backdrop"
-    style="display: none;"
-    aria-hidden="true"
-  >
-    <div class="modal-card glass-panel space-modal-card">
-      <h3>Prestar material de ciencias</h3>
-      <form id="scienceLoanModalForm" class="space-form">
-        <input type="hidden" id="scienceLoanModalCodigo" name="codigo">
-
-        <div class="form-row">
-          <label>Material:</label>
-          <input
-            type="text"
-            id="scienceLoanModalNombre"
-            readonly
-            class="readonly-input"
-          >
-        </div>
-
-        <div class="form-row">
-          <label>Solicitante:</label>
-          <select
-            id="scienceLoanModalUser"
-            name="solicitante"
-            class="form-control persona-select"
-            data-curso-target="scienceLoanModalCurso"
-            required
-          >
-            <option selected disabled>Seleccione una persona</option>
-          </select>
-        </div>
-
-        <div class="form-row">
-          <label>Curso:</label>
-          <input
-            type="text"
-            id="scienceLoanModalCurso"
-            name="curso"
-            class="form-control"
-            readonly
-            required
-          >
-        </div>
-
-        <div class="form-row">
-          <label>Observaciones:</label>
-          <textarea
-            id="scienceLoanModalObs"
-            name="observaciones"
-            rows="2"
-            placeholder="Opcional"
-          ></textarea>
-        </div>
-
-        <div class="modal-actions">
-          <button
-            type="button"
-            id="scienceLoanModalCancel"
-            class="btn-ghost"
-          >
-            Cancelar
-          </button>
-          <button type="submit" class="button">
-            Confirmar préstamo
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Scripts principales (mantengo todo lo que ya tenías) -->
-  <script src="/js/script.js"></script>
-  <script src="/js/roleGuard.js"></script>
+  
   <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      // Cargar personas en todos los selects de tipo persona
-      cargarPersonasEnSelect("solicitante");
-      cargarPersonasEnSelect("scienceLoanUser");
-      cargarPersonasEnSelect("scienceLoanModalUser");
+    // Cargar personas en selects una vez cargada la página
+    document.addEventListener('DOMContentLoaded', () => {
+      cargarPersonasEnSelect('computingSolicitante');
+      cargarPersonasEnSelect('computingLoanUser');
     });
   </script>
 </body>
