@@ -67,18 +67,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
       historyTableBody.innerHTML = '';
 
-      logs.forEach(log => {
-        const tr = document.createElement('tr');
+      // Por si el backend no los ordena: ordenamos por fecha descendente (más reciente primero)
+      logs
+        .slice()
+        .sort((a, b) => {
+          const da = new Date(a.createdAt || a.created_at || 0).getTime();
+          const db = new Date(b.createdAt || b.created_at || 0).getTime();
+          return db - da;
+        })
+        .forEach(log => {
+          const tr = document.createElement('tr');
 
-        const labText = log.lab || '';
-        const actionText = log.action || '';
-        const entityType = log.entityType || '';
-        const entityId = log.entityId || '';
-        const user = log.user || log.user_email || '';
-        const createdAt = formatDate(log.createdAt || log.created_at);
-        const details = formatDetails(log.data || log.details);
+          const labText = log.lab || log.module || '';
+          const actionText = log.action || log.action_type || '';
+          const entityType = log.entityType || log.entity_type || '';
+          const entityId = log.entityId || log.entity_id || '';
+          const user =
+            log.user ||
+            log.user_email ||
+            log.performed_by ||
+            log.created_by ||
+            '';
+          const createdAt = formatDate(log.createdAt || log.created_at);
+          const details = formatDetails(
+            log.data || log.details || log.payload || log.meta
+          );
 
-        tr.innerHTML = `
+          tr.innerHTML = `
           <td>${createdAt}</td>
           <td>${labText}</td>
           <td>${actionText}</td>
@@ -88,8 +103,19 @@ document.addEventListener('DOMContentLoaded', () => {
           <td>${details}</td>
         `;
 
-        historyTableBody.appendChild(tr);
-      });
+          historyTableBody.appendChild(tr);
+        });
+
+      // Si no hay registros, mostramos una fila informativa
+      if (!historyTableBody.children.length) {
+        const emptyRow = document.createElement('tr');
+        emptyRow.innerHTML = `
+          <td colspan="7" style="text-align:center; opacity:0.8;">
+            No hay movimientos registrados para los filtros seleccionados.
+          </td>
+        `;
+        historyTableBody.appendChild(emptyRow);
+      }
     } catch (err) {
       console.error('Error al cargar historial:', err);
     }
