@@ -98,15 +98,19 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 // =========================================================
 // CORS
 // =========================================================
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'https://innova-space-edu.github.io',
+  'https://innova-space-edu.github.io/inventario',
+  'https://inventario-u224.onrender.com'
+];
+
+console.log('🌐 CORS origins permitidos:', allowedOrigins);
+
 app.use(
   cors({
-    origin: [
-      'http://localhost:3000',
-      'http://127.0.0.1:3000',
-      'https://innova-space-edu.github.io',
-      'https://innova-space-edu.github.io/inventario',
-      'https://inventario-u224.onrender.com'
-    ],
+    origin: allowedOrigins,
     credentials: true
   })
 );
@@ -252,6 +256,17 @@ app.get('/logout', (req, res) => {
 app.get('/api/session', (req, res) => {
   if (!req.session.user) return res.json({ email: null, role: null });
   res.json(req.session.user);
+});
+
+// ✅ Healthcheck sencillo para Render / monitoreo
+app.get('/health', async (req, res) => {
+  try {
+    await db.query('SELECT 1');
+    res.json({ status: 'ok', db: true });
+  } catch (err) {
+    console.error('Healthcheck DB error:', err);
+    res.status(500).json({ status: 'error', db: false });
+  }
 });
 
 // =========================================================
