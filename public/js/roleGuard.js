@@ -12,11 +12,11 @@
       ...options
     });
 
-    if (resp.status === 401) {
-      // Sesión caducada o no autenticada
+    if (resp.status === 401 || resp.status === 403) {
+      // Sesión caducada, no autenticada o sin permisos suficientes
       alert('Tu sesión ha expirado o no estás autenticado. Vuelve a iniciar sesión.');
       window.location.href = '/login.html';
-      throw new Error('No autenticado (401)');
+      throw new Error(`Acceso no autorizado (${resp.status})`);
     }
 
     return resp;
@@ -30,8 +30,9 @@
   // -------------------------------------------
   async function fetchSession() {
     try {
-      const resp = await fetch('/api/session', {
-        credentials: 'include'
+      // Usamos guardedFetch para que también capture 401/403
+      const resp = await guardedFetch('/api/session', {
+        method: 'GET'
       });
       if (!resp.ok) return null;
       return await resp.json();
