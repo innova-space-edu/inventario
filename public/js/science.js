@@ -31,11 +31,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const peopleTableBody = document.querySelector('#sciencePeopleTable tbody');
 
+  // Usamos guardedFetch si está definido por roleGuard.js; si no, fetch clásico con credenciales
   const apiFetch =
     window.guardedFetch ||
     ((url, options = {}) => fetch(url, { credentials: 'include', ...options }));
 
-  if (!scienceForm || !scienceTableBody) return; // seguridad
+  // Si no existe el formulario o la tabla base, salimos (evita errores si el HTML cambia)
+  if (!scienceForm || !scienceTableBody) return;
 
   // ---------- Estado ----------
   let scienceItems = [];
@@ -89,7 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       const items = await resp.json();
-      // Suponemos que el backend ya devuelve objetos planos
+      // Suponemos que el backend ya devuelve objetos planos { id, codigo, nombre, ... }
       scienceItems = Array.isArray(items) ? items : [];
       renderScienceTable();
     } catch (err) {
