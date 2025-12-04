@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const loanPersonSelect = document.getElementById('loanPersonSelect');
   const loanNombreInput = document.getElementById('loanNombre');
   const loanCursoInput = document.getElementById('loanCurso');
+  const loanTipoPersonaInput = document.getElementById('loanTipoPersona'); // NUEVO: para rellenar tipoPersona
 
   // (Opcionales para el panel de administración de personas)
   const peopleTableBody = document.querySelector('#libraryPeopleTable tbody');
@@ -39,7 +40,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await resp.json();
       libraryPeople = Array.isArray(data) ? data : [];
     } catch (err) {
-      console.warn('No se pudo cargar desde /api/library/people, usando /config/library_people.json:', err);
+      console.warn(
+        'No se pudo cargar desde /api/library/people, usando /config/library_people.json:',
+        err
+      );
       // 2) Respaldo estático desde JSON
       try {
         const resp2 = await fetch('/config/library_people.json');
@@ -70,8 +74,12 @@ document.addEventListener('DOMContentLoaded', () => {
     loanPersonSelect.appendChild(defaultOpt);
 
     // Separar por tipo para mostrar optgroups
-    const estudiantes = libraryPeople.filter(p => (p.tipo || '').toLowerCase() === 'estudiante');
-    const funcionarios = libraryPeople.filter(p => (p.tipo || '').toLowerCase() === 'funcionario');
+    const estudiantes = libraryPeople.filter(
+      p => (p.tipo || '').toLowerCase() === 'estudiante'
+    );
+    const funcionarios = libraryPeople.filter(
+      p => (p.tipo || '').toLowerCase() === 'funcionario'
+    );
 
     if (estudiantes.length > 0) {
       const ogEst = document.createElement('optgroup');
@@ -121,6 +129,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (loanCursoInput) {
         loanCursoInput.value = p.curso || '';
       }
+      if (loanTipoPersonaInput) {
+        loanTipoPersonaInput.value = p.tipo || '';
+      }
     });
   }
 
@@ -147,13 +158,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (peopleFilterText.trim()) {
       const text = peopleFilterText.toLowerCase();
       items = items.filter(p => {
-        const values = [
-          p.id,
-          p.nombre,
-          p.tipo,
-          p.curso
-        ];
-        return values.some(v => v && String(v).toLowerCase().includes(text));
+        const values = [p.id, p.nombre, p.tipo, p.curso];
+        return values.some(
+          v => v && String(v).toLowerCase().includes(text)
+        );
       });
     }
     return items;
@@ -197,7 +205,6 @@ document.addEventListener('DOMContentLoaded', () => {
   function fillPeopleForm(personId) {
     if (!peopleForm) return;
 
-    const formData = new FormData(peopleForm);
     const person = libraryPeople.find(p => p.id === personId);
     if (!person) return;
 
@@ -219,12 +226,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!ok) return;
 
     try {
-      const resp = await apiFetch(`/api/library/people/${encodeURIComponent(personId)}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json'
+      const resp = await apiFetch(
+        `/api/library/people/${encodeURIComponent(personId)}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json'
+          }
         }
-      });
+      );
 
       if (!resp.ok) {
         const d = await resp.json().catch(() => ({}));
@@ -287,13 +297,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (id) {
           // Actualizar persona existente
-          resp = await apiFetch(`/api/library/people/${encodeURIComponent(id)}`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload)
-          });
+          resp = await apiFetch(
+            `/api/library/people/${encodeURIComponent(id)}`,
+            {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(payload)
+            }
+          );
           message = 'Persona actualizada';
         } else {
           // Crear persona nueva
