@@ -1,13 +1,31 @@
-[
-  {
-    "id": "1762370240324",
-    "idEquip": "12123123",
-    "codigo": "1221",
-    "marca": "cdscd",
-    "modelo": "cdc",
-    "anio": "2025",
-    "serie": "151d8wdedw",
-    "descripcion": "dwededwdw",
-    "photo": "1762370240246-ChatGPT Image 21 ago 2025, 08_22_29 p.m..png"
-  }
-]
+{
+  "id": 1,
+  "idEquip": "PC-01",
+  "codigo": "LAB-PC-01",
+  "tipoActivo": "hardware",
+  "subtipo": "Computadora / Equipo principal",
+  "detalleTipo": "PC de escritorio",
+  "marca": "HP",
+  "modelo": "ProDesk 400",
+  "serie": "XYZ123",
+  "cantidad": 1,
+  "cpu": "Intel i5",
+  "memoriaRam": "8 GB",
+  "sistemaOperativo": "Windows 10",
+  "soTipo": "",
+  "soVersion": "",
+  "appNombre": "",
+  "appVersion": "",
+  "appFechaInstalacion": "",
+  "licenciaTipo": "",
+  "licenciaNumero": "",
+  "licenciaVencimiento": "",
+  "descripcionOtros": "",
+  "ubicacion": "Lab. Computación",
+  "estado": "operativo",
+  "fechaCompra": "2024-03-01",
+  "fechaActualizacion": "",
+  "mantenimientoNotas": "",
+  "descripcion": "PC principal del laboratorio",
+  "photo": "uploads/..."
+}
