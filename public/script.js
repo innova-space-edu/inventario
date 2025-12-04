@@ -929,6 +929,21 @@
   }
 
   /*****************************************************************
+   * NUEVO: PÁGINA DE PRÉSTAMOS / DEVOLUCIONES (loans.html)
+   * (Solo voz y sugerencias generales; la lógica de datos la maneja
+   *  el backend o scripts específicos si los agregamos luego.)
+   *****************************************************************/
+
+  function initLoansPage() {
+    speak(
+      'Estás en la página de gestión de préstamos y devoluciones. ' +
+        'Aquí puedes revisar los préstamos registrados y ver cuáles están pendientes.'
+    );
+    // Si en el futuro agregas botones o filtros específicos en loans.html,
+    // aquí podemos enganchar más listeners sin alterar el resto del sistema.
+  }
+
+  /*****************************************************************
    * NAVBAR ACTIVA
    *****************************************************************/
 
@@ -1017,6 +1032,9 @@
         break;
       case 'science':
         initSciencePage();
+        break;
+      case 'loans': // ⭐ NUEVO: página de préstamos / devoluciones
+        initLoansPage();
         break;
       default:
         break;
