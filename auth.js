@@ -3,11 +3,11 @@
 // Autenticación y gestión de sesión para el inventario
 // ------------------------------------------------------
 //
-// - POST /login      → valida credenciales, crea cookie JWT y redirige a "/"
-// - GET  /logout     → elimina cookie y redirige a "/login.html"
-// - POST /logout     → elimina cookie y responde JSON { ok: true }
-// - GET  /api/session → devuelve { email, role } si hay sesión
-// - requireAuth      → middleware para proteger rutas /api/*
+// - POST /login        → valida credenciales, crea cookie JWT y redirige a "/"
+// - GET  /logout       → elimina cookie y redirige a "/login.html"
+// - POST /logout       → elimina cookie y responde JSON { ok: true }
+// - GET  /api/session  → devuelve { email, role, name } si hay sesión
+// - requireAuth        → middleware para proteger rutas /api/*
 //
 // Configuración por variables de entorno:
 //
@@ -47,8 +47,14 @@ const TOKEN_EXPIRES_HOURS = 8;
  * USERS será un mapa: { email: { role, name } }
  * Ejemplo:
  *   {
- *     "admin@colprovidencia.cl": { role: "admin", name: "Administrador" },
- *     "ciencias@colprovidencia.cl": { role: "science", name: "Laboratorio Ciencias" }
+ *     "admin@colprovidencia.cl": {
+ *       role: "admin",
+ *       name: "Administrador"
+ *     },
+ *     "ciencias@colprovidencia.cl": {
+ *       role: "science",
+ *       name: "Laboratorio Ciencias"
+ *     }
  *   }
  */
 const USERS = {};
@@ -57,7 +63,7 @@ const USERS = {};
  * Helper para registrar usuarios desde variables de entorno.
  */
 function addUserFromEnv(envKey, defaultEmail, role, displayName) {
-  const email = (process.env[envKey] || defaultEmail || '').toLowerCase();
+  const email = (process.env[envKey] || defaultEmail || '').toLowerCase().trim();
   if (!email) return;
   USERS[email] = { role, name: displayName || email };
 }
@@ -163,12 +169,19 @@ function requireAuth(req, res, next) {
 // ------------------------------------------------------
 
 router.post('/login', express.urlencoded({ extended: true }), (req, res) => {
-  const { email, password } = req.body;
+  const { email, password } = req.body || {};
+
+  // Pequeño log de auditoría (solo correo, nunca contraseña)
+  if (email) {
+    console.log(`[AUTH] Intento de inicio de sesión para: ${email}`);
+  }
 
   const user = validateCredentials(email, password);
   if (!user) {
     // Puedes cambiar esto por un render de una vista si quieres
-    return res.status(401).send('Credenciales inválidas');
+    return res
+      .status(401)
+      .send('Credenciales inválidas. Verifica tu correo y contraseña.');
   }
 
   const token = jwt.sign(
