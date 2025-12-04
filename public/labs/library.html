@@ -10,6 +10,9 @@
     <!-- Fondo espacial + glass UI -->
     <link rel="stylesheet" href="/css/app.css">
 
+    <!-- Utilidades compartidas de personas (Biblioteca + Ciencias) -->
+    <script defer src="/js/peopleUtils.js"></script>
+
     <!-- JS específico de biblioteca (API + BD + Supabase) -->
     <script defer src="/js/library.js"></script>
     <!-- NO repetimos script.js aquí para evitar doble carga -->
@@ -36,24 +39,58 @@
             <h2>Agregar Libro o Material</h2>
             <!-- enctype para subir foto -->
             <form id="libraryForm" enctype="multipart/form-data" method="post">
-                <label>Código:</label>
-                <input type="text" name="codigo" id="libCode" required>
+                <label for="libCode">Código:</label>
+                <input
+                  type="text"
+                  name="codigo"
+                  id="libCode"
+                  required
+                  data-message="Escribe el código interno del libro o material que vas a registrar."
+                >
 
-                <label>Título o Nombre:</label>
-                <input type="text" name="titulo" id="libTitle" required>
+                <label for="libTitle">Título o Nombre:</label>
+                <input
+                  type="text"
+                  name="titulo"
+                  id="libTitle"
+                  required
+                  data-message="Ingresa el título del libro o el nombre del material."
+                >
 
-                <label>Autor / Fabricante:</label>
-                <input type="text" name="autor" id="libAuthor" required>
+                <label for="libAuthor">Autor / Fabricante:</label>
+                <input
+                  type="text"
+                  name="autor"
+                  id="libAuthor"
+                  required
+                  data-message="Escribe el autor del libro o el fabricante del material."
+                >
 
-                <label>Año:</label>
-                <input type="number" name="anio" id="libYear" required>
+                <label for="libYear">Año:</label>
+                <input
+                  type="number"
+                  name="anio"
+                  id="libYear"
+                  required
+                  data-message="Indica el año de publicación del libro o de fabricación del material."
+                >
 
-                <label>Serie / ISBN:</label>
-                <input type="text" name="serie" id="libSeries">
+                <label for="libSeries">Serie / ISBN:</label>
+                <input
+                  type="text"
+                  name="serie"
+                  id="libSeries"
+                  data-message="Opcional: serie, colección o código ISBN del libro o material."
+                >
 
                 <!-- CATEGORÍA AÑADIDA -->
-                <label>Categoría:</label>
-                <select id="libCategory" name="categoria" required>
+                <label for="libCategory">Categoría:</label>
+                <select
+                  id="libCategory"
+                  name="categoria"
+                  required
+                  data-message="Selecciona la categoría: libro, material escolar, multimedia, instrumento u otros."
+                >
                     <option value="libro">Libro</option>
                     <option value="material escolar">Material Escolar</option>
                     <option value="material multimedia">Material Multimedia</option>
@@ -63,16 +100,39 @@
                     <option value="otros">Otros</option>
                 </select>
 
-                <label>Descripción:</label>
-                <textarea name="descripcion" id="libDescription" required></textarea>
+                <label for="libDescription">Descripción:</label>
+                <textarea
+                  name="descripcion"
+                  id="libDescription"
+                  required
+                  data-message="Describe brevemente el contenido o uso del libro o material."
+                ></textarea>
 
-                <label>Cantidad:</label>
-                <input type="number" name="cantidad" id="libQuantity" required>
+                <label for="libQuantity">Cantidad:</label>
+                <input
+                  type="number"
+                  name="cantidad"
+                  id="libQuantity"
+                  required
+                  data-message="Indica cuántas unidades de este libro o material se incorporan al inventario."
+                >
 
-                <label>Fotografía:</label>
-                <input type="file" id="libPhoto" name="photo" accept="image/*">
+                <label for="libPhoto">Fotografía:</label>
+                <input
+                  type="file"
+                  id="libPhoto"
+                  name="photo"
+                  accept="image/*"
+                  data-message="Opcional: sube una fotografía del libro o material para identificarlo visualmente."
+                >
 
-                <button type="submit" class="button">Guardar</button>
+                <button
+                  type="submit"
+                  class="button"
+                  data-message="Guardar este libro o material en el inventario de biblioteca."
+                >
+                  Guardar
+                </button>
             </form>
         </section>
 
@@ -86,8 +146,14 @@
                   id="librarySearch"
                   placeholder="Buscar por código, título, autor..."
                   class="input-search"
+                  data-message="Escribe aquí para filtrar el inventario por código, título, autor o descripción."
                 >
-                <button type="button" id="btnExportLibraryCSV" class="button secondary">
+                <button
+                  type="button"
+                  id="btnExportLibraryCSV"
+                  class="button secondary"
+                  data-message="Exportar el inventario de biblioteca a un archivo CSV."
+                >
                     Exportar CSV
                 </button>
             </div>
@@ -121,30 +187,70 @@
             <h2>Registrar Préstamo</h2>
             <form id="loanForm">
                 <!-- IMPORTANTE: el backend usa "codigo" / "bookCode" -->
-                <label>Código del libro / material:</label>
-                <input type="text" id="loanCodigo" name="codigo" required>
+                <label for="loanCodigo">Código del libro / material:</label>
+                <input
+                  type="text"
+                  id="loanCodigo"
+                  name="codigo"
+                  required
+                  data-message="Ingresa el código del libro o material que se prestará."
+                >
 
                 <!-- Selector de persona (estudiantes/funcionarios) -->
-                <label>Persona (desde listado):</label>
-                <select id="loanPersonSelect" name="personaId">
+                <label for="loanPersonSelect">Persona (desde listado):</label>
+                <select
+                  id="loanPersonSelect"
+                  name="personaId"
+                  class="persona-select"
+                  data-curso-target="loanCurso"
+                  data-message="Selecciona a la persona desde el listado de estudiantes o funcionarios."
+                >
                     <option value="">-- Seleccionar desde lista --</option>
                     <!-- opciones generadas dinámicamente -->
                 </select>
 
-                <label>Nombre:</label>
-                <input type="text" id="loanNombre" name="nombre" required>
+                <label for="loanNombre">Nombre:</label>
+                <input
+                  type="text"
+                  id="loanNombre"
+                  name="nombre"
+                  required
+                  data-message="Escribe el nombre de la persona que recibe el préstamo, si no aparece en la lista."
+                >
 
-                <label>Curso / Unidad:</label>
-                <input type="text" id="loanCurso" name="curso">
+                <label for="loanCurso">Curso / Unidad:</label>
+                <input
+                  type="text"
+                  id="loanCurso"
+                  name="curso"
+                  data-message="Indica el curso o unidad a la que pertenece la persona, por ejemplo 3° medio A."
+                >
 
-                <label>Tipo de persona:</label>
+                <label for="loanTipoPersona">Tipo de persona:</label>
                 <!-- el backend espera "tipoPersona" o "personType" -->
-                <input type="text" id="loanTipoPersona" name="tipoPersona" placeholder="estudiante / funcionario">
+                <input
+                  type="text"
+                  id="loanTipoPersona"
+                  name="tipoPersona"
+                  placeholder="estudiante / funcionario"
+                  data-message="Especifica si la persona es estudiante, funcionario u otro tipo."
+                >
 
-                <label>Observaciones:</label>
-                <input type="text" id="loanObservaciones" name="observaciones">
+                <label for="loanObservaciones">Observaciones:</label>
+                <input
+                  type="text"
+                  id="loanObservaciones"
+                  name="observaciones"
+                  data-message="Opcional: escribe observaciones sobre el préstamo, por ejemplo fecha de uso o detalles especiales."
+                >
 
-                <button type="submit" class="button">Registrar Préstamo</button>
+                <button
+                  type="submit"
+                  class="button"
+                  data-message="Registrar este préstamo en el sistema de biblioteca."
+                >
+                  Registrar Préstamo
+                </button>
             </form>
 
             <!-- Banner de préstamos vencidos (7 días o más) -->
@@ -157,8 +263,14 @@
                   id="loansSearch"
                   placeholder="Buscar préstamo por ID, nombre, código, curso..."
                   class="input-search"
+                  data-message="Filtra los préstamos por ID, nombre, código de material o curso."
                 >
-                <button type="button" id="btnExportLoansCSV" class="button secondary">
+                <button
+                  type="button"
+                  id="btnExportLoansCSV"
+                  class="button secondary"
+                  data-message="Exportar el historial de préstamos a un archivo CSV."
+                >
                     Exportar préstamos (CSV)
                 </button>
             </div>
@@ -193,20 +305,51 @@
                 <!-- IMPORTANTE: IDs para que library.js pueda editar -->
                 <input type="hidden" name="id" id="personId">
 
-                <label>Nombre:</label>
-                <input type="text" name="nombre" id="personNombre" required>
+                <label for="personNombre">Nombre:</label>
+                <input
+                  type="text"
+                  name="nombre"
+                  id="personNombre"
+                  required
+                  data-message="Escribe el nombre completo del estudiante o funcionario."
+                >
 
-                <label>Tipo:</label>
-                <select name="tipo" id="personTipo" required>
+                <label for="personTipo">Tipo:</label>
+                <select
+                  name="tipo"
+                  id="personTipo"
+                  required
+                  data-message="Selecciona si la persona es estudiante o funcionario."
+                >
                     <option value="estudiante">Estudiante</option>
                     <option value="funcionario">Funcionario</option>
                 </select>
 
-                <label>Curso / Unidad:</label>
-                <input type="text" name="curso" id="personCurso">
+                <label for="personCurso">Curso / Unidad:</label>
+                <input
+                  type="text"
+                  name="curso"
+                  id="personCurso"
+                  data-message="Indica el curso, nivel o área donde se desempeña la persona."
+                >
 
-                <button type="submit" id="peopleFormSubmit" class="button">Guardar persona</button>
-                <button type="button" id="peopleFormCancel" class="button" style="display: none;">Cancelar</button>
+                <button
+                  type="submit"
+                  id="peopleFormSubmit"
+                  class="button"
+                  data-message="Guardar o actualizar los datos de esta persona en el listado compartido."
+                >
+                  Guardar persona
+                </button>
+                <button
+                  type="button"
+                  id="peopleFormCancel"
+                  class="button"
+                  style="display: none;"
+                  data-message="Cancelar la edición de la persona seleccionada."
+                >
+                  Cancelar
+                </button>
             </form>
 
             <table id="peopleTable">
