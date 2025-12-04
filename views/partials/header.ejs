@@ -1,28 +1,65 @@
 <header class="main-header glass-panel">
   <div class="header-left">
-    <img src="/img/logo-colegio.png"
-         alt="Logo Colegio Providencia"
-         class="header-logo">
+    <!-- Logo institucional -->
+    <img
+      src="/img/logo-colegio.png"
+      alt="Logo Colegio Providencia"
+      class="header-logo"
+    />
 
+    <!-- Títulos del sistema -->
     <div class="header-title">
       <h1>Inventario Colegio Providencia</h1>
       <span class="header-subtitle">Innova Space Track</span>
     </div>
   </div>
 
-  <nav class="header-right">
+  <nav class="header-right" aria-label="Menú superior">
+    <!-- Botón de agenda -->
     <a
       href="https://sites.google.com/colprovidencia.cl/agenda-hora/inicio"
       class="btn-secondary"
       target="_blank"
       rel="noopener noreferrer"
+      title="Abrir agenda del colegio"
     >
       Agendar hora
     </a>
 
     <% if (user) { %>
-      <form action="/logout" method="post" class="logout-form">
-        <span class="user-email"><%= user.email %></span>
+      <!-- Información del usuario logueado -->
+      <div class="user-info">
+        <div class="user-avatar">
+          <span><%= user.email.charAt(0).toUpperCase() %></span>
+        </div>
+
+        <div class="user-meta">
+          <span class="user-email"><%= user.email %></span>
+
+          <!-- Indicador de rol -->
+          <span class="user-role">
+            <% if (user.role === "admin") { %>
+              🛡️ Administrador
+            <% } else if (user.role === "science") { %>
+              🔬 Ciencias
+            <% } else if (user.role === "computing") { %>
+              💻 Computación
+            <% } else if (user.role === "library") { %>
+              📚 Biblioteca
+            <% } else { %>
+              👤 Usuario
+            <% } %>
+          </span>
+        </div>
+      </div>
+
+      <!-- Botón cerrar sesión -->
+      <form
+        action="/logout"
+        method="post"
+        class="logout-form"
+        aria-label="Cerrar sesión"
+      >
         <button type="submit" class="btn-ghost">Cerrar sesión</button>
       </form>
     <% } %>
