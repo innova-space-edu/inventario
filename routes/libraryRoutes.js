@@ -3,6 +3,7 @@ const express = require("express");
 const router = express.Router();
 const { query } = require("../db");
 const { v4: uuidv4 } = require("uuid");
+const { requireAuth } = require("../auth");
 
 /**
  * NOTA IMPORTANTE
@@ -12,14 +13,18 @@ const { v4: uuidv4 } = require("uuid");
  * user, loanDate, returned, returnDate). Si decides montarlo:
  *
  *   const libraryRoutes = require('./routes/libraryRoutes');
- *   app.use('/api/library', requireLogin, libraryRoutes);
+ *   app.use('/api/library', libraryRoutes); // O bien: app.use('/api/library', requireAuth, libraryRoutes);
  *
+ * En este archivo YA aplicamos requireAuth a todas las rutas con router.use.
  * Asegúrate de NO tener duplicadas las rutas equivalentes en server.js.
  */
 
-// Utilidad: obtener email de sesión de forma segura
+// Todas las rutas de biblioteca requieren autenticación
+router.use(requireAuth);
+
+// Utilidad: obtener email de usuario autenticado de forma segura
 function getUserEmail(req) {
-  return req?.session?.user?.email || null;
+  return req?.user?.email || "admin@colprovidencia.cl";
 }
 
 // ===============================
