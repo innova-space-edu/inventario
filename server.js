@@ -5,8 +5,9 @@
 // - PostgreSQL (items, reservas, préstamos, historial)
 // - Supabase Storage para fotos
 // - /api/history para registrar y consultar movimientos
-// - Préstamos Biblioteca + control de stock
+// - Préstamos Biblioteca + control de stock + personas (JSON)
 // - Préstamos Ciencias + control de stock
+// - Préstamos Computación + control de stock
 // =========================================================
 
 const express = require('express');
@@ -46,7 +47,7 @@ if (LAB_USERS.length === 0) {
 const VALID_LABS = ['science', 'computing', 'library'];
 
 // =========================================================
-// DIRECTORIOS DE CONFIG (users.json, library_people.json)
+/** DIRECTORIOS DE CONFIG (users.json, library_people.json) */
 // =========================================================
 const DATA_DIR = process.env.DATA_DIR || __dirname;
 const CONFIG_DIR = path.join(DATA_DIR, 'config');
@@ -55,7 +56,7 @@ if (!fs.existsSync(CONFIG_DIR)) fs.mkdirSync(CONFIG_DIR, { recursive: true });
 const USERS_PATH = path.join(CONFIG_DIR, 'users.json');
 if (!fs.existsSync(USERS_PATH)) fs.writeFileSync(USERS_PATH, '[]', 'utf8');
 
-// ✅ NUEVO: archivo de personas de biblioteca (estudiantes/funcionarios)
+// ✅ Personas de biblioteca (estudiantes/funcionarios)
 const LIBRARY_PEOPLE_PATH = path.join(CONFIG_DIR, 'library_people.json');
 if (!fs.existsSync(LIBRARY_PEOPLE_PATH)) {
   fs.writeFileSync(LIBRARY_PEOPLE_PATH, '[]', 'utf8');
@@ -205,7 +206,7 @@ function canEditScience(req, res, next) {
   next();
 }
 
-// ✅ NUEVO: helper específico para sala de computación
+// ✅ helper específico para sala de computación
 function canEditComputing(req, res, next) {
   const user = req.session.user;
   if (!user) return res.status(401).json({ message: 'No autenticado' });
@@ -280,7 +281,7 @@ async function uploadToSupabase(file, lab) {
 /** HISTORIAL: helper + rutas /api/history */
 // =========================================================
 
-// ✅ NUEVO: garantizar que exista la tabla history
+// ✅ Garantizar que exista la tabla history
 async function ensureHistoryTable() {
   try {
     await db.query(`
@@ -303,9 +304,6 @@ async function ensureHistoryTable() {
 }
 
 // Helper para insertar en tabla "history"
-// Tabla esperada:
-//  id (text PK) | lab (text) | action (text) | entity_type (text)
-//  entity_id (text) | user_email (text) | created_at (timestamptz) | data (jsonb)
 async function addHistory({ lab, action, entityType, entityId, userEmail, data }) {
   try {
     const id = Date.now().toString();
@@ -690,7 +688,7 @@ app.delete('/api/library/people/:id', requireLogin, canEditLibrary, async (req, 
 // API: PRÉSTAMOS BIBLIOTECA (PostgreSQL)
 // =========================================================
 
-// ✅ NUEVO: préstamos vencidos (> 7 días) para el banner
+// ✅ Préstamos vencidos (> 7 días) para el banner
 app.get('/api/library/overdue', requireLogin, async (req, res) => {
   try {
     const { rows } = await db.query(
@@ -742,7 +740,7 @@ app.get('/api/library/loans', requireLogin, async (req, res) => {
   }
 });
 
-// ⬇️⬇️⬇️ Registrar préstamo (con control de stock, transacción)
+// Registrar préstamo (con control de stock, transacción)
 app.post('/api/library/loan', requireLogin, canEditLibrary, async (req, res) => {
   const id = Date.now().toString();
   const raw = { ...req.body };
@@ -792,7 +790,7 @@ app.post('/api/library/loan', requireLogin, canEditLibrary, async (req, res) => 
     // Transacción para controlar stock
     const client = await getPgClient();
     if (!client) {
-      // Fallback sin transacción (no recomendado, deja aviso):
+      // Fallback sin transacción
       console.warn('⚠️ Préstamo sin transacción: db.pool no disponible, no se ajustará stock automáticamente.');
       await db.query(
         'INSERT INTO library_loans (id, data, user_email, loan_date, returned) VALUES ($1,$2::jsonb,$3,$4,$5)',
@@ -944,7 +942,7 @@ app.put('/api/library/loan/:loanId', requireLogin, canEditLibrary, async (req, r
   }
 });
 
-// ⬇️⬇️⬇️ Registrar devolución (suma stock, transacción)
+// Registrar devolución (suma stock, transacción)
 app.post(
   '/api/library/return/:loanId',
   requireLogin,
@@ -957,7 +955,7 @@ app.post(
     try {
       const client = await getPgClient();
       if (!client) {
-        // Fallback sin transacción (no recomendado, deja aviso y no suma stock):
+        // Fallback sin transacción
         console.warn('⚠️ Devolución sin transacción: db.pool no disponible, no se ajustará stock automáticamente.');
         const { rows } = await db.query(
           'UPDATE library_loans SET returned = TRUE, return_date = $1 WHERE id = $2 RETURNING id, data, user_email, loan_date, returned, return_date',
@@ -1124,7 +1122,7 @@ app.delete(
 // API: PRÉSTAMOS CIENCIAS (PostgreSQL, tabla science_loans)
 // =========================================================
 
-// ✅ Préstamos vencidos de Ciencias (> 7 días) — opcional para banner
+// ✅ Préstamos vencidos de Ciencias (> 7 días)
 app.get('/api/science/overdue', requireLogin, async (req, res) => {
   try {
     const { rows } = await db.query(
@@ -1176,7 +1174,7 @@ app.get('/api/science/loans', requireLogin, async (req, res) => {
   }
 });
 
-// Registrar préstamo de Ciencias (con control de stock en items lab='science')
+// Registrar préstamo de Ciencias (control stock lab='science')
 app.post('/api/science/loan', requireLogin, canEditScience, async (req, res) => {
   const id = Date.now().toString();
   const raw = { ...req.body };
@@ -1184,7 +1182,7 @@ app.post('/api/science/loan', requireLogin, canEditScience, async (req, res) => 
   const loanDate = new Date();
 
   try {
-    // Normalización de campos (flexible para el front)
+    // Normalización de campos
     let codigo = (raw.codigo || raw.code || raw.itemCode || '').trim();
     let detalle = (raw.detalle || raw.descripcion || raw.itemName || '').trim();
     let solicitante = (raw.solicitante || raw.borrowerName || '').trim();
@@ -1201,7 +1199,7 @@ app.post('/api/science/loan', requireLogin, canEditScience, async (req, res) => 
       solicitante,
       curso,
       observaciones,
-      // aliases por compatibilidad general
+      // aliases
       itemCode: codigo,
       itemName: detalle,
       borrowerName: solicitante,
@@ -1297,10 +1295,9 @@ app.post('/api/science/loan', requireLogin, canEditScience, async (req, res) => 
   }
 });
 
-// 🔁 ALIAS: permitir también POST /api/science/loans (plural) para el front
+// 🔁 ALIAS: POST /api/science/loans
 app.post('/api/science/loans', requireLogin, canEditScience, async (req, res) => {
-  // Reutilizamos la misma lógica que /api/science/loan
-  // Copiamos el cuerpo del handler anterior para no borrar nada
+  // Misma lógica que /api/science/loan
   const id = Date.now().toString();
   const raw = { ...req.body };
   const userEmail = req.session.user ? req.session.user.email : null;
@@ -1414,7 +1411,7 @@ app.post('/api/science/loans', requireLogin, canEditScience, async (req, res) =>
   }
 });
 
-// Actualizar préstamo de Ciencias (solo datos, no estado devuelto)
+// Actualizar préstamo de Ciencias
 app.put('/api/science/loan/:loanId', requireLogin, canEditScience, async (req, res) => {
   const loanId = req.params.loanId;
   const { codigo, detalle, solicitante, curso, observaciones } = req.body;
@@ -1483,7 +1480,7 @@ app.put('/api/science/loan/:loanId', requireLogin, canEditScience, async (req, r
   }
 });
 
-// Registrar devolución de Ciencias (suma stock en items lab='science')
+// Registrar devolución de Ciencias (suma stock)
 app.post(
   '/api/science/return/:loanId',
   requireLogin,
@@ -1610,13 +1607,13 @@ app.post(
   }
 );
 
-// 🔁 ALIAS: permitir también POST /api/science/loans/:loanId/return para el front
+// 🔁 ALIAS: POST /api/science/loans/:loanId/return
 app.post(
   '/api/science/loans/:loanId/return',
   requireLogin,
   canEditScience,
   async (req, res) => {
-    // Copiamos la misma lógica que /api/science/return/:loanId
+    // Misma lógica que /api/science/return/:loanId
     const loanId = req.params.loanId;
     const userEmail = req.session.user ? req.session.user.email : null;
     const returnDate = new Date();
@@ -1782,7 +1779,7 @@ app.delete(
 );
 
 // =========================================================
-// API: PRÉSTAMOS COMPUTACIÓN (PostgreSQL, tabla computing_loans)
+// API: PRÉSTAMOS COMPUTACIÓN (PostgreSQL, computing_loans)
 // =========================================================
 
 // ✅ Préstamos vencidos de Computación (> 7 días)
@@ -1837,7 +1834,7 @@ app.get('/api/computing/loans', requireLogin, async (req, res) => {
   }
 });
 
-// Registrar préstamo de Computación (con control de stock en items lab='computing')
+// Registrar préstamo de Computación (control stock lab='computing')
 app.post('/api/computing/loan', requireLogin, canEditComputing, async (req, res) => {
   const id = Date.now().toString();
   const raw = { ...req.body };
@@ -2024,7 +2021,7 @@ app.put('/api/computing/loan/:loanId', requireLogin, canEditComputing, async (re
   }
 });
 
-// Registrar devolución de Computación (suma stock en items lab='computing')
+// Registrar devolución de Computación (suma stock)
 app.post(
   '/api/computing/return/:loanId',
   requireLogin,
@@ -2202,7 +2199,7 @@ app.delete(
 // =========================================================
 db.initDb()
   .then(async () => {
-    // ✅ Nos aseguramos también aquí de que history exista
+    // ✅ Aseguramos tabla history
     await ensureHistoryTable();
 
     app.listen(PORT, () => {
