@@ -3,29 +3,55 @@
 <head>
   <meta charset="UTF-8" />
   <title>Inventario – Colegio Providencia</title>
-  <link rel="stylesheet" href="/css/styles.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Estilos principales del panel -->
+  <link rel="stylesheet" href="/css/app.css" />
 </head>
-<body class="body-space">
-  <div class="space-bg"></div>
+<body class="body-space" data-page="dashboard">
+  <!-- Fondo espacial donde script.js dibuja las estrellas -->
+  <div class="background space-bg"></div>
 
   <div class="app-shell">
     <% include('partials/header'); %>
 
     <main class="main-content">
       <section class="welcome-card glass-panel">
-        <h2>Bienvenido/a al sistema de inventario</h2>
+        <h2>
+          Bienvenido/a al sistema de inventario
+          <% if (user && user.name) { %>
+            , <span class="welcome-user-name"><%= user.name %></span>
+          <% } %>
+        </h2>
+
         <p>
           Desde aquí puedes gestionar los inventarios de biblioteca,
           ciencias, computación y otros recursos del colegio.
         </p>
 
+        <p class="section-description">
+          Elige el módulo que necesites para revisar, agregar o administrar materiales.
+        </p>
+
         <div class="inventory-links">
-          <a href="/library" class="card-link">Inventario Biblioteca</a>
-          <a href="/science" class="card-link">Inventario Ciencias</a>
-          <a href="/computing" class="card-link">Inventario Computación</a>
+          <a href="/library" class="card-link">
+            📚 Inventario Biblioteca
+          </a>
+          <a href="/science" class="card-link">
+            🔬 Inventario Ciencias
+          </a>
+          <a href="/computing" class="card-link">
+            💻 Inventario Computación
+          </a>
         </div>
       </section>
     </main>
   </div>
+
+  <!-- Script global: estrellas + voz + sugerencias de accesibilidad -->
+  <script src="/script.js"></script>
+
+  <!-- Control de rol / permisos (banner solo-lectura, etc.) -->
+  <script src="/js/roleGuard.js"></script>
 </body>
 </html>
