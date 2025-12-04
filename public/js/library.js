@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const loanForm = document.getElementById('loanForm');
   const returnForm = document.getElementById('returnForm');
-  // Nota: en tu HTML la tabla se llama "loanTable", pero aquí soportamos ambos ids
+  // Nota: en tu HTML la tabla se llama "loansTable", pero aquí soportamos ambos ids
   const loansTableBody =
     document.querySelector('#loansTable tbody') ||
     document.querySelector('#loanTable tbody');
@@ -91,6 +91,9 @@ document.addEventListener('DOMContentLoaded', () => {
     imgEl.alt = 'Sin imagen';
   }
 
+  // Hacemos accesible el fallback desde el HTML (onerror)
+  window.innovaImageFallback = imageFallback;
+
   // Registrar en historial (si backend lo soporta)
   async function logHistory(entry) {
     try {
@@ -147,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <td>
           ${
             item.photo
-              ? `<img src="${item.photo}" width="50" alt="Foto libro" onerror="(${imageFallback.toString()})(this)">`
+              ? `<img src="${item.photo}" width="50" alt="Foto libro" onerror="window.innovaImageFallback && window.innovaImageFallback(this)">`
               : ''
           }
         </td>
