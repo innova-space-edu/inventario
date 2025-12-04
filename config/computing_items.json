@@ -1,31 +1,125 @@
-{
-  "id": 1,
-  "idEquip": "PC-01",
-  "codigo": "LAB-PC-01",
-  "tipoActivo": "hardware",
-  "subtipo": "Computadora / Equipo principal",
-  "detalleTipo": "PC de escritorio",
-  "marca": "HP",
-  "modelo": "ProDesk 400",
-  "serie": "XYZ123",
-  "cantidad": 1,
-  "cpu": "Intel i5",
-  "memoriaRam": "8 GB",
-  "sistemaOperativo": "Windows 10",
-  "soTipo": "",
-  "soVersion": "",
-  "appNombre": "",
-  "appVersion": "",
-  "appFechaInstalacion": "",
-  "licenciaTipo": "",
-  "licenciaNumero": "",
-  "licenciaVencimiento": "",
-  "descripcionOtros": "",
-  "ubicacion": "Lab. Computación",
-  "estado": "operativo",
-  "fechaCompra": "2024-03-01",
-  "fechaActualizacion": "",
-  "mantenimientoNotas": "",
-  "descripcion": "PC principal del laboratorio",
-  "photo": "uploads/..."
-}
+[
+  {
+    "id": 1,
+    "idEquip": "PC-LAB-01",
+    "codigo": "LAB-PC-01",
+    "tipoActivo": "hardware",
+    "subtipo": "Computadora / Equipo principal",
+    "detalleTipo": "PC de escritorio",
+    "marca": "HP",
+    "modelo": "ProDesk 400 G5",
+    "serie": "HP-400G5-001",
+    "cantidad": 1,
+
+    "cpu": "Intel Core i5-10400",
+    "memoriaRam": "8 GB DDR4",
+    "sistemaOperativo": "Windows 10 Pro 64 bits",
+
+    "soTipo": "Desktop",
+    "soVersion": "22H2",
+    "appNombre": "Microsoft Office 365",
+    "appVersion": "v16.0",
+    "appFechaInstalacion": "2024-03-10",
+
+    "licenciaTipo": "Suscripción",
+    "licenciaNumero": "OFFICE-365-LAB-001",
+    "licenciaVencimiento": "2026-03-10",
+
+    "descripcionOtros": "",
+
+    "ubicacion": "Lab. Computación",
+    "estado": "operativo",
+    "fechaCompra": "2024-03-01",
+    "fechaActualizacion": "2025-01-10",
+    "mantenimientoNotas": "Limpieza interna y actualización de Windows en enero 2025",
+
+    "descripcion": "PC principal del laboratorio para clases de programación y ofimática.",
+    "photo": "/uploads/computing/pc-lab-01.jpg",
+
+    "anio": 2024,
+    "categoria": "pc",
+    "stock": 1
+  },
+  {
+    "id": 2,
+    "idEquip": "MON-LAB-01",
+    "codigo": "LAB-MON-01",
+    "tipoActivo": "hardware",
+    "subtipo": "Periférico (monitor, teclado, mouse, etc.)",
+    "detalleTipo": "Monitor",
+    "marca": "Samsung",
+    "modelo": "S24F350",
+    "serie": "SAM-S24-001",
+    "cantidad": 1,
+
+    "cpu": "",
+    "memoriaRam": "",
+    "sistemaOperativo": "",
+
+    "soTipo": "",
+    "soVersion": "",
+    "appNombre": "",
+    "appVersion": "",
+    "appFechaInstalacion": "",
+
+    "licenciaTipo": "",
+    "licenciaNumero": "",
+    "licenciaVencimiento": "",
+
+    "descripcionOtros": "",
+
+    "ubicacion": "Lab. Computación",
+    "estado": "operativo",
+    "fechaCompra": "2023-11-15",
+    "fechaActualizacion": "",
+    "mantenimientoNotas": "",
+
+    "descripcion": "Monitor de 24 pulgadas para puesto de trabajo del laboratorio.",
+    "photo": "/uploads/computing/monitor-lab-01.jpg",
+
+    "anio": 2023,
+    "categoria": "monitor",
+    "stock": 1
+  },
+  {
+    "id": 3,
+    "idEquip": "NET-ROUTER-01",
+    "codigo": "LAB-ROUTER-01",
+    "tipoActivo": "hardware",
+    "subtipo": "Dispositivo de red (router, switch, AP, firewall)",
+    "detalleTipo": "Router",
+    "marca": "TP-Link",
+    "modelo": "Archer C80",
+    "serie": "TPLINK-AC1900-01",
+    "cantidad": 1,
+
+    "cpu": "",
+    "memoriaRam": "",
+    "sistemaOperativo": "Firmware TP-Link",
+
+    "soTipo": "Dispositivo de red",
+    "soVersion": "Firmware v1.2.0",
+    "appNombre": "",
+    "appVersion": "",
+    "appFechaInstalacion": "",
+
+    "licenciaTipo": "",
+    "licenciaNumero": "",
+    "licenciaVencimiento": "",
+
+    "descripcionOtros": "",
+
+    "ubicacion": "Rack de red - Lab. Computación",
+    "estado": "operativo",
+    "fechaCompra": "2023-05-20",
+    "fechaActualizacion": "2024-02-01",
+    "mantenimientoNotas": "Actualización de firmware en febrero 2024",
+
+    "descripcion": "Router principal para conexión a internet del laboratorio de computación.",
+    "photo": "/uploads/computing/router-01.jpg",
+
+    "anio": 2023,
+    "categoria": "otros",
+    "stock": 1
+  }
+]
