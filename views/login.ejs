@@ -3,19 +3,121 @@
 <head>
   <meta charset="UTF-8" />
   <title>Iniciar sesión – Inventario Colegio Providencia</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Estilos principales -->
   <link rel="stylesheet" href="/css/styles.css" />
+
+  <style>
+    /* Ajustes específicos del login, sin reemplazar estilos globales */
+
+    .login-wrapper {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      max-width: 420px;
+      margin: 0 auto;
+      padding-top: 80px;
+    }
+
+    .login-card {
+      padding: 30px 26px;
+      border-radius: 18px;
+      text-align: center;
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .login-logo img {
+      width: 85px;
+      height: 85px;
+      object-fit: contain;
+      margin-bottom: 12px;
+    }
+
+    .login-title {
+      margin: 0;
+      font-size: 1.4rem;
+      font-weight: 600;
+    }
+
+    .login-subtitle {
+      font-size: 0.9rem;
+      color: #cdd3ff;
+      margin: 8px 0 18px;
+    }
+
+    .login-error {
+      background: rgba(255, 60, 60, 0.15);
+      color: #ff9c9c;
+      padding: 10px;
+      border-radius: 10px;
+      margin-bottom: 18px;
+      font-size: 0.85rem;
+    }
+
+    .login-form label {
+      margin: 8px 0 4px;
+      display: block;
+      text-align: left;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #dadfff;
+    }
+
+    .login-form input {
+      width: 100%;
+      padding: 11px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(160, 170, 255, 0.35);
+      background: rgba(5, 8, 18, 0.85);
+      color: #fff;
+      margin-bottom: 12px;
+      outline: none;
+      transition: 0.25s ease;
+      font-size: 0.95rem;
+    }
+
+    .login-form input:focus {
+      border-color: #8f7bff;
+      box-shadow: 0 0 12px rgba(120, 90, 255, 0.45);
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: white;
+      background: linear-gradient(90deg, #7b5cff, #4d9dff, #7b5cff);
+      background-size: 200% 100%;
+      transition: 0.4s ease;
+    }
+
+    .btn-primary:hover {
+      background-position: 100% 0;
+      box-shadow: 0 0 18px rgba(130, 100, 255, 0.6);
+    }
+  </style>
 </head>
-<body class="body-space">
-  <div class="space-bg"></div>
+
+<body class="body-space" data-page="login">
+  <!-- Fondo animado (estrellas generadas por script.js) -->
+  <div class="background space-bg"></div>
 
   <div class="login-wrapper">
     <div class="login-card glass-panel">
+
       <div class="login-logo">
-        <!-- Pon aquí el logo del colegio -->
         <img src="/img/logo-colegio.png" alt="Logo Colegio Providencia">
       </div>
 
       <h1 class="login-title">Sistema de Inventario</h1>
+
       <p class="login-subtitle">
         Bienvenido/a al panel de administración del Colegio Providencia.
       </p>
@@ -24,14 +126,18 @@
         <div class="login-error"><%= error %></div>
       <% } %>
 
-      <form method="post" action="/login" class="login-form">
+      <!-- FORMULARIO DE LOGIN -->
+      <form method="post" action="/login" class="login-form" id="loginForm">
+
         <label for="email">Correo institucional</label>
         <input
           type="email"
           id="email"
           name="email"
           required
-          placeholder="Emorales@colprovidencia.cl"
+          autocomplete="username"
+          placeholder="usuario@colprovidencia.cl"
+          data-message="Estás en el campo para escribir tu correo institucional."
         />
 
         <label for="password">Contraseña</label>
@@ -40,14 +146,27 @@
           id="password"
           name="password"
           required
+          autocomplete="current-password"
           placeholder="••••••"
+          data-message="Ahora escribe tu contraseña para ingresar al sistema."
         />
 
-        <button type="submit" class="btn-primary">
+        <button
+          type="submit"
+          class="btn-primary"
+          data-message="Botón para iniciar sesión. Se validarán tus credenciales."
+        >
           Iniciar sesión
         </button>
       </form>
+
+      <p style="margin-top: 14px; font-size: 0.78rem; color: #b5baff;">
+        La voz del sistema te guiará automáticamente.
+      </p>
     </div>
   </div>
+
+  <!-- Script global (estrellas + voz + sugerencias) -->
+  <script src="/script.js"></script>
 </body>
 </html>
