@@ -35,42 +35,246 @@
            SECCIÓN: INVENTARIO DE EQUIPOS
       =========================== -->
       <section class="form-section">
-        <h2>Agregar Equipo de Computación</h2>
+        <h2>Agregar Equipo / Activo de Computación</h2>
+
+        <!-- “Ventanas” de selección jerárquica: tipo → subcategoría → detalle -->
+        <div class="category-wizard">
+          <div class="wizard-panel" data-draggable="true">
+            <h3>Paso 1: Tipo de activo</h3>
+            <select id="wizardTipoActivo" class="input-select">
+              <option value="" selected disabled>Selecciona el tipo de activo</option>
+              <option value="hardware">Hardware</option>
+              <option value="software">Software</option>
+              <option value="otros">Otros activos</option>
+            </select>
+          </div>
+
+          <div class="wizard-panel" data-draggable="true">
+            <h3>Paso 2: Subcategoría</h3>
+            <select id="wizardSubtipo" class="input-select">
+              <option value="" selected disabled>Selecciona la subcategoría</option>
+              <!-- Hardware -->
+              <optgroup label="Hardware">
+                <option value="computadora">Computadora / Equipo principal</option>
+                <option value="periferico">Periférico (monitor, teclado, mouse, etc.)</option>
+                <option value="red">Dispositivo de red (router, switch, AP, firewall)</option>
+              </optgroup>
+              <!-- Software -->
+              <optgroup label="Software">
+                <option value="so">Sistema operativo</option>
+                <option value="aplicacion">Aplicación</option>
+                <option value="licencia">Licencia de software</option>
+              </optgroup>
+              <!-- Otros -->
+              <optgroup label="Otros activos">
+                <option value="mobiliario">Mobiliario (mesas, sillas, estanterías)</option>
+                <option value="herramienta">Herramientas y suministros</option>
+              </optgroup>
+            </select>
+          </div>
+
+          <div class="wizard-panel" data-draggable="true">
+            <h3>Paso 3: Detalle del tipo</h3>
+            <select id="wizardDetalle" class="input-select">
+              <option value="" selected disabled>Selecciona un detalle</option>
+              <!-- Detalles sugeridos para cada grupo -->
+              <optgroup label="Computadoras">
+                <option value="pc-escritorio">PC de escritorio</option>
+                <option value="laptop">Laptop</option>
+                <option value="all-in-one">All-in-One</option>
+              </optgroup>
+              <optgroup label="Periféricos">
+                <option value="monitor">Monitor</option>
+                <option value="teclado">Teclado</option>
+                <option value="raton">Ratón</option>
+                <option value="impresora">Impresora</option>
+                <option value="camara">Cámara</option>
+                <option value="proyector">Proyector</option>
+              </optgroup>
+              <optgroup label="Red">
+                <option value="router">Router</option>
+                <option value="switch">Switch</option>
+                <option value="ap">Punto de acceso</option>
+                <option value="firewall">Firewall</option>
+                <option value="cableado">Cableado / Patch cord</option>
+              </optgroup>
+              <optgroup label="Software">
+                <option value="so-escritorio">SO de escritorio</option>
+                <option value="so-servidor">SO de servidor</option>
+                <option value="suite-ofimatica">Suite ofimática</option>
+                <option value="navegador">Navegador / utilidades</option>
+                <option value="app-educativa">Aplicación educativa</option>
+                <option value="app-otro">Otra aplicación</option>
+              </optgroup>
+              <optgroup label="Otros">
+                <option value="mesa-computacion">Mesa de laboratorio</option>
+                <option value="silla-computacion">Silla de laboratorio</option>
+                <option value="estanteria">Estantería</option>
+                <option value="kit-reparacion">Kit de reparación</option>
+                <option value="software-diagnostico">Software de diagnóstico</option>
+                <option value="otro-suministro">Otro suministro</option>
+              </optgroup>
+            </select>
+          </div>
+        </div>
+
         <!-- enctype para subir foto -->
         <form id="computingForm" enctype="multipart/form-data" method="post" class="space-form">
-          <label>ID del Equipo:</label>
-          <input type="text" name="idEquip" id="compIdEquip" required />
+          <!-- IDENTIFICACIÓN -->
+          <fieldset>
+            <legend>Identificación del activo</legend>
 
-          <label>Código:</label>
-          <input type="text" name="codigo" id="compCodigo" required />
+            <label>ID del Equipo / Activo:</label>
+            <input type="text" name="idEquip" id="compIdEquip" required />
 
-          <label>Marca:</label>
-          <input type="text" name="marca" id="compMarca" required />
+            <label>Código interno:</label>
+            <input type="text" name="codigo" id="compCodigo" required />
 
-          <label>Modelo:</label>
-          <input type="text" name="modelo" id="compModelo" required />
+            <label>Tipo de activo:</label>
+            <input
+              type="text"
+              name="tipoActivo"
+              id="compTipoActivo"
+              readonly
+              placeholder="Se completa desde el Paso 1 (Hardware / Software / Otros)"
+            />
 
-          <label>Año:</label>
-          <input type="number" name="anio" id="compAnio" required />
+            <label>Subtipo:</label>
+            <input
+              type="text"
+              name="subtipo"
+              id="compSubtipo"
+              readonly
+              placeholder="Se completa desde el Paso 2 (Computadora, periférico, etc.)"
+            />
 
-          <label>Serie:</label>
-          <input type="text" name="serie" id="compSerie" />
+            <label>Detalle / categoría específica:</label>
+            <input
+              type="text"
+              name="detalleTipo"
+              id="compDetalleTipo"
+              readonly
+              placeholder="Se completa desde el Paso 3 (PC escritorio, router, mesa, etc.)"
+            />
 
-          <label>Categoría:</label>
-          <select name="categoria" id="compCategoria" required>
-            <option value="pc">PC de escritorio</option>
-            <option value="laptop">Laptop</option>
-            <option value="monitor">Monitor</option>
-            <option value="impresora">Impresora</option>
-            <option value="accesorio">Accesorio</option>
-            <option value="otros">Otros</option>
-          </select>
+            <label>Marca:</label>
+            <input type="text" name="marca" id="compMarca" />
 
-          <label>Descripción:</label>
-          <textarea name="descripcion" id="compDescripcion" required></textarea>
+            <label>Modelo:</label>
+            <input type="text" name="modelo" id="compModelo" />
 
-          <label>Fotografía:</label>
-          <input type="file" id="compPhoto" name="photo" accept="image/*" />
+            <label>Número de serie:</label>
+            <input type="text" name="serie" id="compSerie" />
+
+            <label>Cantidad (stock total de este ítem):</label>
+            <input type="number" name="cantidad" id="compCantidad" min="1" value="1" />
+          </fieldset>
+
+          <!-- HARDWARE (computadoras / periféricos / red) -->
+          <fieldset class="group-hardware">
+            <legend>Hardware (Computadoras, periféricos y red)</legend>
+
+            <label>Procesador (CPU):</label>
+            <input type="text" name="cpu" id="compCPU" placeholder="Ej: Intel Core i5-10400" />
+
+            <label>Memoria RAM:</label>
+            <input type="text" name="memoriaRam" id="compRAM" placeholder="Ej: 8 GB DDR4" />
+
+            <label>Sistema operativo instalado:</label>
+            <input type="text" name="sistemaOperativo" id="compSO" placeholder="Ej: Windows 10 Pro 64 bits" />
+
+            <label>Fecha de compra:</label>
+            <input type="date" name="fechaCompra" id="compFechaCompra" />
+
+            <label>Estado del activo:</label>
+            <select name="estado" id="compEstado">
+              <option value="">Seleccione estado</option>
+              <option value="operativo">Operativo</option>
+              <option value="en-reparacion">En reparación</option>
+              <option value="dado-de-baja">Dado de baja</option>
+              <option value="prestado">En préstamo</option>
+              <option value="otro">Otro</option>
+            </select>
+          </fieldset>
+
+          <!-- SOFTWARE (SO, aplicaciones, licencias) -->
+          <fieldset class="group-software">
+            <legend>Software, aplicaciones y licencias</legend>
+
+            <label>Tipo de sistema operativo:</label>
+            <input type="text" name="soTipo" id="compTipoSO" placeholder="Ej: Desktop, servidor, Android, etc." />
+
+            <label>Versión de sistema operativo:</label>
+            <input type="text" name="soVersion" id="compVersionSO" placeholder="Ej: 22H2, Ubuntu 22.04, etc." />
+
+            <label>Nombre de la aplicación principal:</label>
+            <input type="text" name="appNombre" id="compAppNombre" placeholder="Ej: Office 365, GeoGebra" />
+
+            <label>Versión de la aplicación:</label>
+            <input type="text" name="appVersion" id="compAppVersion" placeholder="Ej: v16.0" />
+
+            <label>Fecha de instalación de la aplicación:</label>
+            <input type="date" name="appFechaInstalacion" id="compAppFechaInstalacion" />
+
+            <label>Tipo de licencia:</label>
+            <input type="text" name="licenciaTipo" id="compLicenciaTipo" placeholder="Ej: OEM, Volumen, Suscripción" />
+
+            <label>Número / clave de licencia:</label>
+            <input type="text" name="licenciaNumero" id="compLicenciaNumero" />
+
+            <label>Fecha de vencimiento de la licencia:</label>
+            <input type="date" name="licenciaVencimiento" id="compLicenciaVencimiento" />
+          </fieldset>
+
+          <!-- OTROS ACTIVOS (mobiliario, herramientas, suministros) -->
+          <fieldset class="group-otros">
+            <legend>Otros activos (Mobiliario, herramientas y suministros)</legend>
+
+            <label>Descripción del mobiliario / herramienta / suministro:</label>
+            <textarea
+              name="descripcionOtros"
+              id="compDescripcionOtros"
+              placeholder="Ej: Mesa doble con canaleta de cables, kit de destornilladores, etc."
+            ></textarea>
+          </fieldset>
+
+          <!-- ESTADO, UBICACIÓN Y MANTENIMIENTO -->
+          <fieldset>
+            <legend>Estado, ubicación y mantenimiento</legend>
+
+            <label>Ubicación física:</label>
+            <input
+              type="text"
+              name="ubicacion"
+              id="compUbicacion"
+              placeholder="Ej: Lab. Computación, Bodega TI, Sala 2-B, etc."
+            />
+
+            <label>Fecha de última actualización / mantenimiento:</label>
+            <input type="date" name="fechaActualizacion" id="compFechaActualizacion" />
+
+            <label>Detalle de mantenimiento / estado:</label>
+            <textarea
+              name="mantenimientoNotas"
+              id="compMantenimientoNotas"
+              placeholder="Ej: Se cambió disco duro en 2025, limpieza interna, revisión de fuente, etc."
+            ></textarea>
+          </fieldset>
+
+          <!-- DESCRIPCIÓN GENERAL Y FOTO -->
+          <fieldset>
+            <legend>Descripción general y fotografía</legend>
+
+            <label>Descripción general del activo:</label>
+            <textarea
+              name="descripcion"
+              id="compDescripcion"
+              placeholder="Resumen del equipo o activo, uso principal, notas especiales..."
+            ></textarea>
+
+            <label>Fotografía:</label>
+            <input type="file" id="compPhoto" name="photo" accept="image/*" />
+          </fieldset>
 
           <button type="submit" class="button">Guardar</button>
         </form>
@@ -80,14 +284,14 @@
            SECCIÓN: INVENTARIO ACTUAL
       =========================== -->
       <section class="inventory-section">
-        <h2>Inventario de Equipos</h2>
+        <h2>Inventario de Equipos y Activos</h2>
 
-        <!-- Barra de búsqueda y exportación (opcional) -->
+        <!-- Barra de búsqueda y exportación -->
         <div class="filters-bar">
           <input
             type="text"
             id="computingSearch"
-            placeholder="Buscar por código, marca, modelo..."
+            placeholder="Buscar por código, marca, modelo, tipo, ubicación..."
             class="input-search"
           />
           <button type="button" id="btnExportComputingCSV" class="button secondary">
@@ -101,11 +305,21 @@
               <th>ID</th>
               <th>ID Equipo</th>
               <th>Código</th>
+              <th>Tipo</th>
+              <th>Subtipo</th>
+              <th>Detalle</th>
               <th>Marca</th>
               <th>Modelo</th>
-              <th>Año</th>
-              <th>Serie</th>
-              <th>Categoría</th>
+              <th>CPU</th>
+              <th>RAM</th>
+              <th>Sistema operativo</th>
+              <th>Versión SO / App</th>
+              <th>N° serie</th>
+              <th>Cantidad</th>
+              <th>Ubicación</th>
+              <th>Estado</th>
+              <th>Fecha compra</th>
+              <th>Última actualización</th>
               <th>Descripción</th>
               <th>Foto</th>
               <th>Acciones</th>
@@ -177,13 +391,33 @@
 
       <!-- ==========================
            SECCIÓN: PRÉSTAMOS DE EQUIPO
-           (opcional, se mostrará si el backend lo soporta)
       =========================== -->
       <section class="loans-section">
-        <h2>Registrar Préstamo de Equipo</h2>
+        <h2>Registrar Préstamo de Equipo / Activo</h2>
         <form id="computingLoanForm" class="space-form">
-          <label>ID del Equipo:</label>
-          <input type="text" id="computingLoanItemId" name="itemId" required />
+          <label>ID del Equipo / Activo:</label>
+          <input
+            type="text"
+            id="computingLoanItemId"
+            name="itemId"
+            placeholder="ID o código del inventario"
+            required
+          />
+
+          <label>Código del equipo:</label>
+          <input
+            type="text"
+            id="computingLoanCodigo"
+            name="codigo"
+            placeholder="Código interno (opcional si ya se identifica por ID)"
+          />
+
+          <label>Tipo de persona:</label>
+          <select id="computingLoanTipoPersona" name="tipoPersona" required>
+            <option value="" selected disabled>Seleccione tipo</option>
+            <option value="estudiante">Estudiante</option>
+            <option value="funcionario">Funcionario</option>
+          </select>
 
           <label>Persona:</label>
           <select
@@ -196,14 +430,21 @@
             <option selected disabled>Seleccione una persona</option>
           </select>
 
-          <label>Curso:</label>
+          <label>Curso (si aplica):</label>
           <input
             type="text"
             id="computingLoanCurso"
             name="curso"
             class="form-control"
             readonly
-            required
+          />
+
+          <label>Fecha de préstamo:</label>
+          <input
+            type="date"
+            id="computingLoanFecha"
+            name="fechaPrestamo"
+            readonly
           />
 
           <label>Observaciones:</label>
@@ -212,14 +453,18 @@
           <button type="submit" class="button">Registrar Préstamo</button>
         </form>
 
-        <h3>Préstamos Activos</h3>
+        <h3>Préstamos activos (pendientes de devolución)</h3>
         <table id="computingLoanTable" class="space-table">
           <thead>
             <tr>
               <th>ID</th>
               <th>ID Equipo</th>
+              <th>Código</th>
+              <th>Tipo persona</th>
               <th>Persona</th>
-              <th>Fecha Préstamo</th>
+              <th>Curso</th>
+              <th>Fecha préstamo</th>
+              <th>Fecha devolución</th>
               <th>Devuelto</th>
               <th>Acción</th>
             </tr>
@@ -228,15 +473,59 @@
             <!-- Filas generadas dinámicamente -->
           </tbody>
         </table>
+
+        <h4>Listado de personas que aún deben material</h4>
+        <ul id="computingLoanDebtorsList">
+          <!-- JS llenará este listado con personas que tienen Devuelto = false -->
+        </ul>
       </section>
     </div>
   </div>
-  
+
   <script>
-    // Cargar personas en selects una vez cargada la página
+    // Cargar personas en selects y setear la fecha de préstamo al día actual
     document.addEventListener('DOMContentLoaded', () => {
-      cargarPersonasEnSelect('computingSolicitante');
-      cargarPersonasEnSelect('computingLoanUser');
+      if (typeof cargarPersonasEnSelect === 'function') {
+        cargarPersonasEnSelect('computingSolicitante');
+        cargarPersonasEnSelect('computingLoanUser');
+      }
+
+      // Fecha automática de hoy para préstamos
+      const loanDateInput = document.getElementById('computingLoanFecha');
+      if (loanDateInput) {
+        const hoy = new Date();
+        const yyyy = hoy.getFullYear();
+        const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+        const dd = String(hoy.getDate()).padStart(2, '0');
+        loanDateInput.value = `${yyyy}-${mm}-${dd}`;
+      }
+
+      // Sincronizar wizard con los campos de formulario
+      const tipoInput = document.getElementById('compTipoActivo');
+      const subtipoInput = document.getElementById('compSubtipo');
+      const detalleInput = document.getElementById('compDetalleTipo');
+
+      const wTipo = document.getElementById('wizardTipoActivo');
+      const wSubtipo = document.getElementById('wizardSubtipo');
+      const wDetalle = document.getElementById('wizardDetalle');
+
+      if (wTipo && tipoInput) {
+        wTipo.addEventListener('change', () => {
+          tipoInput.value = wTipo.value || '';
+        });
+      }
+      if (wSubtipo && subtipoInput) {
+        wSubtipo.addEventListener('change', () => {
+          const selected = wSubtipo.options[wSubtipo.selectedIndex];
+          subtipoInput.value = selected ? selected.textContent : '';
+        });
+      }
+      if (wDetalle && detalleInput) {
+        wDetalle.addEventListener('change', () => {
+          const selected = wDetalle.options[wDetalle.selectedIndex];
+          detalleInput.value = selected ? selected.textContent : '';
+        });
+      }
     });
   </script>
 </body>
