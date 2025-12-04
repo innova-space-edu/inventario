@@ -1,12 +1,30 @@
-{
-  "id": 1,
-  "itemId": "PC-01",
-  "codigo": "LAB-PC-01",
-  "tipoPersona": "estudiante",
-  "persona": "Juan Pérez",
-  "curso": "3°B",
-  "fechaPrestamo": "2025-12-04",
-  "fechaDevolucion": null,
-  "observaciones": "",
-  "devuelto": false
-}
+[
+  {
+    "id": 1,
+    "itemId": "PC-LAB-01",
+    "codigo": "LAB-PC-01",
+    "tipoPersona": "estudiante",
+    "persona": "Juan Pérez",
+    "curso": "3° Medio B",
+    "fechaPrestamo": "2025-12-01",
+    "fecha_prestamo": "2025-12-01",
+    "fechaDevolucion": null,
+    "fecha_devolucion": null,
+    "observaciones": "Uso en sala 3B para presentación.",
+    "devuelto": false
+  },
+  {
+    "id": 2,
+    "itemId": "MON-LAB-01",
+    "codigo": "LAB-MON-01",
+    "tipoPersona": "funcionario",
+    "persona": "María López",
+    "curso": "",
+    "fechaPrestamo": "2025-11-20",
+    "fecha_prestamo": "2025-11-20",
+    "fechaDevolucion": "2025-11-25",
+    "fecha_devolucion": "2025-11-25",
+    "observaciones": "Préstamo temporal para oficina UTP.",
+    "devuelto": true
+  }
+]
