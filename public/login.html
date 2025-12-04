@@ -4,8 +4,12 @@
   <meta charset="UTF-8" />
   <title>Innova Space Education – Track | Acceso</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Acceso al sistema de inventario institucional Innova Space Education – Track del Colegio Providencia." />
 
-  <!-- Estilos generales -->
+  <!-- Favicon (opcional, usa el logo del colegio si existe) -->
+  <link rel="icon" type="image/png" href="/img/logo-colegio.png" />
+
+  <!-- Estilos generales (mismo que el resto del sistema) -->
   <link rel="stylesheet" href="/style.css" />
 
   <!-- Estilos específicos del login -->
@@ -177,7 +181,7 @@
 </head>
 
 <body class="login-body" data-page="login">
-  <!-- Fondo animado -->
+  <!-- Fondo animado (script.js dibuja estrellas aquí) -->
   <div class="background"></div>
 
   <div class="login-wrapper">
@@ -199,12 +203,15 @@
       </p>
 
       <!-- FORMULARIO LOGIN -->
-      <form id="loginForm"
-            class="login-form"
-            action="/login"
-            method="post"
-            autocomplete="on"
-            novalidate>
+      <form
+        id="loginForm"
+        class="login-form"
+        action="/login"
+        method="post"
+        autocomplete="on"
+        novalidate
+        aria-label="Formulario de acceso al sistema de inventario"
+      >
 
         <div class="login-field">
           <label for="email">Correo institucional</label>
