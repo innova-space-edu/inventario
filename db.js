@@ -79,6 +79,18 @@ async function initDb() {
     );
   `;
 
+  // ⭐ NUEVA TABLA — PRÉSTAMOS DE COMPUTACIÓN (coherente con server.js)
+  const createComputingLoans = `
+    CREATE TABLE IF NOT EXISTS computing_loans (
+      id TEXT PRIMARY KEY,
+      data JSONB NOT NULL,
+      user_email TEXT,
+      loan_date TIMESTAMPTZ,
+      returned BOOLEAN DEFAULT FALSE,
+      return_date TIMESTAMPTZ
+    );
+  `;
+
   const createHistory = `
     CREATE TABLE IF NOT EXISTS history (
       id TEXT PRIMARY KEY,
@@ -110,6 +122,11 @@ async function initDb() {
     `CREATE INDEX IF NOT EXISTS idx_science_loans_code ON science_loans ((data->>'codigo'));`,
     `CREATE INDEX IF NOT EXISTS idx_science_loans_person ON science_loans ((data->>'nombre'));`,
 
+    // ⭐ NUEVOS índices para Computing Loans (coherentes con /api/computing/*)
+    `CREATE INDEX IF NOT EXISTS idx_computing_loans_returned_loandate ON computing_loans(returned, loan_date);`,
+    `CREATE INDEX IF NOT EXISTS idx_computing_loans_code ON computing_loans ((data->>'codigo'));`,
+    `CREATE INDEX IF NOT EXISTS idx_computing_loans_person ON computing_loans ((data->>'solicitante'));`,
+
     // history
     `CREATE INDEX IF NOT EXISTS idx_history_created_at ON history(created_at);`,
     `CREATE INDEX IF NOT EXISTS idx_history_lab ON history(lab);`,
@@ -123,7 +140,8 @@ async function initDb() {
     await pool.query(createItems);
     await pool.query(createReservations);
     await pool.query(createLoans);
-    await pool.query(createScienceLoans); // ⭐ SE AGREGA SIN BORRAR NADA
+    await pool.query(createScienceLoans);    // ⭐ SE AGREGA SIN BORRAR NADA
+    await pool.query(createComputingLoans);  // ⭐ NUEVO: tabla de préstamos de computación
     await pool.query(createHistory);
 
     for (const sql of indexes) {
