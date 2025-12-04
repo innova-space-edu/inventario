@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
@@ -9,6 +9,9 @@
   <link rel="stylesheet" href="/css/styles.css" />
   <!-- Fondo espacial + glass UI -->
   <link rel="stylesheet" href="/css/app.css" />
+
+  <!-- Utilidades compartidas de personas (Biblioteca + Ciencias) -->
+  <script defer src="/js/peopleUtils.js"></script>
 
   <!-- JS específico de Ciencias -->
   <script defer src="/js/science.js"></script>
@@ -37,17 +40,39 @@
           <!-- id oculto para modo edición -->
           <input type="hidden" name="id" id="sciId" />
 
-          <label>Código:</label>
-          <input type="text" name="codigo" id="sciCode" required />
+          <label for="sciCode">Código:</label>
+          <input
+            type="text"
+            name="codigo"
+            id="sciCode"
+            required
+            data-message="Ingresa el código interno del material de laboratorio."
+          />
 
-          <label>Nombre del material:</label>
-          <input type="text" name="nombre" id="sciName" required />
+          <label for="sciName">Nombre del material:</label>
+          <input
+            type="text"
+            name="nombre"
+            id="sciName"
+            required
+            data-message="Escribe el nombre del material, por ejemplo: probeta de 100 mililitros."
+          />
 
-          <label>Descripción:</label>
-          <textarea name="descripcion" id="sciDescription" required></textarea>
+          <label for="sciDescription">Descripción:</label>
+          <textarea
+            name="descripcion"
+            id="sciDescription"
+            required
+            data-message="Describe brevemente el material, su uso o sus características principales."
+          ></textarea>
 
-          <label>Categoría:</label>
-          <select id="sciCategory" name="categoria" required>
+          <label for="sciCategory">Categoría:</label>
+          <select
+            id="sciCategory"
+            name="categoria"
+            required
+            data-message="Selecciona el tipo de material: instrumento, químico, biológico, seguridad u otro."
+          >
             <option value="instrumento">Instrumento de laboratorio</option>
             <option value="material químico">Material químico</option>
             <option value="material biológico">Material biológico</option>
@@ -57,17 +82,40 @@
             <option value="otros">Otros</option>
           </select>
 
-          <label>Cantidad:</label>
-          <input type="number" name="cantidad" id="sciQuantity" required />
+          <label for="sciQuantity">Cantidad:</label>
+          <input
+            type="number"
+            name="cantidad"
+            id="sciQuantity"
+            required
+            data-message="Indica la cantidad de unidades de este material que se incorporan al inventario."
+          />
 
-          <label>Fecha de ingreso:</label>
-          <input type="date" name="fecha" id="sciDate" required />
+          <label for="sciDate">Fecha de ingreso:</label>
+          <input
+            type="date"
+            name="fecha"
+            id="sciDate"
+            required
+            data-message="Selecciona la fecha de ingreso del material al laboratorio."
+          />
 
-          <label>Fotografía:</label>
-          <input type="file" id="sciPhoto" name="photo" accept="image/*" />
+          <label for="sciPhoto">Fotografía:</label>
+          <input
+            type="file"
+            id="sciPhoto"
+            name="photo"
+            accept="image/*"
+            data-message="Opcional: agrega una fotografía del material para identificarlo visualmente."
+          />
 
           <div style="display:flex; gap:.75rem; margin-top:1rem;">
-            <button type="submit" id="scienceFormSubmit" class="button">
+            <button
+              type="submit"
+              id="scienceFormSubmit"
+              class="button"
+              data-message="Guardar o actualizar este material en el inventario del laboratorio de ciencias."
+            >
               Guardar
             </button>
             <button
@@ -75,6 +123,7 @@
               id="scienceFormCancelEdit"
               class="button secondary"
               style="display:none;"
+              data-message="Cancelar la edición actual y volver al modo de registro normal."
             >
               Cancelar edición
             </button>
@@ -91,6 +140,7 @@
             id="scienceSearch"
             placeholder="Buscar por código, nombre, descripción..."
             class="input-search"
+            data-message="Escribe aquí para filtrar el inventario por código, nombre o descripción."
           />
         </div>
 
@@ -121,52 +171,90 @@
         <h2>Registrar préstamo</h2>
 
         <form id="scienceLoanForm">
-          <label>Código del material:</label>
-          <input type="text" id="sciLoanCodigo" name="codigo" required />
+          <label for="sciLoanCodigo">Código del material:</label>
+          <input
+            type="text"
+            id="sciLoanCodigo"
+            name="codigo"
+            required
+            data-message="Ingresa el código del material de ciencias que se va a prestar."
+          />
 
           <!-- Selector de persona (compartido con Biblioteca) -->
-          <label>Persona (desde listado):</label>
-          <select id="sciLoanPersonSelect" name="personaId">
+          <label for="sciLoanPersonSelect">Persona (desde listado):</label>
+          <select
+            id="sciLoanPersonSelect"
+            name="personaId"
+            class="persona-select"
+            data-curso-target="sciLoanCurso"
+            data-message="Selecciona a la persona desde el listado de estudiantes o funcionarios."
+          >
             <option value="">-- Seleccionar desde lista --</option>
           </select>
 
-          <label>Nombre:</label>
-          <input type="text" id="sciLoanNombre" name="nombre" required />
+          <label for="sciLoanNombre">Nombre:</label>
+          <input
+            type="text"
+            id="sciLoanNombre"
+            name="nombre"
+            required
+            data-message="Escribe el nombre de la persona que recibe el material, si no aparece en la lista."
+          />
 
-          <label>Curso / Unidad:</label>
-          <input type="text" id="sciLoanCurso" name="curso" />
+          <label for="sciLoanCurso">Curso / Unidad:</label>
+          <input
+            type="text"
+            id="sciLoanCurso"
+            name="curso"
+            data-message="Indica el curso o unidad, por ejemplo: 2° medio B o Departamento de Ciencias."
+          />
 
-          <label>Tipo de persona:</label>
+          <label for="sciLoanTipoPersona">Tipo de persona:</label>
           <input
             type="text"
             id="sciLoanTipoPersona"
             name="tipoPersona"
             placeholder="estudiante / funcionario"
+            data-message="Especifica si la persona es estudiante, funcionario u otro tipo."
           />
 
-          <label>Observaciones:</label>
+          <label for="sciLoanObservaciones">Observaciones:</label>
           <input
             type="text"
             id="sciLoanObservaciones"
             name="observaciones"
             placeholder="Opcional"
+            data-message="Puedes escribir observaciones del préstamo, como condiciones especiales o usos."
           />
 
-          <button type="submit" class="button">Registrar préstamo</button>
+          <button
+            type="submit"
+            class="button"
+            data-message="Registrar este préstamo en el sistema del laboratorio de ciencias."
+          >
+            Registrar préstamo
+          </button>
         </form>
 
         <!-- Cuadro de devolución rápida por ID -->
         <form id="scienceReturnForm" style="margin-top: 1rem;">
           <h3>Registrar devolución</h3>
-          <label>ID del préstamo:</label>
+          <label for="scienceReturnId">ID del préstamo:</label>
           <input
             type="text"
             id="scienceReturnId"
             name="loanId"
             placeholder="Ej: 17640888254868"
             required
+            data-message="Escribe el ID del préstamo que deseas marcar como devuelto."
           />
-          <button type="submit" class="button">Registrar devolución</button>
+          <button
+            type="submit"
+            class="button"
+            data-message="Registrar la devolución de este préstamo."
+          >
+            Registrar devolución
+          </button>
         </form>
 
         <div class="filters-bar" style="margin-top: 1.5rem;">
@@ -175,6 +263,7 @@
             id="scienceLoansSearch"
             placeholder="Buscar préstamo por ID, nombre, código, curso..."
             class="input-search"
+            data-message="Filtra los préstamos por ID, nombre, código de material o curso."
           />
         </div>
 
