@@ -3,19 +3,58 @@ const express = require("express");
 const router = express.Router();
 const { query } = require("../db");
 const { v4: uuidv4 } = require("uuid");
+const { requireAuth } = require("../auth"); // ⬅️ usamos el middleware de autenticación
+
+// Aplica requireAuth a todas las rutas de historial
+// (si ya montas requireAuth desde server.js, esto no rompe nada; solo refuerza)
+router.use(requireAuth);
+
+// Helper para asegurar un límite numérico razonable
+function parseLimit(value, fallback = 100) {
+  const n = parseInt(value, 10);
+  if (Number.isNaN(n) || n <= 0) return fallback;
+  return Math.min(n, 1000); // máximo 1000 por seguridad
+}
 
 // Registrar movimiento
 router.post("/", async (req, res) => {
   try {
     const id = uuidv4();
-    const { lab, action, entity_type, entity_id, user_email, data } = req.body;
+
+    const {
+      lab,
+      action,
+      entity_type,
+      entity_id,
+      user_email, // puede venir del cliente, pero preferimos el de la sesión
+      data
+    } = req.body || {};
+
+    // Validaciones mínimas
+    if (!lab || !action) {
+      return res
+        .status(400)
+        .json({ error: "Campos 'lab' y 'action' son obligatorios" });
+    }
+
+    // Tomar email desde la sesión si existe (más confiable que el body)
+    const sessionEmail = req.user?.email || null;
+    const finalUserEmail = sessionEmail || user_email || null;
 
     await query(
       `
       INSERT INTO history (id, lab, action, entity_type, entity_id, user_email, data)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
       `,
-      [id, lab, action, entity_type, entity_id, user_email, data || {}]
+      [
+        id,
+        lab,
+        action,
+        entity_type || null,
+        entity_id || null,
+        finalUserEmail,
+        data || {}
+      ]
     );
 
     res.json({ ok: true, id });
@@ -28,7 +67,9 @@ router.post("/", async (req, res) => {
 // Obtener historial
 router.get("/", async (req, res) => {
   try {
-    const { lab, limit = 100 } = req.query;
+    const { lab, limit } = req.query;
+
+    const safeLimit = parseLimit(limit, 100);
 
     let sql = `
       SELECT *
@@ -36,7 +77,7 @@ router.get("/", async (req, res) => {
       ORDER BY created_at DESC
       LIMIT $1
     `;
-    const params = [limit];
+    const params = [safeLimit];
 
     if (lab && lab !== "all") {
       sql = `
