@@ -1,38 +1,126 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Préstamos y Devoluciones - Innova Space Track</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <title>Préstamos y Devoluciones – Inventario Colegio Providencia</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Estilos globales futuristas -->
+  <link rel="stylesheet" href="/css/app.css" />
 </head>
-<body data-page="loans">
-  <div class="navbar">
-    <a href="dashboard.html">Inicio</a>
-    <a href="library.html">Biblioteca</a>
-    <a href="computer.html">Computación</a>
-    <a href="science.html">Ciencias</a>
+<body class="body-space" data-page="loans">
+  <!-- Fondo espacial animado -->
+  <div class="background space-bg"></div>
+
+  <div class="app-shell">
+    <!-- HEADER con logo y botón Agendar hora -->
+    <header class="main-header glass-panel">
+      <div class="header-left">
+        <img
+          src="/img/logo-colegio.png"
+          alt="Logo Colegio Providencia"
+          class="header-logo"
+        />
+        <div class="header-title">
+          <h1>Inventario Colegio Providencia</h1>
+          <span class="header-subtitle">Innova Space Track</span>
+        </div>
+      </div>
+
+      <nav class="header-right">
+        <!-- Botón Agendar hora EN TODAS LAS PÁGINAS -->
+        <a
+          href="https://sites.google.com/colprovidencia.cl/agenda-hora/inicio"
+          class="btn-secondary"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Agendar hora
+        </a>
+
+        <!-- Botón de cierre de sesión -->
+        <form action="/logout" method="get" class="logout-form">
+          <button type="submit" class="btn-ghost">Cerrar sesión</button>
+        </form>
+      </nav>
+    </header>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="main-content">
+      <section class="glass-panel">
+        <h2>📦 Gestión de Préstamos y Devoluciones</h2>
+        <p class="section-description">
+          Revisar y administrar los préstamos y devoluciones registrados en Biblioteca, Laboratorio de Ciencias y Sala de Computación.
+        </p>
+
+        <!-- Filtros de préstamos -->
+        <div class="panel-block">
+          <div class="filters-row">
+            <label>
+              Módulo
+              <select id="loansModuleFilter">
+                <option value="all">Todos</option>
+                <option value="library">Biblioteca</option>
+                <option value="science">Ciencias</option>
+                <option value="computing">Computación</option>
+              </select>
+            </label>
+
+            <label>
+              Estado
+              <select id="loansStatusFilter">
+                <option value="all">Todos</option>
+                <option value="pending">Solo pendientes</option>
+                <option value="returned">Solo devueltos</option>
+              </select>
+            </label>
+
+            <label>
+              Buscar
+              <input
+                type="text"
+                id="loansSearch"
+                placeholder="ID, código, nombre, curso..."
+              />
+            </label>
+          </div>
+        </div>
+
+        <!-- Tabla de préstamos -->
+        <div class="panel-block">
+          <div class="table-wrapper">
+            <table id="loansTable" class="inventory-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Módulo</th>
+                  <th>Código / Material</th>
+                  <th>Usuario</th>
+                  <th>Curso / Grupo</th>
+                  <th>Fecha préstamo</th>
+                  <th>Devuelto</th>
+                  <th>Fecha devolución</th>
+                  <th>Observaciones</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="loanTableBody">
+                <!-- loans.js llenará aquí -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
   </div>
 
-  <main>
-    <h1>📦 Gestión de Préstamos y Devoluciones</h1>
+  <!-- Script global (fondo, voz, etc.) -->
+  <script src="/script.js"></script>
 
-    <section id="loanSection">
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Material</th>
-            <th>Usuario</th>
-            <th>Fecha Préstamo</th>
-            <th>Devuelto</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody id="loanTableBody"></tbody>
-      </table>
-    </section>
-  </main>
+  <!-- Protección de sesión y roles -->
+  <script src="/js/roleGuard.js"></script>
 
-  <script src="script.js"></script>
+  <!-- Script específico para esta página (deberás crearlo) -->
+  <script src="/js/loans.js"></script>
 </body>
 </html>
