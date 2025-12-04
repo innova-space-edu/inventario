@@ -2,24 +2,39 @@
   "name": "inventory-web",
   "version": "1.0.0",
   "description": "Sistema de inventario Innova Space Education – Track",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js"
-  },
-  "keywords": [],
   "author": "Estefano Morales Campaña",
   "license": "ISC",
+
+  "main": "server.js",
+  "type": "commonjs",
+
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "prod": "NODE_ENV=production node server.js",
+    "clean-cache": "npm cache clean --force",
+    "verify-env": "node scripts/checkEnv.js"
+  },
+
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
     "body-parser": "^2.2.0",
-     "cookie-parser": "^1.4.6",
+    "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "express-session": "^1.18.2",
     "multer": "^2.0.2",
     "pg": "^8.16.3",
-    "uuid": "^10.0.0"
+    "uuid": "^10.0.0",
+    "jsonwebtoken": "^9.0.2" 
+  },
+
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  },
+
+  "engines": {
+    "node": ">=18.x"
   }
 }
