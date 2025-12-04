@@ -1,5 +1,6 @@
 /*
-  Estilos globales para Innova Space Education - Track
+  inventario/public/style.css
+  Estilos globales para Innova Space Education - Track 
   La paleta de colores y los componentes se inspiran en un diseño futurista con
   tonos oscuros y degradados brillantes. Todas las páginas comparten este
   archivo para mantener coherencia en la experiencia de usuario.
@@ -194,7 +195,7 @@ body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-/* Navegación */
+/* Navegación (versión antigua) */
 header {
   padding: 1rem;
   text-align: center;
@@ -261,7 +262,7 @@ main {
   gap: 1rem;
 }
 
-/* Tablas */
+/* Tablas (versión general) */
 .table-section {
   background: var(--card-bg);
   padding: 1.2rem;
@@ -432,5 +433,369 @@ body[data-page="login"] .login-container {
 
   #loginForm {
     max-width: 100%;
+  }
+}
+
+/* =========================================================
+   NUEVOS ESTILOS PARA DASHBOARD FUTURISTA (app-shell)
+   ========================================================= */
+
+/* Layout general del dashboard */
+.body-space {
+  background: radial-gradient(circle at top, #0b1535 0%, #050d1f 45%, #020617 100%);
+  color: var(--text-color);
+  min-height: 100vh;
+}
+
+.app-shell {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 2.5rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* Panel de vidrio (glassmorphism) reutilizable */
+.glass-panel {
+  background: rgba(10, 20, 60, 0.8);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 18px 45px rgba(0, 0, 0, 0.7),
+    0 0 40px rgba(56, 189, 248, 0.18);
+  backdrop-filter: blur(18px);
+}
+
+/* HEADER superior */
+.main-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.9rem 1.4rem;
+  margin-bottom: 1.2rem;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.header-logo {
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.85);
+  padding: 0.35rem;
+  object-fit: contain;
+}
+
+.header-title h1 {
+  font-size: 1.3rem;
+  margin: 0;
+}
+
+.header-subtitle {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.logout-form {
+  margin: 0;
+}
+
+/* Botones principales */
+.btn-primary,
+.btn-secondary,
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 0.55rem 1.2rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.2s ease,
+    border-color 0.2s ease;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: var(--button-grad);
+  color: #fff;
+  box-shadow: 0 0 18px rgba(59, 130, 246, 0.5);
+}
+
+.btn-secondary {
+  background: rgba(56, 189, 248, 0.08);
+  border-color: rgba(56, 189, 248, 0.6);
+  color: #e0f2fe;
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: rgba(148, 163, 184, 0.6);
+  color: #e5e7eb;
+}
+
+.btn-primary:hover,
+.btn-secondary:hover,
+.btn-ghost:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
+}
+
+/* NAV de tabs principales */
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.4rem;
+  margin-bottom: 1.2rem;
+}
+
+.tab-button {
+  flex: 1;
+  min-width: 150px;
+  border-radius: 999px;
+  border: none;
+  padding: 0.5rem 0.8rem;
+  background: rgba(15, 23, 42, 0.9);
+  color: #cbd5f5;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.15s ease;
+}
+
+.tab-button:hover {
+  transform: translateY(-1px);
+}
+
+.tab-button.active {
+  background: var(--primary-grad);
+  color: #fff;
+}
+
+/* Paneles (cada módulo) */
+.main-content {
+  margin-top: 0.5rem;
+}
+
+.tab-panel {
+  display: none;
+  padding: 1.4rem 1.2rem;
+}
+
+.tab-panel.active {
+  display: block;
+}
+
+/* Descripción bajo títulos */
+.section-description {
+  font-size: 0.92rem;
+  opacity: 0.85;
+  margin-top: 0.15rem;
+  margin-bottom: 1.1rem;
+}
+
+/* Grid de paneles internos */
+.panel-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.2fr);
+  gap: 1.2rem;
+  margin-bottom: 1.3rem;
+}
+
+.panel-block {
+  background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.12), rgba(15, 23, 42, 0.96));
+  border-radius: 18px;
+  padding: 1.1rem 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.panel-block h3 {
+  margin-top: 0;
+  margin-bottom: 0.7rem;
+  font-size: 1.05rem;
+}
+
+/* Grilla de formularios dentro de los paneles */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0.75rem;
+}
+
+.form-grid label {
+  font-size: 0.82rem;
+}
+
+.form-grid input,
+.form-grid select {
+  width: 100%;
+  margin-top: 0.2rem;
+  border-radius: 10px;
+  border: none;
+  padding: 0.45rem 0.55rem;
+  background: var(--input-bg);
+  color: var(--text-color);
+  font-size: 0.9rem;
+}
+
+/* Tablas del dashboard (versión refine) */
+.table-wrapper {
+  max-height: 430px;
+  overflow: auto;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: radial-gradient(circle at top, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.98));
+}
+
+.inventory-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+.inventory-table thead {
+  position: sticky;
+  top: 0;
+  background: linear-gradient(90deg, rgba(15, 23, 42, 0.98), rgba(30, 64, 175, 0.95));
+  z-index: 1;
+}
+
+.inventory-table th,
+.inventory-table td {
+  padding: 0.55rem 0.6rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+  text-align: left;
+}
+
+.inventory-table th {
+  font-weight: 600;
+}
+
+.inventory-table tbody tr:nth-child(even) {
+  background: rgba(15, 23, 42, 0.9);
+}
+
+.inventory-table img {
+  width: 46px;
+  height: 46px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+}
+
+/* Filtros y barras de búsqueda */
+.filters-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: flex-end;
+  margin-bottom: 0.8rem;
+}
+
+.filters-row label {
+  font-size: 0.82rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.filters-row input,
+.filters-row select {
+  border-radius: 999px;
+  border: none;
+  padding: 0.35rem 0.7rem;
+  background: var(--input-bg);
+  color: var(--text-color);
+  font-size: 0.84rem;
+}
+
+.filters-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+}
+
+.filters-mode {
+  margin-left: auto;
+}
+
+/* Checkbox inline */
+.checkbox-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.4rem;
+}
+
+/* Banner de alertas (préstamos vencidos) */
+.alert-banner {
+  padding: 0.65rem 0.8rem;
+  margin-bottom: 0.9rem;
+  border-radius: 14px;
+  background: radial-gradient(circle at left, rgba(248, 113, 113, 0.18), rgba(15, 23, 42, 0.98));
+  border: 1px solid rgba(239, 68, 68, 0.6);
+  font-size: 0.86rem;
+  color: #fee2e2;
+}
+
+/* Formularios de personas (biblioteca) */
+.form-actions {
+  margin-top: 0.6rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Responsivo */
+@media (max-width: 960px) {
+  .panel-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .main-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.8rem;
+  }
+
+  .filters-mode {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .app-shell {
+    padding: 1.2rem 0.75rem 2rem;
+  }
+
+  .main-header {
+    padding: 0.8rem 0.9rem;
+  }
+
+  .tabs {
+    flex-direction: column;
+  }
+
+  .table-wrapper {
+    max-height: 360px;
   }
 }
