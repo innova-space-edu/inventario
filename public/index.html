@@ -173,86 +173,360 @@
         </div>
       </section>
 
-      <!-- COMPUTING -->
+      <!-- COMPUTING (ACTUALIZADO) -->
       <section id="tab-computing" class="tab-panel glass-panel">
         <h2>Inventario – Sala de Computación</h2>
         <p class="section-description">
-          Controla equipos de computación, periféricos y reservas de uso de la sala.
+          Controla equipos de computación, periféricos, software y préstamos de forma centralizada.
         </p>
 
+        <!-- 1) FORMULARIO INVENTARIO COMPUTACIÓN -->
         <div class="panel-grid">
           <div class="panel-block">
-            <h3>Agregar equipo de computación</h3>
-            <form id="computingForm" enctype="multipart/form-data">
+            <h3>Registrar equipo / software / activo</h3>
+            <form id="computingItemForm" class="form-grid">
+              <!-- FILA 1: Categoría, Subcategoría, Código -->
               <div class="form-grid">
                 <label>
-                  ID equipo
-                  <input type="text" name="idEquip" required />
-                </label>
-                <label>
-                  Código
-                  <input type="text" name="codigo" required />
-                </label>
-                <label>
-                  Marca
-                  <input type="text" name="marca" />
-                </label>
-                <label>
-                  Modelo
-                  <input type="text" name="modelo" />
-                </label>
-                <label>
-                  Año
-                  <input type="number" name="anio" min="1900" max="2100" />
-                </label>
-                <label>
-                  Serie
-                  <input type="text" name="serie" />
-                </label>
-                <!-- NUEVO: Categoría computación -->
-                <label>
                   Categoría
-                  <select name="categoria" required>
-                    <option value="equipo de cómputo">Equipo de Cómputo</option>
-                    <option value="audiovisual">Material Audiovisual</option>
-                    <option value="electrónico">Material Electrónico</option>
-                    <option value="periférico">Periférico</option>
-                    <option value="cableado o adaptador">Cableado o Adaptador</option>
-                    <option value="varios">Otros Materiales</option>
+                  <select id="compCategory" name="categoria" required>
+                    <option value="">Selecciona...</option>
+                    <option value="hardware">Hardware</option>
+                    <option value="software">Software</option>
+                    <option value="otros-activos">Otros activos</option>
                   </select>
                 </label>
+
                 <label>
-                  Descripción
-                  <input type="text" name="descripcion" />
+                  Subcategoría
+                  <select id="compSubcategory" name="subcategoria" required>
+                    <option value="">Selecciona...</option>
+                    <!-- Hardware -->
+                    <option value="computadoras" data-cat="hardware">Computadoras</option>
+                    <option value="perifericos" data-cat="hardware">Periféricos</option>
+                    <option value="dispositivos-red" data-cat="hardware">Dispositivos de red</option>
+                    <!-- Software -->
+                    <option value="sistemas-operativos" data-cat="software">Sistemas operativos</option>
+                    <option value="aplicaciones" data-cat="software">Aplicaciones</option>
+                    <option value="licencias" data-cat="software">Licencias</option>
+                    <!-- Otros activos -->
+                    <option value="mobiliario" data-cat="otros-activos">Mobiliario</option>
+                    <option value="herramientas" data-cat="otros-activos">Herramientas y suministros</option>
+                  </select>
                 </label>
+
                 <label>
-                  Foto
-                  <input type="file" name="photo" accept="image/*" />
+                  Código
+                  <input type="text" id="compCodigo" name="codigo" placeholder="Ej: PC-001" required />
                 </label>
               </div>
 
-              <button type="submit" class="btn-primary">
-                Guardar equipo
-              </button>
+              <!-- FILA 2: Descripción, Cantidad -->
+              <div class="form-grid">
+                <label>
+                  Descripción / Detalle
+                  <input
+                    type="text"
+                    id="compDescripcion"
+                    name="descripcion"
+                    placeholder="Ej: PC sala 3, equipo del profesor"
+                  />
+                </label>
+
+                <label>
+                  Cantidad
+                  <input
+                    type="number"
+                    id="compCantidad"
+                    name="cantidad"
+                    min="1"
+                    step="1"
+                    value="1"
+                    required
+                  />
+                </label>
+              </div>
+
+              <!-- FILA 3: Ubicación, Estado -->
+              <div class="form-grid">
+                <label>
+                  Ubicación
+                  <input
+                    type="text"
+                    id="compUbicacion"
+                    name="ubicacion"
+                    placeholder="Ej: Sala de computación, rack 1"
+                  />
+                </label>
+
+                <label>
+                  Estado
+                  <input
+                    type="text"
+                    id="compEstado"
+                    name="estado"
+                    placeholder="Ej: Operativo, en reparación, dado de baja"
+                  />
+                </label>
+              </div>
+
+              <!-- FILA 4: Mantenimiento, Actualización -->
+              <div class="form-grid">
+                <label>
+                  Mantenimiento / Notas
+                  <input
+                    type="text"
+                    id="compMantenimiento"
+                    name="mantenimiento"
+                    placeholder="Ej: Último mantenimiento en junio 2024"
+                  />
+                </label>
+
+                <label>
+                  Fecha de actualización
+                  <input
+                    type="date"
+                    id="compActualizacion"
+                    name="actualizacion"
+                  />
+                </label>
+              </div>
+
+              <!-- CAMPOS ESPECÍFICOS SEGÚN SUBCATEGORÍA -->
+
+              <!-- HARDWARE: COMPUTADORAS -->
+              <div id="compComputadorasBox" class="subbox" style="display:none;">
+                <h4>Computadoras</h4>
+                <div class="form-grid">
+                  <label>
+                    Procesador (CPU)
+                    <input type="text" id="cpu" name="cpu" placeholder="Ej: Intel i5, Ryzen 5" />
+                  </label>
+                  <label>
+                    Memoria RAM
+                    <input type="text" id="ram" name="ram" placeholder="Ej: 8 GB, 16 GB" />
+                  </label>
+                </div>
+                <div class="form-grid">
+                  <label>
+                    Sistema operativo
+                    <input type="text" id="so" name="so" placeholder="Ej: Windows 10 Pro" />
+                  </label>
+                  <label>
+                    Marca
+                    <input type="text" id="marca" name="marca" placeholder="Ej: Dell, HP, Lenovo" />
+                  </label>
+                </div>
+                <div class="form-grid">
+                  <label>
+                    Modelo
+                    <input type="text" id="modelo" name="modelo" placeholder="Ej: OptiPlex 3020" />
+                  </label>
+                  <label>
+                    N° de serie
+                    <input type="text" id="numeroSerie" name="numeroSerie" />
+                  </label>
+                </div>
+                <div class="form-grid">
+                  <label>
+                    Fecha de compra
+                    <input type="date" id="fechaCompra" name="fechaCompra" />
+                  </label>
+                </div>
+              </div>
+
+              <!-- HARDWARE: PERIFÉRICOS -->
+              <div id="compPerifericosBox" class="subbox" style="display:none;">
+                <h4>Periféricos</h4>
+                <div class="form-grid">
+                  <label>
+                    Tipo de periférico
+                    <input
+                      type="text"
+                      id="tipoPeriferico"
+                      name="tipoPeriferico"
+                      placeholder="Ej: Monitor, teclado, ratón, impresora"
+                    />
+                  </label>
+                  <label>
+                    Marca
+                    <input type="text" id="marcaPerif" name="marcaPerif" />
+                  </label>
+                </div>
+                <div class="form-grid">
+                  <label>
+                    Modelo
+                    <input type="text" id="modeloPerif" name="modeloPerif" />
+                  </label>
+                  <label>
+                    N° de serie
+                    <input type="text" id="numeroSeriePerif" name="numeroSeriePerif" />
+                  </label>
+                </div>
+              </div>
+
+              <!-- HARDWARE: DISPOSITIVOS DE RED -->
+              <div id="compRedBox" class="subbox" style="display:none;">
+                <h4>Dispositivos de red</h4>
+                <div class="form-grid">
+                  <label>
+                    Tipo
+                    <input
+                      type="text"
+                      id="tipoRed"
+                      name="tipoRed"
+                      placeholder="Ej: Router, switch, punto de acceso"
+                    />
+                  </label>
+                  <label>
+                    Marca
+                    <input type="text" id="marcaRed" name="marcaRed" />
+                  </label>
+                </div>
+                <div class="form-grid">
+                  <label>
+                    Modelo
+                    <input type="text" id="modeloRed" name="modeloRed" />
+                  </label>
+                  <label>
+                    N° de serie
+                    <input type="text" id="numeroSerieRed" name="numeroSerieRed" />
+                  </label>
+                </div>
+              </div>
+
+              <!-- SOFTWARE: SISTEMAS OPERATIVOS -->
+              <div id="compSOBox" class="subbox" style="display:none;">
+                <h4>Sistemas operativos</h4>
+                <div class="form-grid">
+                  <label>
+                    Nombre del SO
+                    <input type="text" id="soNombre" name="soNombre" placeholder="Ej: Windows 10" />
+                  </label>
+                  <label>
+                    Versión
+                    <input type="text" id="soVersion" name="soVersion" placeholder="Ej: 22H2" />
+                  </label>
+                </div>
+                <div class="form-grid">
+                  <label>
+                    Tipo de licencia
+                    <input
+                      type="text"
+                      id="soTipoLicencia"
+                      name="soTipoLicencia"
+                      placeholder="Ej: OEM, por volumen, educacional"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <!-- SOFTWARE: APLICACIONES -->
+              <div id="compAppsBox" class="subbox" style="display:none;">
+                <h4>Aplicaciones</h4>
+                <div class="form-grid">
+                  <label>
+                    Nombre de la aplicación
+                    <input type="text" id="appNombre" name="appNombre" placeholder="Ej: Office, GeoGebra" />
+                  </label>
+                  <label>
+                    Versión
+                    <input type="text" id="appVersion" name="appVersion" />
+                  </label>
+                </div>
+                <div class="form-grid">
+                  <label>
+                    Fecha de instalación
+                    <input type="date" id="appFechaInstalacion" name="appFechaInstalacion" />
+                  </label>
+                  <label>
+                    Licencia / clave
+                    <input type="text" id="appLicencia" name="appLicencia" />
+                  </label>
+                </div>
+              </div>
+
+              <!-- SOFTWARE: LICENCIAS -->
+              <div id="compLicenciasBox" class="subbox" style="display:none;">
+                <h4>Licencias de software</h4>
+                <div class="form-grid">
+                  <label>
+                    Tipo de licencia
+                    <input type="text" id="licTipo" name="licTipo" placeholder="Ej: Anual, permanente" />
+                  </label>
+                  <label>
+                    Número / clave
+                    <input type="text" id="licNumero" name="licNumero" />
+                  </label>
+                </div>
+                <div class="form-grid">
+                  <label>
+                    Fecha de vencimiento
+                    <input type="date" id="licVencimiento" name="licVencimiento" />
+                  </label>
+                </div>
+              </div>
+
+              <!-- OTROS ACTIVOS: MOBILIARIO -->
+              <div id="compMobiliarioBox" class="subbox" style="display:none;">
+                <h4>Mobiliario</h4>
+                <div class="form-grid">
+                  <label>
+                    Tipo de mueble
+                    <input
+                      type="text"
+                      id="tipoMueble"
+                      name="tipoMueble"
+                      placeholder="Ej: Mesa, silla, estantería"
+                    />
+                  </label>
+                  <label>
+                    Detalle
+                    <input type="text" id="detalleMueble" name="detalleMueble" />
+                  </label>
+                </div>
+              </div>
+
+              <!-- OTROS ACTIVOS: HERRAMIENTAS -->
+              <div id="compHerramientasBox" class="subbox" style="display:none;">
+                <h4>Herramientas y suministros</h4>
+                <div class="form-grid">
+                  <label>
+                    Nombre
+                    <input type="text" id="herramientaNombre" name="herramientaNombre" />
+                  </label>
+                  <label>
+                    Uso / descripción
+                    <input type="text" id="herramientaUso" name="herramientaUso" />
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-actions">
+                <button type="submit" class="btn-primary">
+                  Guardar en inventario
+                </button>
+              </div>
             </form>
           </div>
 
+          <!-- TABLA INVENTARIO COMPUTACIÓN -->
           <div class="panel-block">
-            <h3>Listado de equipos</h3>
+            <h3>Inventario de computación</h3>
             <div class="table-wrapper">
-              <table id="computingTable" class="inventory-table">
+              <table id="computingItemsTable" class="inventory-table">
                 <thead>
                   <tr>
-                    <th>ID</th>
-                    <th>ID Equipo</th>
                     <th>Código</th>
-                    <th>Marca</th>
-                    <th>Modelo</th>
-                    <th>Año</th>
-                    <th>Serie</th>
                     <th>Categoría</th>
+                    <th>Subcategoría</th>
                     <th>Descripción</th>
-                    <th>Foto</th>
+                    <th>Estado</th>
+                    <th>Ubicación</th>
+                    <th>Cantidad</th>
+                    <th>Mantención</th>
+                    <th>Actualización</th>
+                    <th>Detalles</th>
                     <th>Acciones</th>
                   </tr>
                 </thead>
@@ -264,58 +538,99 @@
           </div>
         </div>
 
-        <!-- Reserva sala computación -->
-        <div class="panel-block">
-          <h3>Reserva de sala de computación</h3>
-          <form id="computingReservationForm">
-            <div class="form-grid">
-              <label>
-                Nombre del solicitante
-                <input type="text" name="solicitante" required />
-              </label>
-              <label>
-                Curso
-                <input type="text" name="curso" required />
-              </label>
-              <label>
-                Fecha de uso
-                <input type="date" name="fechaUso" required />
-              </label>
-              <label>
-                Horario
-                <input type="text" name="horario" placeholder="Ej: 10:00 - 11:30" />
-              </label>
-              <label>
-                Observaciones
-                <input type="text" name="observaciones" />
-              </label>
+        <!-- 2) PRÉSTAMOS COMPUTACIÓN -->
+        <div class="panel-grid">
+          <div class="panel-block">
+            <h3>Registrar préstamo de equipo de computación</h3>
+            <form id="computingLoanForm" class="form-grid">
+              <div class="form-grid">
+                <label>
+                  Código del equipo
+                  <input
+                    type="text"
+                    id="loanCodigo"
+                    name="loanCodigo"
+                    placeholder="Ej: PC-001"
+                    required
+                  />
+                </label>
+                <label>
+                  Solicitante (estudiante o funcionario)
+                  <input
+                    type="text"
+                    id="loanSolicitante"
+                    name="loanSolicitante"
+                    placeholder="Nombre completo"
+                    required
+                  />
+                </label>
+                <label>
+                  Curso / Grupo
+                  <input
+                    type="text"
+                    id="loanCurso"
+                    name="loanCurso"
+                    placeholder="Ej: 2°B, Funcionarios, UTP"
+                  />
+                </label>
+              </div>
+              <div class="form-grid">
+                <label>
+                  Observaciones
+                  <input
+                    type="text"
+                    id="loanObservaciones"
+                    name="loanObservaciones"
+                    placeholder="Ej: Uso en sala 2, hora de clase, proyecto X"
+                  />
+                </label>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn-secondary">
+                  Registrar préstamo
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div class="panel-block">
+            <h3>Listado de préstamos de computación</h3>
+            <div class="table-wrapper">
+              <table id="computingLoansTable" class="inventory-table">
+                <thead>
+                  <tr>
+                    <th>Código</th>
+                    <th>Equipo / Detalle</th>
+                    <th>Solicitante</th>
+                    <th>Curso / Grupo</th>
+                    <th>Observaciones</th>
+                    <th>Fecha préstamo</th>
+                    <th>Devuelto</th>
+                    <th>Fecha devolución</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- computing.js llenará aquí -->
+                </tbody>
+              </table>
             </div>
-            <button type="submit" class="btn-secondary">
-              Registrar reserva
-            </button>
-          </form>
+          </div>
         </div>
 
-        <!-- Tabla de reservas sala computación -->
-        <div class="panel-block">
-          <h3>Reservas registradas</h3>
-          <div class="table-wrapper">
-            <table id="computingReservationsTable" class="inventory-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Nombre solicitante</th>
-                  <th>Curso</th>
-                  <th>Fecha de uso</th>
-                  <th>Horario</th>
-                  <th>Observaciones</th>
-                  <th>Usuario</th>
-                </tr>
-              </thead>
-              <tbody>
-                <!-- computing.js llenará aquí -->
-              </tbody>
-            </table>
+        <!-- 3) VENCIDOS Y PENDIENTES -->
+        <div class="panel-grid">
+          <div class="panel-block">
+            <h3>Préstamos vencidos (más de 7 días)</h3>
+            <div id="computingOverdueList" class="list-container">
+              <!-- computing.js llenará aquí -->
+            </div>
+          </div>
+          <div class="panel-block">
+            <h3>Equipos pendientes por devolver</h3>
+            <div id="computingPendingList" class="list-container">
+              <!-- computing.js llenará aquí -->
+            </div>
           </div>
         </div>
       </section>
