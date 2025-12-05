@@ -661,6 +661,21 @@
                 </label>
               </div>
 
+              <!-- NUEVO: Panel informativo con datos del equipo seleccionado -->
+              <div class="form-grid">
+                <label class="full-width">
+                  Equipo seleccionado
+                  <div
+                    id="computingLoanItemInfo"
+                    class="info-box"
+                    style="min-height: 2.5rem; padding: 0.5rem 0; font-size: 0.9rem; opacity: 0.9;"
+                  >
+                    Escribe el <strong>ID</strong> o el <strong>código</strong> del equipo para ver su descripción,
+                    marca, modelo y ubicación antes de registrar el préstamo.
+                  </div>
+                </label>
+              </div>
+
               <div class="form-actions">
                 <button type="submit" class="btn-secondary">
                   Registrar préstamo
@@ -676,14 +691,15 @@
               <table id="computingLoanTable" class="inventory-table">
                 <thead>
                   <tr>
+                    <th>ID</th>
+                    <th>ID Equipo</th>
                     <th>Código</th>
-                    <th>Equipo / Detalle</th>
-                    <th>Solicitante</th>
+                    <th>Tipo persona</th>
+                    <th>Persona</th>
                     <th>Curso / Grupo</th>
-                    <th>Observaciones</th>
                     <th>Fecha préstamo</th>
-                    <th>Devuelto</th>
                     <th>Fecha devolución</th>
+                    <th>Devuelto</th>
                     <th>Acciones</th>
                   </tr>
                 </thead>
