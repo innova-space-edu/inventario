@@ -78,32 +78,52 @@ document.addEventListener('DOMContentLoaded', () => {
   const compCPU = document.getElementById('compCPU') || document.getElementById('cpu');
   const compRAM = document.getElementById('compRAM') || document.getElementById('ram');
   const compSO = document.getElementById('compSO') || document.getElementById('so');
-  const compFechaCompra = document.getElementById('compFechaCompra') || document.getElementById('fechaCompra');
+  const compFechaCompra =
+    document.getElementById('compFechaCompra') || document.getElementById('fechaCompra');
   const compEstado = document.getElementById('compEstado');
 
-  const compTipoSO = document.getElementById('compTipoSO') || document.getElementById('soTipoLicencia');
-  const compVersionSO = document.getElementById('compVersionSO') || document.getElementById('soVersion');
-  const compAppNombre = document.getElementById('compAppNombre') || document.getElementById('appNombre');
-  const compAppVersion = document.getElementById('compAppVersion') || document.getElementById('appVersion');
+  const compTipoSO =
+    document.getElementById('compTipoSO') || document.getElementById('soTipoLicencia');
+  const compVersionSO =
+    document.getElementById('compVersionSO') || document.getElementById('soVersion');
+  const compAppNombre =
+    document.getElementById('compAppNombre') || document.getElementById('appNombre');
+  const compAppVersion =
+    document.getElementById('compAppVersion') || document.getElementById('appVersion');
   const compAppFechaInstalacion =
-    document.getElementById('compAppFechaInstalacion') || document.getElementById('appFechaInstalacion');
-  const compLicenciaTipo = document.getElementById('compLicenciaTipo') || document.getElementById('licTipo');
-  const compLicenciaNumero = document.getElementById('compLicenciaNumero') || document.getElementById('licNumero');
+    document.getElementById('compAppFechaInstalacion') ||
+    document.getElementById('appFechaInstalacion');
+  const compLicenciaTipo =
+    document.getElementById('compLicenciaTipo') || document.getElementById('licTipo');
+  const compLicenciaNumero =
+    document.getElementById('compLicenciaNumero') || document.getElementById('licNumero');
   const compLicenciaVencimiento =
-    document.getElementById('compLicenciaVencimiento') || document.getElementById('licVencimiento');
+    document.getElementById('compLicenciaVencimiento') ||
+    document.getElementById('licVencimiento');
 
   const compDescripcionOtros = document.getElementById('compDescripcionOtros');
 
   const compUbicacion = document.getElementById('compUbicacion');
   const compFechaActualizacion =
-    document.getElementById('compFechaActualizacion') || document.getElementById('compActualizacion');
+    document.getElementById('compFechaActualizacion') ||
+    document.getElementById('compActualizacion');
   const compMantenimientoNotas =
-    document.getElementById('compMantenimientoNotas') || document.getElementById('compMantenimiento');
+    document.getElementById('compMantenimientoNotas') ||
+    document.getElementById('compMantenimiento');
   const compDescripcion = document.getElementById('compDescripcion');
 
   // Selects de categoría/subcategoría para la versión simplificada
   const compCategory = document.getElementById('compCategory');
   const compSubcategory = document.getElementById('compSubcategory');
+
+  // Campos de formulario de préstamo para autocompletar desde inventario
+  const loanCodigoInput =
+    document.getElementById('loanCodigo') ||
+    document.getElementById('computingLoanCodigo');
+  const loanItemIdInput =
+    document.getElementById('loanItemId') ||
+    document.getElementById('computingLoanItemId');
+  const loanItemInfo = document.getElementById('computingLoanItemInfo');
 
   // ---------- API helper ----------
   const apiFetch =
@@ -331,6 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (box) box.style.display = 'none';
       });
     });
+
     compSubcategory.addEventListener('change', () => {
       const subVal = compSubcategory.value;
       // Mostrar la caja asociada a la subcategoría y ocultar las demás
@@ -388,9 +409,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const items = getFilteredComputingItems();
     items.forEach((item) => {
       const tr = document.createElement('tr');
+
+      // Miniatura de foto clickeable (si existe)
       const fotoCell = item.photo
-        ? `<a href="${safe(item.photo)}" target="_blank" rel="noopener noreferrer">Ver foto</a>`
+        ? `
+          <a href="${safe(item.photo)}" target="_blank" rel="noopener noreferrer">
+            <img src="${safe(item.photo)}" alt="Foto" class="inventory-thumb" style="max-width:60px;max-height:60px;border-radius:6px;object-fit:cover;">
+          </a>
+        `
         : '';
+
       // Construimos la fila con la mayoría de los campos. Si la tabla
       // en la interfaz actual tiene menos columnas, las celdas extra
       // simplemente no se mostrarán.
@@ -470,6 +498,27 @@ document.addEventListener('DOMContentLoaded', () => {
       compFechaActualizacion.value = (item.fechaActualizacion || '').substring(0, 10);
     if (compMantenimientoNotas) compMantenimientoNotas.value = item.mantenimientoNotas || '';
     if (compDescripcion) compDescripcion.value = item.descripcion || '';
+
+    // Mostrar la subbox correcta según el subtipo (para el diseño con cajas)
+    const boxesMap = {
+      computadoras: 'compComputadorasBox',
+      perifericos: 'compPerifericosBox',
+      'dispositivos-red': 'compRedBox',
+      'sistemas-operativos': 'compSOBox',
+      aplicaciones: 'compAppsBox',
+      licencias: 'compLicenciasBox',
+      mobiliario: 'compMobiliarioBox',
+      herramientas: 'compHerramientasBox',
+    };
+    Object.values(boxesMap).forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+    const boxId = boxesMap[item.subtipo];
+    if (boxId) {
+      const el = document.getElementById(boxId);
+      if (el) el.style.display = '';
+    }
     // No tocamos el input de foto: si quiere cambiar la foto, el usuario la vuelve a cargar.
   }
 
@@ -678,6 +727,80 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ========================================================
+  //     PRÉSTAMOS – BÚSQUEDA EN INVENTARIO (ID / CÓDIGO)
+  // ========================================================
+  function findComputingItemByIdOrCode(idVal, codeVal) {
+    const id = (idVal || '').toString().trim();
+    const codigo = (codeVal || '').toString().trim();
+    if (!id && !codigo) return null;
+
+    let item = null;
+
+    if (id) {
+      // Buscar por id interno
+      item = computingItems.find((it) => it.id && String(it.id) === id);
+      if (item) return item;
+      // Buscar por idEquip si existe
+      item = computingItems.find((it) => it.idEquip && String(it.idEquip) === id);
+      if (item) return item;
+    }
+
+    if (codigo) {
+      // Buscar por código (case-insensitive)
+      item = computingItems.find(
+        (it) => it.codigo && String(it.codigo).toLowerCase() === codigo.toLowerCase()
+      );
+    }
+
+    return item || null;
+  }
+
+  function handleLoanInventoryLookup() {
+    if (!loanCodigoInput && !loanItemIdInput) return;
+
+    const idVal = loanItemIdInput ? loanItemIdInput.value : '';
+    const codeVal = loanCodigoInput ? loanCodigoInput.value : '';
+
+    const item = findComputingItemByIdOrCode(idVal, codeVal);
+
+    if (!item) {
+      if (loanItemInfo) {
+        loanItemInfo.textContent = 'Equipo no encontrado en inventario.';
+      }
+      return;
+    }
+
+    // Rellenar ID y código coherentes
+    if (loanItemIdInput) loanItemIdInput.value = item.id || item.idEquip || '';
+    if (loanCodigoInput) loanCodigoInput.value = item.codigo || '';
+
+    // Mostrar información de referencia en pantalla (solo lectura)
+    if (loanItemInfo) {
+      const texto = [
+        item.descripcion || item.detalleTipo || '',
+        item.marca || '',
+        item.modelo || '',
+        item.ubicacion || '',
+      ]
+        .filter(Boolean)
+        .join(' – ');
+      loanItemInfo.textContent = texto || 'Equipo encontrado.';
+    }
+  }
+
+  // Enlazar eventos de autocompletado en el formulario de préstamo
+  if (loanCodigoInput) {
+    ['change', 'blur'].forEach((ev) => {
+      loanCodigoInput.addEventListener(ev, handleLoanInventoryLookup);
+    });
+  }
+  if (loanItemIdInput) {
+    ['change', 'blur'].forEach((ev) => {
+      loanItemIdInput.addEventListener(ev, handleLoanInventoryLookup);
+    });
+  }
+
+  // ========================================================
   //                    PRÉSTAMOS DE EQUIPOS
   // ========================================================
   async function loadComputingLoans() {
@@ -724,7 +847,11 @@ document.addEventListener('DOMContentLoaded', () => {
         <td>${safe(loan.persona || loan.nombre || '')}</td>
         <td>${safe(loan.curso || '')}</td>
         <td>${formatDateTime(loan.loanDate || loan.fechaPrestamo)}</td>
-        <td>${loan.returnDate || loan.fechaDevolucion ? formatDateTime(loan.returnDate || loan.fechaDevolucion) : ''}</td>
+        <td>${
+          loan.returnDate || loan.fechaDevolucion
+            ? formatDateTime(loan.returnDate || loan.fechaDevolucion)
+            : ''
+        }</td>
         <td>${loan.returned ? 'Sí' : overdue ? 'No (vencido)' : 'No'}</td>
         <td>
           ${
@@ -839,6 +966,10 @@ document.addEventListener('DOMContentLoaded', () => {
           computingLoans.unshift(result.loan);
           renderLoansTable();
           renderDebtorsList();
+
+          // Actualizar inventario para sincronizar la cantidad
+          await loadComputingItems();
+
           await logHistory({
             action: 'create',
             type: 'loan',
