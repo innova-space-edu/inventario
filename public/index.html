@@ -184,12 +184,19 @@
         <div class="panel-grid">
           <div class="panel-block">
             <h3>Registrar equipo / software / activo</h3>
-            <form id="computingItemForm" class="form-grid">
+            <!-- IMPORTANTE: enctype para subir foto + id que espera computing.js -->
+            <form id="computingForm" class="form-grid" enctype="multipart/form-data">
+              <!-- Campos ocultos usados por computing.js / backend -->
+              <input type="hidden" id="compIdEquip" name="idEquip" />
+              <input type="hidden" id="compDetalleTipo" name="detalleTipo" />
+              <input type="hidden" id="compDescripcionOtros" name="descripcionOtros" />
+
               <!-- FILA 1: Categoría, Subcategoría, Código -->
               <div class="form-grid">
                 <label>
                   Categoría
-                  <select id="compCategory" name="categoria" required>
+                  <!-- tipoActivo para el backend -->
+                  <select id="compTipoActivo" name="tipoActivo" required>
                     <option value="">Selecciona...</option>
                     <option value="hardware">Hardware</option>
                     <option value="software">Software</option>
@@ -199,7 +206,8 @@
 
                 <label>
                   Subcategoría
-                  <select id="compSubcategory" name="subcategoria" required>
+                  <!-- subtipo para el backend -->
+                  <select id="compSubtipo" name="subtipo" required>
                     <option value="">Selecciona...</option>
                     <!-- Hardware -->
                     <option value="computadoras" data-cat="hardware">Computadoras</option>
@@ -276,8 +284,8 @@
                   Mantenimiento / Notas
                   <input
                     type="text"
-                    id="compMantenimiento"
-                    name="mantenimiento"
+                    id="compMantenimientoNotas"
+                    name="mantenimientoNotas"
                     placeholder="Ej: Último mantenimiento en junio 2024"
                   />
                 </label>
@@ -286,9 +294,17 @@
                   Fecha de actualización
                   <input
                     type="date"
-                    id="compActualizacion"
-                    name="actualizacion"
+                    id="compFechaActualizacion"
+                    name="fechaActualizacion"
                   />
+                </label>
+              </div>
+
+              <!-- FOTO GENERAL DEL ACTIVO -->
+              <div class="form-grid">
+                <label>
+                  Fotografía
+                  <input type="file" id="compPhoto" name="photo" accept="image/*" />
                 </label>
               </div>
 
@@ -300,37 +316,37 @@
                 <div class="form-grid">
                   <label>
                     Procesador (CPU)
-                    <input type="text" id="cpu" name="cpu" placeholder="Ej: Intel i5, Ryzen 5" />
+                    <input type="text" id="compCPU" name="cpu" placeholder="Ej: Intel i5, Ryzen 5" />
                   </label>
                   <label>
                     Memoria RAM
-                    <input type="text" id="ram" name="ram" placeholder="Ej: 8 GB, 16 GB" />
+                    <input type="text" id="compRAM" name="memoriaRam" placeholder="Ej: 8 GB, 16 GB" />
                   </label>
                 </div>
                 <div class="form-grid">
                   <label>
                     Sistema operativo
-                    <input type="text" id="so" name="so" placeholder="Ej: Windows 10 Pro" />
+                    <input type="text" id="compSO" name="sistemaOperativo" placeholder="Ej: Windows 10 Pro" />
                   </label>
                   <label>
                     Marca
-                    <input type="text" id="marca" name="marca" placeholder="Ej: Dell, HP, Lenovo" />
+                    <input type="text" id="compMarca" name="marca" placeholder="Ej: Dell, HP, Lenovo" />
                   </label>
                 </div>
                 <div class="form-grid">
                   <label>
                     Modelo
-                    <input type="text" id="modelo" name="modelo" placeholder="Ej: OptiPlex 3020" />
+                    <input type="text" id="compModelo" name="modelo" placeholder="Ej: OptiPlex 3020" />
                   </label>
                   <label>
                     N° de serie
-                    <input type="text" id="numeroSerie" name="numeroSerie" />
+                    <input type="text" id="compSerie" name="serie" />
                   </label>
                 </div>
                 <div class="form-grid">
                   <label>
                     Fecha de compra
-                    <input type="date" id="fechaCompra" name="fechaCompra" />
+                    <input type="date" id="compFechaCompra" name="fechaCompra" />
                   </label>
                 </div>
               </div>
@@ -401,11 +417,11 @@
                 <div class="form-grid">
                   <label>
                     Nombre del SO
-                    <input type="text" id="soNombre" name="soNombre" placeholder="Ej: Windows 10" />
+                    <input type="text" id="compTipoSO" name="soTipo" placeholder="Ej: Windows 10" />
                   </label>
                   <label>
                     Versión
-                    <input type="text" id="soVersion" name="soVersion" placeholder="Ej: 22H2" />
+                    <input type="text" id="compVersionSO" name="soVersion" placeholder="Ej: 22H2" />
                   </label>
                 </div>
                 <div class="form-grid">
@@ -427,17 +443,17 @@
                 <div class="form-grid">
                   <label>
                     Nombre de la aplicación
-                    <input type="text" id="appNombre" name="appNombre" placeholder="Ej: Office, GeoGebra" />
+                    <input type="text" id="compAppNombre" name="appNombre" placeholder="Ej: Office, GeoGebra" />
                   </label>
                   <label>
                     Versión
-                    <input type="text" id="appVersion" name="appVersion" />
+                    <input type="text" id="compAppVersion" name="appVersion" />
                   </label>
                 </div>
                 <div class="form-grid">
                   <label>
                     Fecha de instalación
-                    <input type="date" id="appFechaInstalacion" name="appFechaInstalacion" />
+                    <input type="date" id="compAppFechaInstalacion" name="appFechaInstalacion" />
                   </label>
                   <label>
                     Licencia / clave
@@ -452,17 +468,17 @@
                 <div class="form-grid">
                   <label>
                     Tipo de licencia
-                    <input type="text" id="licTipo" name="licTipo" placeholder="Ej: Anual, permanente" />
+                    <input type="text" id="compLicenciaTipo" name="licenciaTipo" placeholder="Ej: Anual, permanente" />
                   </label>
                   <label>
                     Número / clave
-                    <input type="text" id="licNumero" name="licNumero" />
+                    <input type="text" id="compLicenciaNumero" name="licenciaNumero" />
                   </label>
                 </div>
                 <div class="form-grid">
                   <label>
                     Fecha de vencimiento
-                    <input type="date" id="licVencimiento" name="licVencimiento" />
+                    <input type="date" id="compLicenciaVencimiento" name="licenciaVencimiento" />
                   </label>
                 </div>
               </div>
@@ -513,24 +529,51 @@
           <!-- TABLA INVENTARIO COMPUTACIÓN -->
           <div class="panel-block">
             <h3>Inventario de computación</h3>
+
+            <!-- Buscador y exportación (lo usa computing.js) -->
+            <div class="filters-row">
+              <label>
+                Buscar
+                <input
+                  type="text"
+                  id="computingSearch"
+                  placeholder="Código, marca, modelo, ubicación..."
+                />
+              </label>
+              <button type="button" id="btnExportComputingCSV" class="btn-secondary">
+                Exportar CSV
+              </button>
+            </div>
+
             <div class="table-wrapper">
-              <table id="computingItemsTable" class="inventory-table">
+              <!-- IDs que espera computing.js -->
+              <table id="computingTable" class="inventory-table">
                 <thead>
                   <tr>
+                    <th>ID</th>
+                    <th>ID Equipo</th>
                     <th>Código</th>
-                    <th>Categoría</th>
-                    <th>Subcategoría</th>
-                    <th>Descripción</th>
-                    <th>Estado</th>
-                    <th>Ubicación</th>
+                    <th>Tipo</th>
+                    <th>Subtipo</th>
+                    <th>Detalle</th>
+                    <th>Marca</th>
+                    <th>Modelo</th>
+                    <th>CPU</th>
+                    <th>RAM</th>
+                    <th>Sistema operativo</th>
+                    <th>Versión SO / App</th>
+                    <th>N° serie</th>
                     <th>Cantidad</th>
-                    <th>Mantención</th>
-                    <th>Actualización</th>
-                    <th>Detalles</th>
+                    <th>Ubicación</th>
+                    <th>Estado</th>
+                    <th>Fecha compra</th>
+                    <th>Última actualización</th>
+                    <th>Descripción</th>
+                    <th>Foto</th>
                     <th>Acciones</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody id="computingTableBody">
                   <!-- computing.js llenará aquí -->
                 </tbody>
               </table>
@@ -545,46 +588,79 @@
             <form id="computingLoanForm" class="form-grid">
               <div class="form-grid">
                 <label>
-                  Código del equipo
+                  ID del equipo / activo
                   <input
                     type="text"
-                    id="loanCodigo"
-                    name="loanCodigo"
-                    placeholder="Ej: PC-001"
+                    id="computingLoanItemId"
+                    name="itemId"
+                    placeholder="ID o código del inventario"
                     required
                   />
                 </label>
                 <label>
-                  Solicitante (estudiante o funcionario)
+                  Código del equipo
                   <input
                     type="text"
-                    id="loanSolicitante"
-                    name="loanSolicitante"
+                    id="computingLoanCodigo"
+                    name="codigo"
+                    placeholder="Código interno (opcional si ya se identifica por ID)"
+                  />
+                </label>
+                <label>
+                  Tipo de persona
+                  <select id="computingLoanTipoPersona" name="tipoPersona" required>
+                    <option value="" selected disabled>Seleccione tipo</option>
+                    <option value="estudiante">Estudiante</option>
+                    <option value="funcionario">Funcionario</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="form-grid">
+                <label>
+                  Persona
+                  <input
+                    type="text"
+                    id="computingLoanUser"
+                    name="persona"
                     placeholder="Nombre completo"
                     required
                   />
+                  <!-- Si más adelante quieres usar personas registradas:
+                       puedes cambiar este input por un <select> con class persona-select -->
                 </label>
                 <label>
                   Curso / Grupo
                   <input
                     type="text"
-                    id="loanCurso"
-                    name="loanCurso"
+                    id="computingLoanCurso"
+                    name="curso"
                     placeholder="Ej: 2°B, Funcionarios, UTP"
                   />
                 </label>
               </div>
+
               <div class="form-grid">
+                <label>
+                  Fecha de préstamo
+                  <input
+                    type="date"
+                    id="computingLoanFecha"
+                    name="fechaPrestamo"
+                    readonly
+                  />
+                </label>
                 <label>
                   Observaciones
                   <input
                     type="text"
-                    id="loanObservaciones"
-                    name="loanObservaciones"
+                    id="computingLoanObs"
+                    name="observaciones"
                     placeholder="Ej: Uso en sala 2, hora de clase, proyecto X"
                   />
                 </label>
               </div>
+
               <div class="form-actions">
                 <button type="submit" class="btn-secondary">
                   Registrar préstamo
@@ -596,21 +672,23 @@
           <div class="panel-block">
             <h3>Listado de préstamos de computación</h3>
             <div class="table-wrapper">
-              <table id="computingLoansTable" class="inventory-table">
+              <!-- IDs que espera computing.js -->
+              <table id="computingLoanTable" class="inventory-table">
                 <thead>
                   <tr>
+                    <th>ID</th>
+                    <th>ID Equipo</th>
                     <th>Código</th>
-                    <th>Equipo / Detalle</th>
-                    <th>Solicitante</th>
+                    <th>Tipo persona</th>
+                    <th>Persona</th>
                     <th>Curso / Grupo</th>
-                    <th>Observaciones</th>
                     <th>Fecha préstamo</th>
-                    <th>Devuelto</th>
                     <th>Fecha devolución</th>
+                    <th>Devuelto</th>
                     <th>Acciones</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody id="computingLoanTableBody">
                   <!-- computing.js llenará aquí -->
                 </tbody>
               </table>
@@ -618,19 +696,21 @@
           </div>
         </div>
 
-        <!-- 3) VENCIDOS Y PENDIENTES -->
+        <!-- 3) PENDIENTES / DEUDORES -->
         <div class="panel-grid">
           <div class="panel-block">
             <h3>Préstamos vencidos (más de 7 días)</h3>
-            <div id="computingOverdueList" class="list-container">
-              <!-- computing.js llenará aquí -->
-            </div>
+            <p>
+              Los préstamos vencidos se destacan automáticamente en la tabla anterior,
+              y en el listado de personas pendientes se indica cuántos vencidos tiene cada una.
+            </p>
           </div>
           <div class="panel-block">
             <h3>Equipos pendientes por devolver</h3>
-            <div id="computingPendingList" class="list-container">
-              <!-- computing.js llenará aquí -->
-            </div>
+            <!-- Lista que usa computing.js (renderDebtorsList) -->
+            <ul id="computingLoanDebtorsList" class="list-container">
+              <!-- JS llenará aquí las personas que aún tienen material pendiente -->
+            </ul>
           </div>
         </div>
       </section>
