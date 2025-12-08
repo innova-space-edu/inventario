@@ -7,7 +7,9 @@ const { v4: uuidv4 } = require("uuid");
 
 const upload = multer({ dest: "public/uploads/" });
 
-// Helper: actualizar cantidad del item (por idEquip o código)
+/**
+ * Helper: actualizar cantidad del item (por idEquip o código)
+ */
 async function updateItemQuantityByIdEquipOrCodigo({ itemId, codigo, delta }) {
   try {
     if (!itemId && !codigo) return;
@@ -47,7 +49,7 @@ async function updateItemQuantityByIdEquipOrCodigo({ itemId, codigo, delta }) {
     const newData = {
       ...data,
       cantidad: newQty,
-      stock: newQty
+      stock: newQty,
     };
 
     await query(
@@ -73,17 +75,17 @@ router.post("/items", upload.single("photo"), async (req, res) => {
 
     const data = {
       // Identificación básica
-      idEquip: req.body.idEquip || null,
-      codigo: req.body.codigo || null,
-      marca: req.body.marca || null,
-      modelo: req.body.modelo || null,
-      anio: req.body.anio || null,
-      serie: req.body.serie || null,
-      categoria: req.body.categoria || null,
+      idEquip: req.body.idEquip,
+      codigo: req.body.codigo,
+      marca: req.body.marca,
+      modelo: req.body.modelo,
+      anio: req.body.anio,
+      serie: req.body.serie,
+      categoria: req.body.categoria,
 
-      // Nueva clasificación
+      // Clasificación
       tipoActivo: req.body.tipoActivo || null, // hardware / software / otros-activos
-      subtipo: req.body.subtipo || null,       // computadoras / perifericos / etc
+      subtipo: req.body.subtipo || null,       // computadoras / perifericos / dispositivos-red / ...
       detalleTipo: req.body.detalleTipo || null,
       cantidad: req.body.cantidad ? Number(req.body.cantidad) : 1,
 
@@ -101,7 +103,7 @@ router.post("/items", upload.single("photo"), async (req, res) => {
       appVersion: req.body.appVersion || null,
       appFechaInstalacion: req.body.appFechaInstalacion || null,
       licenciaTipo: req.body.licenciaTipo || null,
-      licenciaNumero: req.body.licenciaNumero || req.body.appLicencia || null,
+      licenciaNumero: req.body.licenciaNumero || null,
       licenciaVencimiento: req.body.licenciaVencimiento || null,
 
       // Otros activos
@@ -113,7 +115,7 @@ router.post("/items", upload.single("photo"), async (req, res) => {
       mantenimientoNotas: req.body.mantenimientoNotas || null,
 
       // Descripción general
-      descripcion: req.body.descripcion || null
+      descripcion: req.body.descripcion || null,
     };
 
     await query(
@@ -135,7 +137,7 @@ router.post("/items", upload.single("photo"), async (req, res) => {
     res.json({ ok: true, item: { id, ...data, photo } });
   } catch (err) {
     console.error("❌ Error POST /computing/items:", err);
-    res.status(500).json({ error: "Error al agregar equipo" });
+    res.status(500).json({ message: "Error al agregar equipo" });
   }
 });
 
@@ -145,69 +147,63 @@ router.post("/items", upload.single("photo"), async (req, res) => {
 router.put("/items/:id", upload.single("photo"), async (req, res) => {
   try {
     const id = req.params.id;
-    const photo = req.file ? `/uploads/${req.file.filename}` : null;
 
-    const result = await query(
-      `
-      SELECT data, photo
-      FROM items
-      WHERE id = $1 AND lab = 'computing'
-      `,
+    const existing = await query(
+      `SELECT photo FROM items WHERE id = $1 AND lab = 'computing'`,
       [id]
     );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Equipo no encontrado" });
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ message: "Equipo no encontrado" });
     }
 
-    const oldData = result.rows[0].data || {};
-    const oldPhoto = result.rows[0].photo || null;
+    const currentPhoto = existing.rows[0].photo;
+    const photo = req.file ? `/uploads/${req.file.filename}` : currentPhoto || null;
 
-    const newData = {
-      ...oldData,
-      idEquip: req.body.idEquip ?? oldData.idEquip ?? null,
-      codigo: req.body.codigo ?? oldData.codigo ?? null,
-      marca: req.body.marca ?? oldData.marca ?? null,
-      modelo: req.body.modelo ?? oldData.modelo ?? null,
-      anio: req.body.anio ?? oldData.anio ?? null,
-      serie: req.body.serie ?? oldData.serie ?? null,
-      categoria: req.body.categoria ?? oldData.categoria ?? null,
+    const data = {
+      // Identificación básica
+      idEquip: req.body.idEquip,
+      codigo: req.body.codigo,
+      marca: req.body.marca,
+      modelo: req.body.modelo,
+      anio: req.body.anio,
+      serie: req.body.serie,
+      categoria: req.body.categoria,
 
-      tipoActivo: req.body.tipoActivo ?? oldData.tipoActivo ?? null,
-      subtipo: req.body.subtipo ?? oldData.subtipo ?? null,
-      detalleTipo: req.body.detalleTipo ?? oldData.detalleTipo ?? null,
-      cantidad: req.body.cantidad
-        ? Number(req.body.cantidad)
-        : (typeof oldData.cantidad !== "undefined" ? Number(oldData.cantidad) : 1),
+      // Clasificación
+      tipoActivo: req.body.tipoActivo || null,
+      subtipo: req.body.subtipo || null,
+      detalleTipo: req.body.detalleTipo || null,
+      cantidad: req.body.cantidad ? Number(req.body.cantidad) : 1,
 
-      cpu: req.body.cpu ?? oldData.cpu ?? null,
-      memoriaRam: req.body.memoriaRam ?? oldData.memoriaRam ?? null,
-      sistemaOperativo: req.body.sistemaOperativo ?? oldData.sistemaOperativo ?? null,
-      fechaCompra: req.body.fechaCompra ?? oldData.fechaCompra ?? null,
-      estado: req.body.estado ?? oldData.estado ?? null,
+      // Hardware
+      cpu: req.body.cpu || null,
+      memoriaRam: req.body.memoriaRam || null,
+      sistemaOperativo: req.body.sistemaOperativo || null,
+      fechaCompra: req.body.fechaCompra || null,
+      estado: req.body.estado || null,
 
-      soTipo: req.body.soTipo ?? oldData.soTipo ?? null,
-      soVersion: req.body.soVersion ?? oldData.soVersion ?? null,
-      appNombre: req.body.appNombre ?? oldData.appNombre ?? null,
-      appVersion: req.body.appVersion ?? oldData.appVersion ?? null,
-      appFechaInstalacion: req.body.appFechaInstalacion ?? oldData.appFechaInstalacion ?? null,
-      licenciaTipo: req.body.licenciaTipo ?? oldData.licenciaTipo ?? null,
-      licenciaNumero:
-        req.body.licenciaNumero ??
-        req.body.appLicencia ??
-        oldData.licenciaNumero ??
-        null,
-      licenciaVencimiento:
-        req.body.licenciaVencimiento ?? oldData.licenciaVencimiento ?? null,
+      // Software / licencias
+      soTipo: req.body.soTipo || null,
+      soVersion: req.body.soVersion || null,
+      appNombre: req.body.appNombre || null,
+      appVersion: req.body.appVersion || null,
+      appFechaInstalacion: req.body.appFechaInstalacion || null,
+      licenciaTipo: req.body.licenciaTipo || null,
+      licenciaNumero: req.body.licenciaNumero || null,
+      licenciaVencimiento: req.body.licenciaVencimiento || null,
 
-      descripcionOtros: req.body.descripcionOtros ?? oldData.descripcionOtros ?? null,
-      ubicacion: req.body.ubicacion ?? oldData.ubicacion ?? null,
-      fechaActualizacion: req.body.fechaActualizacion ?? oldData.fechaActualizacion ?? null,
-      mantenimientoNotas: req.body.mantenimientoNotas ?? oldData.mantenimientoNotas ?? null,
-      descripcion: req.body.descripcion ?? oldData.descripcion ?? null
+      // Otros activos
+      descripcionOtros: req.body.descripcionOtros || null,
+
+      // Estado, ubicación y mantenimiento
+      ubicacion: req.body.ubicacion || null,
+      fechaActualizacion: req.body.fechaActualizacion || null,
+      mantenimientoNotas: req.body.mantenimientoNotas || null,
+
+      // Descripción general
+      descripcion: req.body.descripcion || null,
     };
-
-    const finalPhoto = photo || oldPhoto;
 
     await query(
       `
@@ -215,7 +211,7 @@ router.put("/items/:id", upload.single("photo"), async (req, res) => {
       SET data = $1, photo = $2
       WHERE id = $3 AND lab = 'computing'
       `,
-      [newData, finalPhoto, id]
+      [data, photo, id]
     );
 
     await query(
@@ -223,13 +219,13 @@ router.put("/items/:id", upload.single("photo"), async (req, res) => {
       INSERT INTO history (id, lab, action, entity_type, entity_id, user_email, data)
       VALUES ($1, 'computing', 'actualizar', 'equipo', $2, $3, $4)
       `,
-      [uuidv4(), id, req.session?.email || "admin", newData]
+      [uuidv4(), id, req.session?.email || "admin", data]
     );
 
-    res.json({ ok: true, item: { id, ...newData, photo: finalPhoto } });
+    res.json({ ok: true, item: { id, ...data, photo } });
   } catch (err) {
     console.error("❌ Error PUT /computing/items/:id:", err);
-    res.status(500).json({ error: "Error al actualizar equipo" });
+    res.status(500).json({ message: "Error al actualizar equipo" });
   }
 });
 
@@ -242,16 +238,16 @@ router.get("/items", async (req, res) => {
       `SELECT * FROM items WHERE lab='computing' ORDER BY id DESC`
     );
 
-    const items = result.rows.map(row => ({
+    const items = result.rows.map((row) => ({
       id: row.id,
       ...(row.data || {}),
-      photo: row.photo || null
+      photo: row.photo || null,
     }));
 
     res.json(items);
   } catch (err) {
     console.error("❌ Error GET /computing/items:", err);
-    res.status(500).json({ error: "Error al obtener equipos" });
+    res.status(500).json({ message: "Error al obtener equipos" });
   }
 });
 
@@ -275,7 +271,7 @@ router.delete("/items/:id", async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error("❌ Error DELETE /computing/items:", err);
-    res.status(500).json({ error: "Error al eliminar equipo" });
+    res.status(500).json({ message: "Error al eliminar equipo" });
   }
 });
 
@@ -292,7 +288,7 @@ router.post("/reservations", async (req, res) => {
       curso: req.body.curso,
       fechaUso: req.body.fechaUso,
       horario: req.body.horario,
-      observaciones: req.body.observaciones
+      observaciones: req.body.observaciones,
     };
 
     await query(
@@ -316,12 +312,12 @@ router.post("/reservations", async (req, res) => {
       reservation: {
         id,
         ...data,
-        user: userEmail
-      }
+        user: userEmail,
+      },
     });
   } catch (err) {
     console.error("❌ Error POST /computing/reservations:", err);
-    res.status(500).json({ error: "Error al registrar reserva" });
+    res.status(500).json({ message: "Error al registrar reserva" });
   }
 });
 
@@ -334,16 +330,16 @@ router.get("/reservations", async (req, res) => {
       `SELECT * FROM reservations WHERE lab='computing' ORDER BY id DESC`
     );
 
-    const reservations = result.rows.map(row => ({
+    const reservations = result.rows.map((row) => ({
       id: row.id,
       ...(row.data || {}),
-      user: row.user_email || null
+      user: row.user_email || null,
     }));
 
     res.json(reservations);
   } catch (err) {
     console.error("❌ Error GET /computing/reservations:", err);
-    res.status(500).json({ error: "Error al obtener reservas" });
+    res.status(500).json({ message: "Error al obtener reservas" });
   }
 });
 
@@ -351,8 +347,8 @@ router.get("/reservations", async (req, res) => {
 //           PRÉSTAMOS DE EQUIPOS
 // ========================================
 
-// Registrar préstamo
-router.post("/loans", async (req, res) => {
+// Handler común para crear préstamo
+async function handleCreateLoan(req, res) {
   try {
     const id = uuidv4();
     const userEmail = req.session?.email || "admin";
@@ -364,22 +360,20 @@ router.post("/loans", async (req, res) => {
     const todayStr = `${yyyy}-${mm}-${dd}`;
 
     const fechaPrestamo =
-      req.body.fechaPrestamo ||
-      req.body.fecha_prestamo ||
-      todayStr;
+      req.body.fechaPrestamo || req.body.fecha_prestamo || todayStr;
 
     const data = {
       itemId: req.body.itemId,
       codigo: req.body.codigo || null,
-      tipoPersona: req.body.tipoPersona || null,
+      tipoPersona: req.body.tipoPersona || null, // estudiante / funcionario
       persona: req.body.persona,
       curso: req.body.curso || "",
-      fechaPrestamo: fechaPrestamo,
+      fechaPrestamo,
       fecha_prestamo: fechaPrestamo,
       fechaDevolucion: null,
       fecha_devolucion: null,
       observaciones: req.body.observaciones || "",
-      devuelto: false
+      devuelto: false,
     };
 
     await query(
@@ -401,21 +395,27 @@ router.post("/loans", async (req, res) => {
     await updateItemQuantityByIdEquipOrCodigo({
       itemId: data.itemId,
       codigo: data.codigo,
-      delta: -1
+      delta: -1,
     });
 
     res.json({
       ok: true,
       loan: {
         id,
-        ...data
-      }
+        ...data,
+      },
     });
   } catch (err) {
-    console.error("❌ Error POST /computing/loans:", err);
-    res.status(500).json({ error: "Error al registrar préstamo" });
+    console.error("❌ Error creando préstamo (computing):", err);
+    res.status(500).json({ message: "Error al registrar préstamo" });
   }
-});
+}
+
+// Registrar préstamo
+// Ruta "oficial"
+router.post("/loans", handleCreateLoan);
+// Ruta que usa computing.js: POST /api/computing/loan
+router.post("/loan", handleCreateLoan);
 
 // Listar préstamos
 router.get("/loans", async (req, res) => {
@@ -424,21 +424,21 @@ router.get("/loans", async (req, res) => {
       `SELECT * FROM loans WHERE lab='computing' ORDER BY id DESC`
     );
 
-    const loans = result.rows.map(row => ({
+    const loans = result.rows.map((row) => ({
       id: row.id,
       ...(row.data || {}),
-      user: row.user_email || null
+      user: row.user_email || null,
     }));
 
     res.json(loans);
   } catch (err) {
     console.error("❌ Error GET /computing/loans:", err);
-    res.status(500).json({ error: "Error al obtener préstamos" });
+    res.status(500).json({ message: "Error al obtener préstamos" });
   }
 });
 
-// Marcar devolución
-router.post("/loans/:id/return", async (req, res) => {
+// Handler común para marcar devolución
+async function handleReturnLoan(req, res) {
   try {
     const id = req.params.id;
     const userEmail = req.session?.email || "admin";
@@ -452,7 +452,7 @@ router.post("/loans/:id/return", async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Préstamo no encontrado" });
+      return res.status(404).json({ message: "Préstamo no encontrado" });
     }
 
     const row = result.rows[0];
@@ -472,7 +472,7 @@ router.post("/loans/:id/return", async (req, res) => {
       ...data,
       devuelto: true,
       fechaDevolucion: todayStr,
-      fecha_devolucion: todayStr
+      fecha_devolucion: todayStr,
     };
 
     await query(
@@ -495,14 +495,19 @@ router.post("/loans/:id/return", async (req, res) => {
     await updateItemQuantityByIdEquipOrCodigo({
       itemId: updated.itemId,
       codigo: updated.codigo,
-      delta: 1
+      delta: 1,
     });
 
     res.json({ ok: true, loan: { id, ...updated } });
   } catch (err) {
-    console.error("❌ Error POST /computing/loans/:id/return:", err);
-    res.status(500).json({ error: "Error al registrar devolución" });
+    console.error("❌ Error registrando devolución (computing):", err);
+    res.status(500).json({ message: "Error al registrar devolución" });
   }
-});
+}
+
+// Ruta nueva: /computing/loans/:id/return
+router.post("/loans/:id/return", handleReturnLoan);
+// Ruta antigua que usa computing.js: /computing/return/:id
+router.post("/return/:id", handleReturnLoan);
 
 module.exports = router;
