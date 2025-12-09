@@ -1,153 +1,199 @@
-// public/js/roleGuard.js
-// Control de permisos por rol + fetch seguro con express-session
-// Compatible al 100% con tu server.js actual (sessions, no JWT)
+// /public/js/roleGuard.js
+// Control de permisos de edición según el rol del usuario y helper global
+// para manejar fetch autenticado (guardedFetch).
 
 (() => {
-  // ==============================================
-  // Helper global: fetch que envía la cookie de sesión
-  // ==============================================
+  // -------------------------------------------
+  // Helper global: guardedFetch
+  // -------------------------------------------
   async function guardedFetch(url, options = {}) {
     const resp = await fetch(url, {
-      credentials: 'include', // Esto envía la cookie de sesión
+      credentials: 'include',
       ...options
     });
 
     if (resp.status === 401 || resp.status === 403) {
-      alert('Tu sesión ha expirado o no tienes permisos. Serás redirigido al login.');
+      // Sesión caducada, no autenticada o sin permisos suficientes
+      alert('Tu sesión ha expirado o no estás autenticado. Vuelve a iniciar sesión.');
       window.location.href = '/login.html';
-      return null;
+      throw new Error(`Acceso no autorizado (${resp.status})`);
     }
+
     return resp;
   }
 
-  // Exponer para que lo usen todos los módulos (computing.js, library.js, etc.)
+  // Exponemos en window para que lo use computing.js, history.js, library.js, science.js, etc.
   window.guardedFetch = guardedFetch;
 
-  // ==============================================
-  // Obtener sesión desde /api/session
-  // ==============================================
-  async function getCurrentSession() {
+  // -------------------------------------------
+  // Obtener sesión actual desde el backend
+  // -------------------------------------------
+  async function fetchSession() {
     try {
-      const resp = await guardedFetch('/api/session');
-      if (!resp) return null;
+      // Usamos guardedFetch para que también capture 401/403
+      const resp = await guardedFetch('/api/session', {
+        method: 'GET'
+      });
       if (!resp.ok) return null;
       return await resp.json();
     } catch (err) {
-      console.warn('Error obteniendo sesión:', err);
+      console.error('Error al obtener sesión:', err);
       return null;
     }
   }
 
-  // ==============================================
-  // Banner de solo lectura (amarillo bonito)
-  // ==============================================
+  // -------------------------------------------
+  // Banner de advertencia solo-lectura
+  // -------------------------------------------
   function showReadOnlyBanner(message) {
+    // Si ya existe un banner, no lo duplicamos
     if (document.getElementById('readOnlyBanner')) return;
 
     const banner = document.createElement('div');
     banner.id = 'readOnlyBanner';
-    banner.textContent = message;
-    banner.style.cssText = `
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      z-index: 9999;
-      padding: 12px 20px;
-      background: linear-gradient(90deg, #ffcc00, #ff9800, #ff5722);
-      color: #000;
-      font-weight: 600;
-      font-size: 15px;
-      text-align: center;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-      border-bottom: 3px solid #d32f2f;
-    `;
-    document.body.prepend(banner);
+    banner.textContent =
+      message ||
+      'No tienes permisos de edición en esta sección. Solo puedes visualizar los datos.';
+
+    banner.style.position = 'fixed';
+    banner.style.top = '0';
+    banner.style.left = '0';
+    banner.style.right = '0';
+    banner.style.zIndex = '9999';
+    banner.style.padding = '10px 16px';
+    banner.style.textAlign = 'center';
+    banner.style.fontSize = '14px';
+    banner.style.fontWeight = '500';
+    banner.style.background =
+      'linear-gradient(90deg, #ffcc00, #ff9800, #ff5722)';
+    banner.style.color = '#000';
+    banner.style.boxShadow = '0 2px 8px rgba(0,0,0,0.5)';
+
+    document.body.appendChild(banner);
   }
 
-  // ==============================================
-  // Bloquear edición (pero deja buscadores, filtros y exportar)
-  // ==============================================
+  // -------------------------------------------
+  // Bloquear edición de la página
+  // -------------------------------------------
   function lockPageEdition() {
+    // IDs que se deben mantener habilitados aun en modo solo lectura:
+    // buscadores, filtros y botones de exportar / imprimir.
     const allowedIds = new Set([
       // Biblioteca
-      'librarySearch', 'loansSearch',
-      'btnExportLibraryCSV', 'btnExportLoansCSV',
-      'btnPrintLibraryReport', 'btnPrintLoansReport',
+      'librarySearch',
+      'loansSearch',
+      'btnExportLibraryCSV',
+      'btnExportLoansCSV',
+      'btnPrintLibraryReport',
+      'btnPrintLoansReport',
       // Ciencias
-      'scienceSearch', 'scienceLoansSearch',
-      'btnExportScienceCSV', 'btnExportScienceLoansCSV',
-      'btnPrintScienceReport', 'btnPrintScienceLoansReport',
-      // Computación
-      'computingSearch', 'computingLoansSearch',
-      'btnExportComputingCSV', 'btnExportComputingLoansCSV',
-      'btnPrintComputingReport', 'btnPrintComputingLoansReport',
-      // Filtros generales
-      'historyLabFilter', 'historyLimit'
+      'scienceSearch',
+      'scienceLoansSearch',
+      'btnExportScienceCSV',
+      'btnExportScienceLoansCSV',
+      'btnPrintScienceReport',
+      'btnPrintScienceLoansReport',
+      // Computación (por si los usas)
+      'computingSearch',
+      'computingLoansSearch',
+      'btnExportComputingCSV',
+      'btnExportComputingLoansCSV',
+      'btnPrintComputingReport',
+      'btnPrintComputingLoansReport'
     ]);
 
-    document.querySelectorAll('input, textarea, select, button').forEach(el => {
-      // Mantener habilitados los elementos explícitamente permitidos
-      if (el.dataset.keepEnabled === 'true') return;
+    // Deshabilita inputs, selects, textareas y botones que no sean de navegación
+    const controls = document.querySelectorAll(
+      'input, textarea, select, button'
+    );
+
+    controls.forEach(el => {
+      // 1) Si explícitamente queremos mantenerlo activo: data-keep-enabled="true"
+      if (el.dataset && el.dataset.keepEnabled === 'true') return;
+
+      // 2) No bloqueamos enlaces que visualmente parecen botones (<button> dentro de <a>)
+      if (el.closest('a')) return;
+
+      // 3) Si su id está en la lista de permitidos (buscadores, export, etc.)
       if (el.id && allowedIds.has(el.id)) return;
-      if (el.closest('a')) return; // botones que son links
 
-      // Permitir inputs de búsqueda y filtros
+      // 4) Permitir automáticamente inputs de búsqueda/filtro
       const type = (el.getAttribute('type') || '').toLowerCase();
-      if (el.tagName === 'INPUT' && (type === 'search' || /search|filter/i.test(el.id || ''))) {
+      if (
+        el.tagName === 'INPUT' &&
+        (type === 'search' ||
+          // ids que contienen "search" o "filter"
+          (el.id && /search|filter/i.test(el.id)))
+      ) {
         return;
       }
 
-      // Permitir botones de exportar/imprimir por texto
-      if (el.tagName === 'BUTTON' && /exportar|csv|imprimir|reporte/i.test(el.textContent || '')) {
+      // 5) Permitir botones de exportar / imprimir por texto
+      if (
+        el.tagName === 'BUTTON' &&
+        el.textContent &&
+        /exportar|csv|imprimir|reporte/i.test(el.textContent)
+      ) {
         return;
       }
 
+      // Si llega hasta acá: se bloquea
       el.disabled = true;
       el.classList.add('readonly');
     });
   }
 
-  // ==============================================
-  // Lógica principal al cargar la página
-  // ==============================================
+  // -------------------------------------------
+  // Lógica principal por página / rol
+  // -------------------------------------------
   document.addEventListener('DOMContentLoaded', async () => {
-    // No hacer nada en la página de login
-    if (window.location.pathname.includes('login.html')) return;
-
-    const session = await getCurrentSession();
-
-    // Si no hay sesión → login
-    if (!session || !session.email) {
-      window.location.href = '/login.html';
-      return;
-    }
+    const session = await fetchSession();
+    if (!session || !session.role) return;
 
     const role = session.role;
-    const page = document.body.dataset.page || '';
 
-    // Admin puede todo
+    // Admin puede TODO, sin restricciones ni banner
     if (role === 'admin') return;
 
-    // Mensaje general en el dashboard
-    if (page === 'dashboard' || page === 'index') {
+    const page = document.body.dataset.page; // 'login', 'dashboard', 'science', etc.
+
+    // En login no bloqueamos nada
+    if (page === 'login') return;
+
+    // En el dashboard (todas las pestañas) mostramos aviso general de cuenta limitada
+    if (page === 'dashboard') {
       showReadOnlyBanner(
-        'Cuenta de área: solo puedes editar tu sección asignada. El resto es solo lectura.'
+        'Has iniciado sesión con una cuenta de área. Solo podrás editar tu sección asignada; el resto será solo lectura.'
       );
+      // Aquí no bloqueamos nada porque cada módulo (biblioteca, ciencias, etc.)
+      // se controla dentro de su propia pestaña/página.
       return;
     }
 
-    // Control por página
-    if (page.includes('science') && role !== 'science') {
-      showReadOnlyBanner('Sección exclusiva del Laboratorio de Ciencias.');
-      lockPageEdition();
-    } else if (page.includes('computing') || page === 'computer') {
-      if (role !== 'computing') {
-        showReadOnlyBanner('Sección exclusiva de la Sala de Computación.');
+    // Si en el futuro vuelves a usar páginas separadas:
+    if (page === 'science') {
+      // Solo el rol "science" (o admin, que ya retornó arriba) puede editar
+      if (role !== 'science') {
+        showReadOnlyBanner(
+          'Esta sección es exclusiva del laboratorio de Ciencias. Tu cuenta solo tiene permisos de lectura aquí.'
+        );
         lockPageEdition();
       }
-    } else if (page.includes('library') && role !== 'library') {
-      showReadOnlyBanner('Sección exclusiva de la Biblioteca.');
-      lockPageEdition();
+    } else if (page === 'computer') {
+      if (role !== 'computing') {
+        showReadOnlyBanner(
+          'Esta sección es exclusiva de la Sala de Computación. Tu cuenta solo tiene permisos de lectura aquí.'
+        );
+        lockPageEdition();
+      }
+    } else if (page === 'library' || page === 'library-api') {
+      // Consideramos tanto la biblioteca antigua como la nueva (library-api)
+      if (role !== 'library') {
+        showReadOnlyBanner(
+          'Esta sección es exclusiva de la Biblioteca. Tu cuenta solo tiene permisos de lectura aquí.'
+        );
+        lockPageEdition();
+      }
     }
   });
-
 })();
