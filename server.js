@@ -1,11 +1,13 @@
 // server.js — Inventario Colegio Providencia
 // =========================================================
-// - Sesiones con express-session + bcrypt
+// - Sesiones con express-session
 // - Roles por laboratorio (admin, science, computing, library)
 // - PostgreSQL (items, reservas, préstamos, historial)
 // - Supabase Storage para fotos
-// - Rutas modulares (routes/)
-// - Migración automática de JSONs legacy
+// - /api/history para registrar y consultar movimientos
+// - Préstamos Biblioteca + control de stock + personas (JSON)
+// - Préstamos Ciencias + control de stock
+// - Préstamos Computación + control de stock
 // =========================================================
 
 const express = require('express');
@@ -15,7 +17,6 @@ const multer = require('multer');
 const fs = require('fs');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
-const bcrypt = require('bcryptjs'); // ← NUEVO: seguridad de contraseñas
 const db = require('./db');
 const { createClient } = require('@supabase/supabase-js');
 
@@ -33,19 +34,20 @@ let LAB_USERS = [
   { email: process.env.COMPUTING_EMAIL, password: process.env.COMPUTING_PASSWORD, role: 'computing' },
   { email: process.env.LIBRARY_EMAIL, password: process.env.LIBRARY_PASSWORD, role: 'library' }
 ];
+
 LAB_USERS = LAB_USERS.filter(u => u.email && u.password);
 
 if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
-  console.warn('Falta ADMIN_EMAIL o ADMIN_PASSWORD en .env');
+  console.warn('⚠️ Falta ADMIN_EMAIL o ADMIN_PASSWORD en .env');
 }
 if (LAB_USERS.length === 0) {
-  console.warn('No hay usuarios de laboratorio configurados en .env');
+  console.warn('⚠️ No hay usuarios de laboratorio configurados en .env');
 }
 
 const VALID_LABS = ['science', 'computing', 'library'];
 
 // =========================================================
-// DIRECTORIOS DE CONFIG
+/** DIRECTORIOS DE CONFIG (users.json, library_people.json) */
 // =========================================================
 const DATA_DIR = process.env.DATA_DIR || __dirname;
 const CONFIG_DIR = path.join(DATA_DIR, 'config');
@@ -54,6 +56,7 @@ if (!fs.existsSync(CONFIG_DIR)) fs.mkdirSync(CONFIG_DIR, { recursive: true });
 const USERS_PATH = path.join(CONFIG_DIR, 'users.json');
 if (!fs.existsSync(USERS_PATH)) fs.writeFileSync(USERS_PATH, '[]', 'utf8');
 
+// ✅ Personas de biblioteca (estudiantes/funcionarios)
 const LIBRARY_PEOPLE_PATH = path.join(CONFIG_DIR, 'library_people.json');
 if (!fs.existsSync(LIBRARY_PEOPLE_PATH)) {
   fs.writeFileSync(LIBRARY_PEOPLE_PATH, '[]', 'utf8');
@@ -69,6 +72,7 @@ function loadLibraryPeople() {
     return [];
   }
 }
+
 function saveLibraryPeople(people) {
   try {
     fs.writeFileSync(LIBRARY_PEOPLE_PATH, JSON.stringify(people, null, 2), 'utf8');
@@ -85,9 +89,10 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabaseBucket = process.env.SUPABASE_BUCKET || 'inventario-fotos';
 
 if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('Falta SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY en .env');
+  console.error('❌ Falta SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY en .env');
   process.exit(1);
 }
+
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // =========================================================
@@ -101,10 +106,15 @@ const allowedOrigins = [
   'https://inventario-u224.onrender.com'
 ];
 
-app.use(cors({
-  origin: allowedOrigins,
-  credentials: true
-}));
+console.log('🌐 CORS origins permitidos:', allowedOrigins);
+
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true
+  })
+);
+
 app.set('trust proxy', 1);
 
 // =========================================================
@@ -113,30 +123,32 @@ app.set('trust proxy', 1);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(session({
-  secret: 'inventario_super_secreto',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    secure: process.env.NODE_ENV === 'production'
-  }
-}));
+
+app.use(
+  session({
+    secret: 'inventario_super_secreto',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      secure: process.env.NODE_ENV === 'production'
+    }
+  })
+);
 
 // Static
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/config', express.static(CONFIG_DIR));
 
 // =========================================================
-// CARGA DE USUARIOS + HASH DE CONTRASEÑAS
+// USUARIOS (JSON + variables de entorno)
 // =========================================================
-async function loadUsers() {
+function loadUsers() {
   let users = [];
   try {
     const txt = fs.readFileSync(USERS_PATH, 'utf8').trim();
     users = txt ? JSON.parse(txt) : [];
-  } catch (err) {
-    console.warn('No se pudo leer users.json, se creará uno nuevo');
+  } catch {
     users = [];
   }
 
@@ -146,32 +158,23 @@ async function loadUsers() {
   }
   baseUsers.push(...LAB_USERS);
 
-  for (const u of baseUsers) {
-    if (!u.email || !u.password) continue;
-
+  baseUsers.forEach(u => {
+    if (!u.email || !u.password) return;
     const existing = users.find(x => x.email === u.email);
-    if (!existing) {
-      // Hashear contraseña nueva
-      const hashed = await bcrypt.hash(u.password, 10);
-      users.push({ email: u.email, password: hashed, role: u.role || 'viewer' });
-    } else {
-      // Si ya existe pero contraseña en texto plano → hashear
-      if (!existing.password.startsWith('$2a$')) {
-        existing.password = await bcrypt.hash(u.password, 10);
-        existing.role = u.role || existing.role;
-      }
+    if (!existing) users.push(u);
+    else {
+      existing.password = u.password;
+      existing.role = u.role;
     }
-  }
+  });
 
   fs.writeFileSync(USERS_PATH, JSON.stringify(users, null, 2));
   return users;
 }
 
-// =========================================================
-// AUTENTICACIÓN Y PERMISOS
-// =========================================================
-async function requireLogin(req, res, next) {
+function requireLogin(req, res, next) {
   if (req.session.user) return next();
+
   if (req.path.startsWith('/api/')) {
     return res.status(401).json({ message: 'No autenticado' });
   }
@@ -186,34 +189,42 @@ function userCanEditLab(role, lab) {
 function canEditLab(req, res, next) {
   const user = req.session.user;
   const lab = req.params.lab;
+
   if (!user) return res.status(401).json({ message: 'No autenticado' });
-  if (!VALID_LABS.includes(lab)) return res.status(400).json({ message: 'Laboratorio no válido' });
+  if (!VALID_LABS.includes(lab)) {
+    return res.status(400).json({ message: 'Laboratorio no válido' });
+  }
   if (!userCanEditLab(user.role, lab)) {
     return res.status(403).json({ message: 'No tienes permiso para editar esta sección.' });
   }
   next();
 }
 
+// ✅ helper específico para laboratorio de ciencias
 function canEditScience(req, res, next) {
-  if (!req.session.user) return res.status(401).json({ message: 'No autenticado' });
-  if (!userCanEditLab(req.session.user.role, 'science')) {
-    return res.status(403).json({ message: 'No tienes permiso para editar Ciencias.' });
+  const user = req.session.user;
+  if (!user) return res.status(401).json({ message: 'No autenticado' });
+  if (!userCanEditLab(user.role, 'science')) {
+    return res.status(403).json({ message: 'No tienes permiso para editar el laboratorio de ciencias.' });
   }
   next();
 }
 
+// ✅ helper específico para sala de computación
 function canEditComputing(req, res, next) {
-  if (!req.session.user) return res.status(401).json({ message: 'No autenticado' });
-  if (!userCanEditLab(req.session.user.role, 'computing')) {
-    return res.status(403).json({ message: 'No tienes permiso para editar Computación.' });
+  const user = req.session.user;
+  if (!user) return res.status(401).json({ message: 'No autenticado' });
+  if (!userCanEditLab(user.role, 'computing')) {
+    return res.status(403).json({ message: 'No tienes permiso para editar la sala de computación.' });
   }
   next();
 }
 
 function canEditLibrary(req, res, next) {
-  if (!req.session.user) return res.status(401).json({ message: 'No autenticado' });
-  if (!userCanEditLab(req.session.user.role, 'library')) {
-    return res.status(403).json({ message: 'No tienes permiso para editar Biblioteca.' });
+  const user = req.session.user;
+  if (!user) return res.status(401).json({ message: 'No autenticado' });
+  if (!userCanEditLab(user.role, 'library')) {
+    return res.status(403).json({ message: 'No tienes permiso para editar la biblioteca.' });
   }
   next();
 }
@@ -225,12 +236,12 @@ app.get('/', requireLogin, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.post('/login', async (req, res) => {
+app.post('/login', (req, res) => {
   const { email, password } = req.body;
-  const users = await loadUsers();
-  const user = users.find(u => u.email === email);
+  const users = loadUsers();
+  const user = users.find(u => u.email === email && u.password === password);
 
-  if (!user || !(await bcrypt.compare(password, user.password))) {
+  if (!user) {
     return res.send('Usuario o contraseña incorrectos. <a href="/login.html">Volver</a>');
   }
 
@@ -244,13 +255,10 @@ app.get('/logout', (req, res) => {
 
 app.get('/api/session', (req, res) => {
   if (!req.session.user) return res.json({ email: null, role: null });
-  res.json({
-    email: req.session.user.email,
-    role: req.session.user.role,
-    name: req.session.user.name || 'Usuario'  // opcional, para el banner
-  });
+  res.json(req.session.user);
 });
 
+// ✅ Healthcheck sencillo para Render / monitoreo
 app.get('/health', async (req, res) => {
   try {
     await db.query('SELECT 1');
@@ -268,115 +276,1950 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 async function uploadToSupabase(file, lab) {
   if (!file) return null;
+
   const filePath = `${lab}/${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
+
   const { error } = await supabase.storage
     .from(supabaseBucket)
     .upload(filePath, file.buffer, { contentType: file.mimetype });
+
   if (error) {
     console.error('Error subiendo archivo a Supabase:', error);
     return null;
   }
+
   const { data } = supabase.storage.from(supabaseBucket).getPublicUrl(filePath);
   return data.publicUrl || null;
 }
 
 // =========================================================
-// HISTORIAL
+/** HISTORIAL: helper + rutas /api/history */
 // =========================================================
+
+// ✅ Garantizar que exista la tabla history
 async function ensureHistoryTable() {
-  await db.query(`
-    CREATE TABLE IF NOT EXISTS history (
-      id TEXT PRIMARY KEY,
-      lab TEXT,
-      action TEXT,
-      entity_type TEXT,
-      entity_id TEXT,
-      user_email TEXT,
-      created_at TIMESTAMPTZ DEFAULT NOW(),
-      data JSONB
-    );
-  `);
+  try {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS history (
+        id TEXT PRIMARY KEY,
+        lab TEXT,
+        action TEXT,
+        entity_type TEXT,
+        entity_id TEXT,
+        user_email TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        data JSONB
+      );
+    `);
+    console.log('Tabla history verificada/creada ✅');
+  } catch (err) {
+    console.error('❌ Error creando/verificando tabla history:', err);
+    throw err;
+  }
 }
 
+// Helper para insertar en tabla "history"
 async function addHistory({ lab, action, entityType, entityId, userEmail, data }) {
   try {
     const id = Date.now().toString();
+    const createdAt = new Date();
+
     await db.query(
-      `INSERT INTO history (id, lab, action, entity_type, entity_id, user_email, data)
-       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
-      [id, lab || null, action || null, entityType || null, entityId || null, userEmail || null, JSON.stringify(data || {})]
+      `INSERT INTO history (
+        id, lab, action, entity_type, entity_id, user_email, created_at, data
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb)`,
+      [id, lab || null, action || null, entityType || null, entityId || null, userEmail || null, createdAt, JSON.stringify(data || {})]
     );
   } catch (err) {
     console.error('Error guardando historial:', err);
   }
 }
 
+// ✅ helper para cliente transaccional (usa db.pool)
 function getPgClient() {
   if (!db.pool || typeof db.pool.connect !== 'function') {
-    console.warn('db.pool no disponible');
+    console.warn('⚠️ db.pool no está disponible. Asegúrate que db.js exporte el Pool de pg como "pool".');
     return null;
   }
   return db.pool.connect();
 }
 
+// GET /api/history?lab=&limit=
+app.get('/api/history', requireLogin, async (req, res) => {
+  const { lab, limit } = req.query;
+
+  const params = [];
+  let where = '';
+  if (lab && lab !== 'all') {
+    where = 'WHERE lab = $1';
+    params.push(lab);
+  }
+
+  let sql =
+    'SELECT id, lab, action, entity_type, entity_id, user_email, created_at, data FROM history ' +
+    where +
+    ' ORDER BY created_at DESC, id DESC';
+
+  const lim = parseInt(limit, 10);
+  if (!Number.isNaN(lim) && lim > 0 && lim <= 1000) {
+    sql += ` LIMIT ${lim}`;
+  } else {
+    sql += ' LIMIT 100';
+  }
+
+  try {
+    const { rows } = await db.query(sql, params);
+    const logs = rows.map(r => ({
+      id: r.id,
+      lab: r.lab,
+      action: r.action,
+      entityType: r.entity_type,
+      entityId: r.entity_id,
+      user: r.user_email,
+      createdAt: r.created_at,
+      data: r.data
+    }));
+    res.json(logs);
+  } catch (err) {
+    console.error('Error al obtener historial:', err);
+    res.status(500).json({ message: 'Error al obtener historial' });
+  }
+});
+
+// POST /api/history  (para logs manuales desde el front si quieres)
+app.post('/api/history', requireLogin, async (req, res) => {
+  const userEmail = req.session.user ? req.session.user.email : null;
+  const {
+    module,
+    lab,
+    action,
+    type,
+    entityType,
+    entity_id,
+    entityId,
+    detail,
+    ...rest
+  } = req.body;
+
+  const finalLab = lab || module || null;
+  const finalEntityType = entityType || type || null;
+  const finalEntityId = entityId || entity_id || null;
+
+  await addHistory({
+    lab: finalLab,
+    action: action || null,
+    entityType: finalEntityType,
+    entityId: finalEntityId,
+    userEmail,
+    data: { detail, ...rest }
+  });
+
+  res.json({ message: 'Historial registrado' });
+});
+
 // =========================================================
-// MONTAR ROUTERS MODULARES (¡ELIMINA TODA LA DUPLICACIÓN!)
+// API: ITEMS (PostgreSQL)
 // =========================================================
-const computingRoutes = require('./routes/computingRoutes');
-const libraryRoutes    = require('./routes/libraryRoutes');
-const scienceRoutes    = require('./routes/scienceRoutes');
-const historyRoutes    = require('./routes/historyRoutes');
+app.get('/api/:lab/items', requireLogin, async (req, res) => {
+  const lab = req.params.lab;
+  if (!VALID_LABS.includes(lab)) {
+    return res.status(400).json({ message: 'Laboratorio no válido' });
+  }
 
-app.use('/api/computing', requireLogin, computingRoutes);
-app.use('/api/library',    requireLogin, libraryRoutes);
-app.use('/api/science',    requireLogin, scienceRoutes);
-app.use('/api/history',    requireLogin, historyRoutes);
+  try {
+    const { rows } = await db.query(
+      'SELECT id, data, photo FROM items WHERE lab = $1 ORDER BY id',
+      [lab]
+    );
 
-// =========================================================
-// MIGRACIÓN AUTOMÁTICA DE JSONs LEGACY
-// =========================================================
-async function migrateLegacyData() {
-  console.log('Migrando datos legacy (JSON → PostgreSQL)...');
-  const configDir = path.join(__dirname, 'config');
-  const mappings = [
-    { file: 'computing_loans.json', table: 'computing_loans' },
-    { file: 'library_loans.json',   table: 'library_loans' },
-    { file: 'science_loans.json',   table: 'science_loans' }
-  ];
+    const items = rows.map(r => ({ id: r.id, ...r.data, photo: r.photo || null }));
+    res.json(items);
+  } catch (err) {
+    console.error('Error al obtener items de', lab, err);
+    res.status(500).json({ message: 'Error al obtener items' });
+  }
+});
 
-  for (const { file, table } of mappings) {
-    const filePath = path.join(configDir, file);
-    if (!fs.existsSync(filePath)) continue;
+app.post(
+  '/api/:lab/items',
+  requireLogin,
+  canEditLab,
+  upload.single('photo'),
+  async (req, res) => {
+    const lab = req.params.lab;
+    if (!VALID_LABS.includes(lab)) {
+      return res.status(400).json({ message: 'Laboratorio no válido' });
+    }
 
-    const raw = fs.readFileSync(filePath, 'utf8');
-    const items = JSON.parse(raw);
+    const id = Date.now().toString();
+    const data = { ...req.body };
+    let photoUrl = null;
 
-    for (const item of items) {
-      await db.query(`
-        INSERT INTO ${table} (id, data, user_email, loan_date, returned)
-        VALUES ($1, $2, $3, $4, $5)
-        ON CONFLICT (id) DO NOTHING
-      `, [
-        item.id?.toString() || Date.now().toString(),
-        item,
-        item.user || 'legacy@import',
-        item.fecha_prestamo || new Date(),
-        !!item.devuelto
-      ]);
+    try {
+      photoUrl = await uploadToSupabase(req.file, lab);
+    } catch (err) {
+      console.error('Error en uploadToSupabase:', err);
+    }
+
+    try {
+      await db.query(
+        'INSERT INTO items (id, lab, data, photo) VALUES ($1,$2,$3::jsonb,$4)',
+        [id, lab, JSON.stringify(data), photoUrl]
+      );
+
+      const newItem = { id, ...data, photo: photoUrl };
+
+      // Historial
+      await addHistory({
+        lab,
+        action: 'create-item',
+        entityType: 'item',
+        entityId: id,
+        userEmail: req.session.user.email,
+        data: newItem
+      });
+
+      res.json({ message: 'Item agregado', item: newItem });
+    } catch (err) {
+      console.error('Error al agregar item en', lab, err);
+      res.status(500).json({ message: 'Error al agregar item' });
     }
   }
-  console.log('Migración completada');
-}
+);
+
+app.delete('/api/:lab/items/:id', requireLogin, canEditLab, async (req, res) => {
+  const lab = req.params.lab;
+  const id = req.params.id;
+
+  if (!VALID_LABS.includes(lab)) {
+    return res.status(400).json({ message: 'Laboratorio no válido' });
+  }
+
+  try {
+    const { rows } = await db.query(
+      'DELETE FROM items WHERE id = $1 AND lab = $2 RETURNING id, data, photo',
+      [id, lab]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Item no encontrado' });
+    }
+
+    const row = rows[0];
+    const removed = { id: row.id, ...row.data, photo: row.photo || null };
+
+    await addHistory({
+      lab,
+      action: 'delete-item',
+      entityType: 'item',
+      entityId: id,
+      userEmail: req.session.user.email,
+      data: removed
+    });
+
+    res.json({ message: 'Item eliminado', item: removed });
+  } catch (err) {
+    console.error('Error al eliminar item de', lab, err);
+    res.status(500).json({ message: 'Error al eliminar item' });
+  }
+});
+
+// =========================================================
+// API: RESERVAS (PostgreSQL)
+// =========================================================
+app.get('/api/:lab/reservations', requireLogin, async (req, res) => {
+  const lab = req.params.lab;
+  if (!VALID_LABS.includes(lab)) {
+    return res.status(400).json({ message: 'Laboratorio no válido' });
+  }
+
+  try {
+    const { rows } = await db.query(
+      'SELECT id, data, user_email FROM reservations WHERE lab = $1 ORDER BY id',
+      [lab]
+    );
+
+    const reservations = rows.map(r => ({
+      id: r.id,
+      ...r.data,
+      user: r.user_email || null
+    }));
+
+    res.json(reservations);
+  } catch (err) {
+    console.error('Error al obtener reservas de', lab, err);
+    res.status(500).json({ message: 'Error al obtener reservas' });
+  }
+});
+
+app.post('/api/:lab/reservations', requireLogin, canEditLab, async (req, res) => {
+  const lab = req.params.lab;
+  if (!VALID_LABS.includes(lab)) {
+    return res.status(400).json({ message: 'Laboratorio no válido' });
+  }
+
+  const id = Date.now().toString();
+  const data = { ...req.body };
+  const userEmail = req.session.user ? req.session.user.email : null;
+
+  try {
+    await db.query(
+      'INSERT INTO reservations (id, lab, data, user_email) VALUES ($1,$2,$3::jsonb,$4)',
+      [id, lab, JSON.stringify(data), userEmail]
+    );
+
+    const newRes = { id, ...data, user: userEmail };
+
+    await addHistory({
+      lab,
+      action: 'create-reservation',
+      entityType: 'reservation',
+      entityId: id,
+      userEmail,
+      data: newRes
+    });
+
+    res.json({ message: 'Reserva creada', reservation: newRes });
+  } catch (err) {
+    console.error('Error al crear reserva en', lab, err);
+    res.status(500).json({ message: 'Error al crear reserva' });
+  }
+});
+
+// =========================================================
+// API: PERSONAS BIBLIOTECA (JSON library_people.json)
+// =========================================================
+
+// Obtener todas las personas (estudiantes/funcionarios)
+app.get('/api/library/people', requireLogin, (req, res) => {
+  const people = loadLibraryPeople();
+  res.json(people);
+});
+
+// Crear persona
+app.post('/api/library/people', requireLogin, canEditLibrary, async (req, res) => {
+  const { id: rawId, nombre, tipo, curso } = req.body;
+
+  if (!nombre || !tipo) {
+    return res.status(400).json({ message: 'Nombre y tipo son obligatorios.' });
+  }
+
+  let id = rawId && rawId.trim() ? rawId.trim() : null;
+  const people = loadLibraryPeople();
+
+  // Si no se entrega ID, generamos uno automático
+  if (!id) {
+    const prefix = tipo === 'funcionario' ? 'FUNC' : 'STU';
+    let counter = 1;
+    do {
+      id = `${prefix}-${String(counter).padStart(3, '0')}`;
+      counter += 1;
+    } while (people.some(p => p.id === id));
+  } else {
+    // Si se entrega ID y ya existe, error
+    if (people.some(p => p.id === id)) {
+      return res.status(409).json({ message: 'Ya existe una persona con ese ID.' });
+    }
+  }
+
+  const person = {
+    id,
+    nombre: nombre.trim(),
+    tipo: tipo.trim(),
+    curso: (curso || '').trim()
+  };
+
+  people.push(person);
+  saveLibraryPeople(people);
+
+  await addHistory({
+    lab: 'library',
+    action: 'create-person',
+    entityType: 'person',
+    entityId: id,
+    userEmail: req.session.user.email,
+    data: person
+  });
+
+  res.json({ message: 'Persona creada', person });
+});
+
+// Actualizar persona
+app.put('/api/library/people/:id', requireLogin, canEditLibrary, async (req, res) => {
+  const { id } = req.params;
+  const { nombre, tipo, curso } = req.body;
+
+  const people = loadLibraryPeople();
+  const index = people.findIndex(p => p.id === id);
+
+  if (index === -1) {
+    return res.status(404).json({ message: 'Persona no encontrada.' });
+  }
+
+  if (nombre !== undefined) people[index].nombre = nombre.trim();
+  if (tipo !== undefined) people[index].tipo = tipo.trim();
+  if (curso !== undefined) people[index].curso = curso.trim();
+
+  saveLibraryPeople(people);
+
+  await addHistory({
+    lab: 'library',
+    action: 'update-person',
+    entityType: 'person',
+    entityId: id,
+    userEmail: req.session.user.email,
+    data: people[index]
+  });
+
+  res.json({ message: 'Persona actualizada', person: people[index] });
+});
+
+// Eliminar persona
+app.delete('/api/library/people/:id', requireLogin, canEditLibrary, async (req, res) => {
+  const { id } = req.params;
+  const people = loadLibraryPeople();
+  const index = people.findIndex(p => p.id === id);
+
+  if (index === -1) {
+    return res.status(404).json({ message: 'Persona no encontrada.' });
+  }
+
+  const removed = people.splice(index, 1)[0];
+  saveLibraryPeople(people);
+
+  await addHistory({
+    lab: 'library',
+    action: 'delete-person',
+    entityType: 'person',
+    entityId: id,
+    userEmail: req.session.user.email,
+    data: removed
+  });
+
+  res.json({ message: 'Persona eliminada', person: removed });
+});
+
+// =========================================================
+// API: PRÉSTAMOS BIBLIOTECA (PostgreSQL)
+// =========================================================
+
+// ✅ Préstamos vencidos (> 7 días) para el banner
+app.get('/api/library/overdue', requireLogin, async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `
+      SELECT id, data, user_email, loan_date, returned, return_date
+      FROM library_loans
+      WHERE returned = FALSE
+        AND loan_date < NOW() - INTERVAL '7 days'
+      ORDER BY loan_date ASC, id
+      `
+    );
+
+    const overdue = rows.map(r => ({
+      id: r.id,
+      ...r.data,
+      user: r.user_email || null,
+      loanDate: r.loan_date,
+      returned: r.returned,
+      returnDate: r.return_date
+    }));
+
+    res.json(overdue);
+  } catch (err) {
+    console.error('Error al obtener préstamos vencidos de biblioteca:', err);
+    res.status(500).json({ message: 'Error al obtener préstamos vencidos' });
+  }
+});
+
+// GET préstamos
+app.get('/api/library/loans', requireLogin, async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      'SELECT id, data, user_email, loan_date, returned, return_date FROM library_loans ORDER BY loan_date DESC NULLS LAST, id'
+    );
+
+    const loans = rows.map(r => ({
+      id: r.id,
+      ...r.data,
+      user: r.user_email || null,
+      loanDate: r.loan_date,
+      returned: r.returned,
+      returnDate: r.return_date
+    }));
+
+    res.json(loans);
+  } catch (err) {
+    console.error('Error al obtener préstamos de biblioteca:', err);
+    res.status(500).json({ message: 'Error al obtener préstamos' });
+  }
+});
+
+// Registrar préstamo (con control de stock, transacción)
+app.post('/api/library/loan', requireLogin, canEditLibrary, async (req, res) => {
+  const id = Date.now().toString();
+  const raw = { ...req.body };
+  const userEmail = req.session.user ? req.session.user.email : null;
+  const loanDate = new Date();
+
+  try {
+    // Normalización de campos
+    let codigo = (raw.codigo || raw.bookCode || '').trim();
+    let nombre = (raw.nombre || raw.borrowerName || '').trim();
+    let curso = (raw.curso || raw.borrowerCourse || '').trim();
+    let observaciones = (raw.observaciones || raw.notes || '').trim();
+
+    const personaId = raw.personaId || raw.personId || null;
+    let tipoPersona = raw.tipoPersona || raw.personType || null;
+
+    // Si viene personaId y faltan nombre/curso, completamos desde library_people.json
+    if (personaId && (!nombre || !curso || !tipoPersona)) {
+      const people = loadLibraryPeople();
+      const found = people.find(p => p.id === personaId);
+      if (found) {
+        if (!nombre) nombre = found.nombre || nombre;
+        if (!curso) curso = found.curso || curso;
+        if (!tipoPersona) tipoPersona = found.tipo || tipoPersona;
+      }
+    }
+
+    if (!codigo) {
+      return res.status(400).json({ message: 'Falta el código del libro/material.' });
+    }
+
+    // Construimos el objeto de datos
+    const data = {
+      codigo,
+      nombre,
+      curso,
+      observaciones,
+      personaId: personaId || undefined,
+      tipoPersona: tipoPersona || undefined,
+      // alias compatibilidad
+      bookCode: codigo,
+      borrowerName: nombre,
+      borrowerCourse: curso,
+      notes: observaciones
+    };
+
+    // Transacción para controlar stock
+    const client = await getPgClient();
+    if (!client) {
+      // Fallback sin transacción
+      console.warn('⚠️ Préstamo sin transacción: db.pool no disponible, no se ajustará stock automáticamente.');
+      await db.query(
+        'INSERT INTO library_loans (id, data, user_email, loan_date, returned) VALUES ($1,$2::jsonb,$3,$4,$5)',
+        [id, JSON.stringify(data), userEmail, loanDate, false]
+      );
+
+      const newLoan = { id, ...data, user: userEmail, loanDate, returned: false };
+      await addHistory({
+        lab: 'library',
+        action: 'create-loan',
+        entityType: 'loan',
+        entityId: id,
+        userEmail,
+        data: newLoan
+      });
+      return res.json({ message: 'Préstamo registrado (sin control de stock)', loan: newLoan });
+    }
+
+    try {
+      await client.query('BEGIN');
+
+      // 1) Buscar item por código (lab=library)
+      const qItem = await client.query(
+        `SELECT id, data, photo
+         FROM items
+         WHERE lab='library' AND data->>'codigo' = $1
+         FOR UPDATE`,
+        [codigo]
+      );
+      if (qItem.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ message: `No existe un item en Biblioteca con código "${codigo}".` });
+      }
+
+      const itemRow = qItem.rows[0];
+      const itemData = itemRow.data || {};
+      const cant = parseInt(itemData.cantidad, 10);
+      if (Number.isNaN(cant) || cant <= 0) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ message: `Sin stock disponible para el código "${codigo}".` });
+      }
+
+      // 2) Descontar 1 del stock
+      const nuevaCant = cant - 1;
+      itemData.cantidad = nuevaCant;
+      await client.query(
+        `UPDATE items
+         SET data = $1::jsonb
+         WHERE id = $2 AND lab='library'`,
+        [JSON.stringify(itemData), itemRow.id]
+      );
+
+      // 3) Crear préstamo
+      await client.query(
+        `INSERT INTO library_loans (id, data, user_email, loan_date, returned)
+         VALUES ($1, $2::jsonb, $3, $4, FALSE)`,
+        [id, JSON.stringify(data), userEmail, loanDate]
+      );
+
+      // 4) Historial
+      await addHistory({
+        lab: 'library',
+        action: 'create-loan',
+        entityType: 'loan',
+        entityId: id,
+        userEmail,
+        data: { ...data, linkedItemId: itemRow.id }
+      });
+
+      await client.query('COMMIT');
+
+      const newLoan = { id, ...data, user: userEmail, loanDate, returned: false };
+      res.json({ message: 'Préstamo registrado', loan: newLoan });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      console.error('Error al registrar préstamo (tx):', err);
+      res.status(500).json({ message: 'Error al registrar préstamo' });
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error('Error al registrar préstamo de biblioteca:', err);
+    res.status(500).json({ message: 'Error al registrar préstamo' });
+  }
+});
+
+// Actualizar préstamo (datos, no estado devuelto)
+app.put('/api/library/loan/:loanId', requireLogin, canEditLibrary, async (req, res) => {
+  const loanId = req.params.loanId;
+  const { bookCode, borrowerName, borrowerCourse, notes } = req.body;
+
+  try {
+    const { rows } = await db.query(
+      'SELECT id, data, user_email, loan_date, returned, return_date FROM library_loans WHERE id = $1',
+      [loanId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Préstamo no encontrado' });
+    }
+
+    const row = rows[0];
+    const data = row.data || {};
+
+    if (bookCode !== undefined) {
+      data.bookCode = bookCode;
+      data.codigo = bookCode;
+    }
+    if (borrowerName !== undefined) {
+      data.borrowerName = borrowerName;
+      data.nombre = borrowerName;
+    }
+    if (borrowerCourse !== undefined) {
+      data.borrowerCourse = borrowerCourse;
+      data.curso = borrowerCourse;
+    }
+    if (notes !== undefined) {
+      data.notes = notes;
+      data.observaciones = notes;
+    }
+
+    await db.query('UPDATE library_loans SET data = $1::jsonb WHERE id = $2', [
+      JSON.stringify(data),
+      loanId
+    ]);
+
+    const updatedLoan = {
+      id: row.id,
+      ...data,
+      user: row.user_email || null,
+      loanDate: row.loan_date,
+      returned: row.returned,
+      returnDate: row.return_date
+    };
+
+    await addHistory({
+      lab: 'library',
+      action: 'update-loan',
+      entityType: 'loan',
+      entityId: loanId,
+      userEmail: req.session.user.email,
+      data: updatedLoan
+    });
+
+    res.json({ message: 'Préstamo actualizado', loan: updatedLoan });
+  } catch (err) {
+    console.error('Error al actualizar préstamo de biblioteca:', err);
+    res.status(500).json({ message: 'Error al actualizar préstamo' });
+  }
+});
+
+// Registrar devolución (suma stock, transacción)
+app.post(
+  '/api/library/return/:loanId',
+  requireLogin,
+  canEditLibrary,
+  async (req, res) => {
+    const loanId = req.params.loanId;
+    const userEmail = req.session.user ? req.session.user.email : null;
+    const returnDate = new Date();
+
+    try {
+      const client = await getPgClient();
+      if (!client) {
+        // Fallback sin transacción
+        console.warn('⚠️ Devolución sin transacción: db.pool no disponible, no se ajustará stock automáticamente.');
+        const { rows } = await db.query(
+          'UPDATE library_loans SET returned = TRUE, return_date = $1 WHERE id = $2 RETURNING id, data, user_email, loan_date, returned, return_date',
+          [returnDate, loanId]
+        );
+        if (rows.length === 0) return res.status(404).json({ message: 'Préstamo no encontrado' });
+
+        const row = rows[0];
+        const data = row.data || {};
+        const loan = {
+          id: row.id,
+          ...data,
+          user: row.user_email || null,
+          loanDate: row.loan_date,
+          returned: row.returned,
+          returnDate: row.return_date
+        };
+
+        await addHistory({
+          lab: 'library',
+          action: 'return-loan',
+          entityType: 'loan',
+          entityId: loanId,
+          userEmail,
+          data: loan
+        });
+
+        return res.json({ message: 'Préstamo devuelto (sin ajuste de stock)', loan });
+      }
+
+      try {
+        await client.query('BEGIN');
+
+        // 1) Leer préstamo
+        const qLoan = await client.query(
+          `SELECT id, data, user_email, loan_date, returned, return_date
+           FROM library_loans WHERE id = $1 FOR UPDATE`,
+          [loanId]
+        );
+        if (qLoan.rows.length === 0) {
+          await client.query('ROLLBACK');
+          return res.status(404).json({ message: 'Préstamo no encontrado' });
+        }
+        const loanRow = qLoan.rows[0];
+        const loanData = loanRow.data || {};
+        const codigo = (loanData.codigo || loanData.bookCode || '').trim();
+
+        // 2) Marcar devuelto
+        await client.query(
+          `UPDATE library_loans
+           SET returned = TRUE, return_date = $1
+           WHERE id = $2`,
+          [returnDate, loanId]
+        );
+
+        // 3) Sumar stock si existe el ítem
+        if (codigo) {
+          const qItem = await client.query(
+            `SELECT id, data
+             FROM items
+             WHERE lab='library' AND data->>'codigo' = $1
+             FOR UPDATE`,
+            [codigo]
+          );
+          if (qItem.rows.length > 0) {
+            const itemRow = qItem.rows[0];
+            const itemData = itemRow.data || {};
+            const cant = parseInt(itemData.cantidad, 10) || 0;
+            itemData.cantidad = cant + 1;
+
+            await client.query(
+              `UPDATE items
+               SET data = $1::jsonb
+               WHERE id = $2 AND lab='library'`,
+              [JSON.stringify(itemData), itemRow.id]
+            );
+          }
+        }
+
+        // 4) Historial
+        await addHistory({
+          lab: 'library',
+          action: 'return-loan',
+          entityType: 'loan',
+          entityId: loanId,
+          userEmail,
+          data: { codigo }
+        });
+
+        await client.query('COMMIT');
+
+        // Responder en el formato que espera el front:
+        const loan = {
+          id: loanRow.id,
+          ...loanData,
+          user: loanRow.user_email || null,
+          loanDate: loanRow.loan_date,
+          returned: true,
+          returnDate
+        };
+        res.json({ message: 'Préstamo devuelto', loan });
+      } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('Error al registrar devolución (tx):', err);
+        res.status(500).json({ message: 'Error al registrar devolución' });
+      } finally {
+        client.release();
+      }
+    } catch (err) {
+      console.error('Error al registrar devolución de préstamo:', err);
+      res.status(500).json({ message: 'Error al registrar devolución' });
+    }
+  }
+);
+
+// Eliminar préstamo
+app.delete(
+  '/api/library/loan/:loanId',
+  requireLogin,
+  canEditLibrary,
+  async (req, res) => {
+    const loanId = req.params.loanId;
+
+    try {
+      const { rows } = await db.query(
+        'DELETE FROM library_loans WHERE id = $1 RETURNING id, data, user_email, loan_date, returned, return_date',
+        [loanId]
+      );
+
+      if (rows.length === 0) {
+        return res.status(404).json({ message: 'Préstamo no encontrado' });
+      }
+
+      const row = rows[0];
+      const data = row.data || {};
+
+      const removed = {
+        id: row.id,
+        ...data,
+        user: row.user_email || null,
+        loanDate: row.loan_date,
+        returned: row.returned,
+        returnDate: row.return_date
+      };
+
+      await addHistory({
+        lab: 'library',
+        action: 'delete-loan',
+        entityType: 'loan',
+        entityId: loanId,
+        userEmail: req.session.user.email,
+        data: removed
+      });
+
+      res.json({ message: 'Préstamo eliminado', loan: removed });
+    } catch (err) {
+      console.error('Error al eliminar préstamo de biblioteca:', err);
+      res.status(500).json({ message: 'Error al eliminar préstamo' });
+    }
+  }
+);
+
+// =========================================================
+// API: PRÉSTAMOS CIENCIAS (PostgreSQL, tabla science_loans)
+// =========================================================
+
+// ✅ Préstamos vencidos de Ciencias (> 7 días)
+app.get('/api/science/overdue', requireLogin, async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `
+      SELECT id, data, user_email, loan_date, returned, return_date
+      FROM science_loans
+      WHERE returned = FALSE
+        AND loan_date < NOW() - INTERVAL '7 days'
+      ORDER BY loan_date ASC, id
+      `
+    );
+
+    const overdue = rows.map(r => ({
+      id: r.id,
+      ...r.data,
+      user: r.user_email || null,
+      loanDate: r.loan_date,
+      returned: r.returned,
+      returnDate: r.return_date
+    }));
+
+    res.json(overdue);
+  } catch (err) {
+    console.error('Error al obtener préstamos vencidos de ciencias:', err);
+    res.status(500).json({ message: 'Error al obtener préstamos vencidos' });
+  }
+});
+
+// GET préstamos de Ciencias
+app.get('/api/science/loans', requireLogin, async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      'SELECT id, data, user_email, loan_date, returned, return_date FROM science_loans ORDER BY loan_date DESC NULLS LAST, id'
+    );
+
+    const loans = rows.map(r => ({
+      id: r.id,
+      ...r.data,
+      user: r.user_email || null,
+      loanDate: r.loan_date,
+      returned: r.returned,
+      returnDate: r.return_date
+    }));
+
+    res.json(loans);
+  } catch (err) {
+    console.error('Error al obtener préstamos de ciencias:', err);
+    res.status(500).json({ message: 'Error al obtener préstamos' });
+  }
+});
+
+// Registrar préstamo de Ciencias (control stock lab='science')
+app.post('/api/science/loan', requireLogin, canEditScience, async (req, res) => {
+  const id = Date.now().toString();
+  const raw = { ...req.body };
+  const userEmail = req.session.user ? req.session.user.email : null;
+  const loanDate = new Date();
+
+  try {
+    // Normalización de campos
+    let codigo = (raw.codigo || raw.code || raw.itemCode || '').trim();
+    let detalle = (raw.detalle || raw.descripcion || raw.itemName || '').trim();
+    let solicitante = (raw.solicitante || raw.borrowerName || '').trim();
+    let curso = (raw.curso || raw.grupo || raw.borrowerGroup || '').trim();
+    let observaciones = (raw.observaciones || raw.notes || '').trim();
+
+    if (!codigo) {
+      return res.status(400).json({ message: 'Falta el código del material de ciencias.' });
+    }
+
+    const data = {
+      codigo,
+      detalle,
+      solicitante,
+      curso,
+      observaciones,
+      // aliases
+      itemCode: codigo,
+      itemName: detalle,
+      borrowerName: solicitante,
+      borrowerGroup: curso,
+      notes: observaciones
+    };
+
+    const client = await getPgClient();
+    if (!client) {
+      console.warn('⚠️ Préstamo ciencias sin transacción: db.pool no disponible, no se ajustará stock automáticamente.');
+      await db.query(
+        'INSERT INTO science_loans (id, data, user_email, loan_date, returned) VALUES ($1,$2::jsonb,$3,$4,$5)',
+        [id, JSON.stringify(data), userEmail, loanDate, false]
+      );
+
+      const newLoan = { id, ...data, user: userEmail, loanDate, returned: false };
+      await addHistory({
+        lab: 'science',
+        action: 'create-loan',
+        entityType: 'loan',
+        entityId: id,
+        userEmail,
+        data: newLoan
+      });
+      return res.json({ message: 'Préstamo registrado (sin control de stock)', loan: newLoan });
+    }
+
+    try {
+      await client.query('BEGIN');
+
+      // 1) Buscar item por código (lab=science)
+      const qItem = await client.query(
+        `SELECT id, data, photo
+         FROM items
+         WHERE lab='science' AND data->>'codigo' = $1
+         FOR UPDATE`,
+        [codigo]
+      );
+      if (qItem.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ message: `No existe un item en Ciencias con código "${codigo}".` });
+      }
+
+      const itemRow = qItem.rows[0];
+      const itemData = itemRow.data || {};
+      const cant = parseInt(itemData.cantidad, 10);
+      if (Number.isNaN(cant) || cant <= 0) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ message: `Sin stock disponible para el código "${codigo}".` });
+      }
+
+      // 2) Descontar 1 del stock
+      const nuevaCant = cant - 1;
+      itemData.cantidad = nuevaCant;
+      await client.query(
+        `UPDATE items
+         SET data = $1::jsonb
+         WHERE id = $2 AND lab='science'`,
+        [JSON.stringify(itemData), itemRow.id]
+      );
+
+      // 3) Crear préstamo en science_loans
+      await client.query(
+        `INSERT INTO science_loans (id, data, user_email, loan_date, returned)
+         VALUES ($1, $2::jsonb, $3, $4, FALSE)`,
+        [id, JSON.stringify(data), userEmail, loanDate]
+      );
+
+      // 4) Historial
+      await addHistory({
+        lab: 'science',
+        action: 'create-loan',
+        entityType: 'loan',
+        entityId: id,
+        userEmail,
+        data: { ...data, linkedItemId: itemRow.id }
+      });
+
+      await client.query('COMMIT');
+
+      const newLoan = { id, ...data, user: userEmail, loanDate, returned: false };
+      res.json({ message: 'Préstamo registrado', loan: newLoan });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      console.error('Error al registrar préstamo de ciencias (tx):', err);
+      res.status(500).json({ message: 'Error al registrar préstamo' });
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error('Error al registrar préstamo de ciencias:', err);
+    res.status(500).json({ message: 'Error al registrar préstamo' });
+  }
+});
+
+// 🔁 ALIAS: POST /api/science/loans
+app.post('/api/science/loans', requireLogin, canEditScience, async (req, res) => {
+  // Misma lógica que /api/science/loan
+  const id = Date.now().toString();
+  const raw = { ...req.body };
+  const userEmail = req.session.user ? req.session.user.email : null;
+  const loanDate = new Date();
+
+  try {
+    let codigo = (raw.codigo || raw.code || raw.itemCode || '').trim();
+    let detalle = (raw.detalle || raw.descripcion || raw.itemName || '').trim();
+    let solicitante = (raw.solicitante || raw.borrowerName || '').trim();
+    let curso = (raw.curso || raw.grupo || raw.borrowerGroup || '').trim();
+    let observaciones = (raw.observaciones || raw.notes || '').trim();
+
+    if (!codigo) {
+      return res.status(400).json({ message: 'Falta el código del material de ciencias.' });
+    }
+
+    const data = {
+      codigo,
+      detalle,
+      solicitante,
+      curso,
+      observaciones,
+      itemCode: codigo,
+      itemName: detalle,
+      borrowerName: solicitante,
+      borrowerGroup: curso,
+      notes: observaciones
+    };
+
+    const client = await getPgClient();
+    if (!client) {
+      console.warn('⚠️ Préstamo ciencias sin transacción: db.pool no disponible, no se ajustará stock automáticamente.');
+      await db.query(
+        'INSERT INTO science_loans (id, data, user_email, loan_date, returned) VALUES ($1,$2::jsonb,$3,$4,$5)',
+        [id, JSON.stringify(data), userEmail, loanDate, false]
+      );
+
+      const newLoan = { id, ...data, user: userEmail, loanDate, returned: false };
+      await addHistory({
+        lab: 'science',
+        action: 'create-loan',
+        entityType: 'loan',
+        entityId: id,
+        userEmail,
+        data: newLoan
+      });
+      return res.json({ message: 'Préstamo registrado (sin control de stock)', loan: newLoan });
+    }
+
+    try {
+      await client.query('BEGIN');
+
+      const qItem = await client.query(
+        `SELECT id, data, photo
+         FROM items
+         WHERE lab='science' AND data->>'codigo' = $1
+         FOR UPDATE`,
+        [codigo]
+      );
+      if (qItem.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ message: `No existe un item en Ciencias con código "${codigo}".` });
+      }
+
+      const itemRow = qItem.rows[0];
+      const itemData = itemRow.data || {};
+      const cant = parseInt(itemData.cantidad, 10);
+      if (Number.isNaN(cant) || cant <= 0) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ message: `Sin stock disponible para el código "${codigo}".` });
+      }
+
+      const nuevaCant = cant - 1;
+      itemData.cantidad = nuevaCant;
+      await client.query(
+        `UPDATE items
+         SET data = $1::jsonb
+         WHERE id = $2 AND lab='science'`,
+        [JSON.stringify(itemData), itemRow.id]
+      );
+
+      await client.query(
+        `INSERT INTO science_loans (id, data, user_email, loan_date, returned)
+         VALUES ($1, $2::jsonb, $3, $4, FALSE)`,
+        [id, JSON.stringify(data), userEmail, loanDate]
+      );
+
+      await addHistory({
+        lab: 'science',
+        action: 'create-loan',
+        entityType: 'loan',
+        entityId: id,
+        userEmail,
+        data: { ...data, linkedItemId: itemRow.id }
+      });
+
+      await client.query('COMMIT');
+
+      const newLoan = { id, ...data, user: userEmail, loanDate, returned: false };
+      res.json({ message: 'Préstamo registrado', loan: newLoan });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      console.error('Error al registrar préstamo de ciencias (tx):', err);
+      res.status(500).json({ message: 'Error al registrar préstamo' });
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error('Error al registrar préstamo de ciencias:', err);
+    res.status(500).json({ message: 'Error al registrar préstamo' });
+  }
+});
+
+// Actualizar préstamo de Ciencias
+app.put('/api/science/loan/:loanId', requireLogin, canEditScience, async (req, res) => {
+  const loanId = req.params.loanId;
+  const { codigo, detalle, solicitante, curso, observaciones } = req.body;
+
+  try {
+    const { rows } = await db.query(
+      'SELECT id, data, user_email, loan_date, returned, return_date FROM science_loans WHERE id = $1',
+      [loanId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Préstamo de ciencias no encontrado' });
+    }
+
+    const row = rows[0];
+    const data = row.data || {};
+
+    if (codigo !== undefined) {
+      data.codigo = codigo;
+      data.itemCode = codigo;
+    }
+    if (detalle !== undefined) {
+      data.detalle = detalle;
+      data.itemName = detalle;
+    }
+    if (solicitante !== undefined) {
+      data.solicitante = solicitante;
+      data.borrowerName = solicitante;
+    }
+    if (curso !== undefined) {
+      data.curso = curso;
+      data.borrowerGroup = curso;
+    }
+    if (observaciones !== undefined) {
+      data.observaciones = observaciones;
+      data.notes = observaciones;
+    }
+
+    await db.query('UPDATE science_loans SET data = $1::jsonb WHERE id = $2', [
+      JSON.stringify(data),
+      loanId
+    ]);
+
+    const updatedLoan = {
+      id: row.id,
+      ...data,
+      user: row.user_email || null,
+      loanDate: row.loan_date,
+      returned: row.returned,
+      returnDate: row.return_date
+    };
+
+    await addHistory({
+      lab: 'science',
+      action: 'update-loan',
+      entityType: 'loan',
+      entityId: loanId,
+      userEmail: req.session.user.email,
+      data: updatedLoan
+    });
+
+    res.json({ message: 'Préstamo de ciencias actualizado', loan: updatedLoan });
+  } catch (err) {
+    console.error('Error al actualizar préstamo de ciencias:', err);
+    res.status(500).json({ message: 'Error al actualizar préstamo' });
+  }
+});
+
+// Registrar devolución de Ciencias (suma stock)
+app.post(
+  '/api/science/return/:loanId',
+  requireLogin,
+  canEditScience,
+  async (req, res) => {
+    const loanId = req.params.loanId;
+    const userEmail = req.session.user ? req.session.user.email : null;
+    const returnDate = new Date();
+
+    try {
+      const client = await getPgClient();
+      if (!client) {
+        console.warn('⚠️ Devolución ciencias sin transacción: db.pool no disponible, no se ajustará stock automáticamente.');
+        const { rows } = await db.query(
+          'UPDATE science_loans SET returned = TRUE, return_date = $1 WHERE id = $2 RETURNING id, data, user_email, loan_date, returned, return_date',
+          [returnDate, loanId]
+        );
+        if (rows.length === 0) return res.status(404).json({ message: 'Préstamo de ciencias no encontrado' });
+
+        const row = rows[0];
+        const data = row.data || {};
+        const loan = {
+          id: row.id,
+          ...data,
+          user: row.user_email || null,
+          loanDate: row.loan_date,
+          returned: row.returned,
+          returnDate: row.return_date
+        };
+
+        await addHistory({
+          lab: 'science',
+          action: 'return-loan',
+          entityType: 'loan',
+          entityId: loanId,
+          userEmail,
+          data: loan
+        });
+
+        return res.json({ message: 'Préstamo de ciencias devuelto (sin ajuste de stock)', loan });
+      }
+
+      try {
+        await client.query('BEGIN');
+
+        // 1) Leer préstamo
+        const qLoan = await client.query(
+          `SELECT id, data, user_email, loan_date, returned, return_date
+           FROM science_loans WHERE id = $1 FOR UPDATE`,
+          [loanId]
+        );
+        if (qLoan.rows.length === 0) {
+          await client.query('ROLLBACK');
+          return res.status(404).json({ message: 'Préstamo de ciencias no encontrado' });
+        }
+        const loanRow = qLoan.rows[0];
+        const loanData = loanRow.data || {};
+        const codigo = (loanData.codigo || loanData.itemCode || '').trim();
+
+        // 2) Marcar devuelto
+        await client.query(
+          `UPDATE science_loans
+           SET returned = TRUE, return_date = $1
+           WHERE id = $2`,
+          [returnDate, loanId]
+        );
+
+        // 3) Sumar stock si existe el ítem en lab='science'
+        if (codigo) {
+          const qItem = await client.query(
+            `SELECT id, data
+             FROM items
+             WHERE lab='science' AND data->>'codigo' = $1
+             FOR UPDATE`,
+            [codigo]
+          );
+          if (qItem.rows.length > 0) {
+            const itemRow = qItem.rows[0];
+            const itemData = itemRow.data || {};
+            const cant = parseInt(itemData.cantidad, 10) || 0;
+            itemData.cantidad = cant + 1;
+
+            await client.query(
+              `UPDATE items
+               SET data = $1::jsonb
+               WHERE id = $2 AND lab='science'`,
+              [JSON.stringify(itemData), itemRow.id]
+            );
+          }
+        }
+
+        // 4) Historial
+        await addHistory({
+          lab: 'science',
+          action: 'return-loan',
+          entityType: 'loan',
+          entityId: loanId,
+          userEmail,
+          data: { codigo }
+        });
+
+        await client.query('COMMIT');
+
+        const loan = {
+          id: loanRow.id,
+          ...loanData,
+          user: loanRow.user_email || null,
+          loanDate: loanRow.loan_date,
+          returned: true,
+          returnDate
+        };
+        res.json({ message: 'Préstamo de ciencias devuelto', loan });
+      } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('Error al registrar devolución de ciencias (tx):', err);
+        res.status(500).json({ message: 'Error al registrar devolución' });
+      } finally {
+        client.release();
+      }
+    } catch (err) {
+      console.error('Error al registrar devolución de ciencias:', err);
+      res.status(500).json({ message: 'Error al registrar devolución' });
+    }
+  }
+);
+
+// 🔁 ALIAS: POST /api/science/loans/:loanId/return
+app.post(
+  '/api/science/loans/:loanId/return',
+  requireLogin,
+  canEditScience,
+  async (req, res) => {
+    // Misma lógica que /api/science/return/:loanId
+    const loanId = req.params.loanId;
+    const userEmail = req.session.user ? req.session.user.email : null;
+    const returnDate = new Date();
+
+    try {
+      const client = await getPgClient();
+      if (!client) {
+        console.warn('⚠️ Devolución ciencias sin transacción: db.pool no disponible, no se ajustará stock automáticamente.');
+        const { rows } = await db.query(
+          'UPDATE science_loans SET returned = TRUE, return_date = $1 WHERE id = $2 RETURNING id, data, user_email, loan_date, returned, return_date',
+          [returnDate, loanId]
+        );
+        if (rows.length === 0) return res.status(404).json({ message: 'Préstamo de ciencias no encontrado' });
+
+        const row = rows[0];
+        const data = row.data || {};
+        const loan = {
+          id: row.id,
+          ...data,
+          user: row.user_email || null,
+          loanDate: row.loan_date,
+          returned: row.returned,
+          returnDate: row.return_date
+        };
+
+        await addHistory({
+          lab: 'science',
+          action: 'return-loan',
+          entityType: 'loan',
+          entityId: loanId,
+          userEmail,
+          data: loan
+        });
+
+        return res.json({ message: 'Préstamo de ciencias devuelto (sin ajuste de stock)', loan });
+      }
+
+      try {
+        await client.query('BEGIN');
+
+        const qLoan = await client.query(
+          `SELECT id, data, user_email, loan_date, returned, return_date
+           FROM science_loans WHERE id = $1 FOR UPDATE`,
+          [loanId]
+        );
+        if (qLoan.rows.length === 0) {
+          await client.query('ROLLBACK');
+          return res.status(404).json({ message: 'Préstamo de ciencias no encontrado' });
+        }
+        const loanRow = qLoan.rows[0];
+        const loanData = loanRow.data || {};
+        const codigo = (loanData.codigo || loanData.itemCode || '').trim();
+
+        await client.query(
+          `UPDATE science_loans
+           SET returned = TRUE, return_date = $1
+           WHERE id = $2`,
+          [returnDate, loanId]
+        );
+
+        if (codigo) {
+          const qItem = await client.query(
+            `SELECT id, data
+             FROM items
+             WHERE lab='science' AND data->>'codigo' = $1
+             FOR UPDATE`,
+            [codigo]
+          );
+          if (qItem.rows.length > 0) {
+            const itemRow = qItem.rows[0];
+            const itemData = itemRow.data || {};
+            const cant = parseInt(itemData.cantidad, 10) || 0;
+            itemData.cantidad = cant + 1;
+
+            await client.query(
+              `UPDATE items
+               SET data = $1::jsonb
+               WHERE id = $2 AND lab='science'`,
+              [JSON.stringify(itemData), itemRow.id]
+            );
+          }
+        }
+
+        await addHistory({
+          lab: 'science',
+          action: 'return-loan',
+          entityType: 'loan',
+          entityId: loanId,
+          userEmail,
+          data: { codigo }
+        });
+
+        await client.query('COMMIT');
+
+        const loan = {
+          id: loanRow.id,
+          ...loanData,
+          user: loanRow.user_email || null,
+          loanDate: loanRow.loan_date,
+          returned: true,
+          returnDate
+        };
+        res.json({ message: 'Préstamo de ciencias devuelto', loan });
+      } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('Error al registrar devolución de ciencias (tx):', err);
+        res.status(500).json({ message: 'Error al registrar devolución' });
+      } finally {
+        client.release();
+      }
+    } catch (err) {
+      console.error('Error al registrar devolución de ciencias:', err);
+      res.status(500).json({ message: 'Error al registrar devolución' });
+    }
+  }
+);
+
+// Eliminar préstamo de Ciencias
+app.delete(
+  '/api/science/loan/:loanId',
+  requireLogin,
+  canEditScience,
+  async (req, res) => {
+    const loanId = req.params.loanId;
+
+    try {
+      const { rows } = await db.query(
+        'DELETE FROM science_loans WHERE id = $1 RETURNING id, data, user_email, loan_date, returned, return_date',
+        [loanId]
+      );
+
+      if (rows.length === 0) {
+        return res.status(404).json({ message: 'Préstamo de ciencias no encontrado' });
+      }
+
+      const row = rows[0];
+      const data = row.data || {};
+
+      const removed = {
+        id: row.id,
+        ...data,
+        user: row.user_email || null,
+        loanDate: row.loan_date,
+        returned: row.returned,
+        returnDate: row.return_date
+      };
+
+      await addHistory({
+        lab: 'science',
+        action: 'delete-loan',
+        entityType: 'loan',
+        entityId: loanId,
+        userEmail: req.session.user.email,
+        data: removed
+      });
+
+      res.json({ message: 'Préstamo de ciencias eliminado', loan: removed });
+    } catch (err) {
+      console.error('Error al eliminar préstamo de ciencias:', err);
+      res.status(500).json({ message: 'Error al eliminar préstamo' });
+    }
+  }
+);
+
+// =========================================================
+// API: PRÉSTAMOS COMPUTACIÓN (PostgreSQL, computing_loans)
+// =========================================================
+
+// ✅ Préstamos vencidos de Computación (> 7 días)
+app.get('/api/computing/overdue', requireLogin, async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `
+      SELECT id, data, user_email, loan_date, returned, return_date
+      FROM computing_loans
+      WHERE returned = FALSE
+        AND loan_date < NOW() - INTERVAL '7 days'
+      ORDER BY loan_date ASC, id
+      `
+    );
+
+    const overdue = rows.map(r => ({
+      id: r.id,
+      ...r.data,
+      user: r.user_email || null,
+      loanDate: r.loan_date,
+      returned: r.returned,
+      returnDate: r.return_date
+    }));
+
+    res.json(overdue);
+  } catch (err) {
+    console.error('Error al obtener préstamos vencidos de computación:', err);
+    res.status(500).json({ message: 'Error al obtener préstamos vencidos' });
+  }
+});
+
+// GET préstamos de Computación
+app.get('/api/computing/loans', requireLogin, async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      'SELECT id, data, user_email, loan_date, returned, return_date FROM computing_loans ORDER BY loan_date DESC NULLS LAST, id'
+    );
+
+    const loans = rows.map(r => ({
+      id: r.id,
+      ...r.data,
+      user: r.user_email || null,
+      loanDate: r.loan_date,
+      returned: r.returned,
+      returnDate: r.return_date
+    }));
+
+    res.json(loans);
+  } catch (err) {
+    console.error('Error al obtener préstamos de computación:', err);
+    res.status(500).json({ message: 'Error al obtener préstamos' });
+  }
+});
+
+// Registrar préstamo de Computación (control stock lab='computing')
+app.post('/api/computing/loan', requireLogin, canEditComputing, async (req, res) => {
+  const id = Date.now().toString();
+  const raw = { ...req.body };
+  const userEmail = req.session.user ? req.session.user.email : null;
+  const loanDate = new Date();
+
+  try {
+    let codigo = (raw.codigo || raw.code || raw.itemCode || '').trim();
+    let detalle = (raw.detalle || raw.descripcion || raw.itemName || '').trim();
+    let solicitante = (raw.solicitante || raw.borrowerName || '').trim();
+    let curso = (raw.curso || raw.grupo || raw.borrowerGroup || '').trim();
+    let observaciones = (raw.observaciones || raw.notes || '').trim();
+
+    if (!codigo) {
+      return res.status(400).json({ message: 'Falta el código del equipo de computación.' });
+    }
+
+    const data = {
+      codigo,
+      detalle,
+      solicitante,
+      curso,
+      observaciones,
+      itemCode: codigo,
+      itemName: detalle,
+      borrowerName: solicitante,
+      borrowerGroup: curso,
+      notes: observaciones
+    };
+
+    const client = await getPgClient();
+    if (!client) {
+      console.warn('⚠️ Préstamo computación sin transacción: db.pool no disponible, no se ajustará stock automáticamente.');
+      await db.query(
+        'INSERT INTO computing_loans (id, data, user_email, loan_date, returned) VALUES ($1,$2::jsonb,$3,$4,$5)',
+        [id, JSON.stringify(data), userEmail, loanDate, false]
+      );
+
+      const newLoan = { id, ...data, user: userEmail, loanDate, returned: false };
+      await addHistory({
+        lab: 'computing',
+        action: 'create-loan',
+        entityType: 'loan',
+        entityId: id,
+        userEmail,
+        data: newLoan
+      });
+      return res.json({ message: 'Préstamo registrado (sin control de stock)', loan: newLoan });
+    }
+
+    try {
+      await client.query('BEGIN');
+
+      // 1) Buscar item por código en lab='computing'
+      const qItem = await client.query(
+        `SELECT id, data, photo
+         FROM items
+         WHERE lab='computing' AND data->>'codigo' = $1
+         FOR UPDATE`,
+        [codigo]
+      );
+      if (qItem.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ message: `No existe un equipo en Computación con código "${codigo}".` });
+      }
+
+      const itemRow = qItem.rows[0];
+      const itemData = itemRow.data || {};
+      const cant = parseInt(itemData.cantidad, 10);
+      if (Number.isNaN(cant) || cant <= 0) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ message: `Sin stock disponible para el código "${codigo}".` });
+      }
+
+      // 2) Descontar 1 del stock
+      const nuevaCant = cant - 1;
+      itemData.cantidad = nuevaCant;
+      await client.query(
+        `UPDATE items
+         SET data = $1::jsonb
+         WHERE id = $2 AND lab='computing'`,
+        [JSON.stringify(itemData), itemRow.id]
+      );
+
+      // 3) Crear préstamo
+      await client.query(
+        `INSERT INTO computing_loans (id, data, user_email, loan_date, returned)
+         VALUES ($1, $2::jsonb, $3, $4, FALSE)`,
+        [id, JSON.stringify(data), userEmail, loanDate]
+      );
+
+      await addHistory({
+        lab: 'computing',
+        action: 'create-loan',
+        entityType: 'loan',
+        entityId: id,
+        userEmail,
+        data: { ...data, linkedItemId: itemRow.id }
+      });
+
+      await client.query('COMMIT');
+
+      const newLoan = { id, ...data, user: userEmail, loanDate, returned: false };
+      res.json({ message: 'Préstamo registrado', loan: newLoan });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      console.error('Error al registrar préstamo de computación (tx):', err);
+      res.status(500).json({ message: 'Error al registrar préstamo' });
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error('Error al registrar préstamo de computación:', err);
+    res.status(500).json({ message: 'Error al registrar préstamo' });
+  }
+});
+
+// Actualizar préstamo de Computación
+app.put('/api/computing/loan/:loanId', requireLogin, canEditComputing, async (req, res) => {
+  const loanId = req.params.loanId;
+  const { codigo, detalle, solicitante, curso, observaciones } = req.body;
+
+  try {
+    const { rows } = await db.query(
+      'SELECT id, data, user_email, loan_date, returned, return_date FROM computing_loans WHERE id = $1',
+      [loanId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Préstamo de computación no encontrado' });
+    }
+
+    const row = rows[0];
+    const data = row.data || {};
+
+    if (codigo !== undefined) {
+      data.codigo = codigo;
+      data.itemCode = codigo;
+    }
+    if (detalle !== undefined) {
+      data.detalle = detalle;
+      data.itemName = detalle;
+    }
+    if (solicitante !== undefined) {
+      data.solicitante = solicitante;
+      data.borrowerName = solicitante;
+    }
+    if (curso !== undefined) {
+      data.curso = curso;
+      data.borrowerGroup = curso;
+    }
+    if (observaciones !== undefined) {
+      data.observaciones = observaciones;
+      data.notes = observaciones;
+    }
+
+    await db.query('UPDATE computing_loans SET data = $1::jsonb WHERE id = $2', [
+      JSON.stringify(data),
+      loanId
+    ]);
+
+    const updatedLoan = {
+      id: row.id,
+      ...data,
+      user: row.user_email || null,
+      loanDate: row.loan_date,
+      returned: row.returned,
+      returnDate: row.return_date
+    };
+
+    await addHistory({
+      lab: 'computing',
+      action: 'update-loan',
+      entityType: 'loan',
+      entityId: loanId,
+      userEmail: req.session.user.email,
+      data: updatedLoan
+    });
+
+    res.json({ message: 'Préstamo de computación actualizado', loan: updatedLoan });
+  } catch (err) {
+    console.error('Error al actualizar préstamo de computación:', err);
+    res.status(500).json({ message: 'Error al actualizar préstamo' });
+  }
+});
+
+// Registrar devolución de Computación (suma stock)
+app.post(
+  '/api/computing/return/:loanId',
+  requireLogin,
+  canEditComputing,
+  async (req, res) => {
+    const loanId = req.params.loanId;
+    const userEmail = req.session.user ? req.session.user.email : null;
+    const returnDate = new Date();
+
+    try {
+      const client = await getPgClient();
+      if (!client) {
+        console.warn('⚠️ Devolución computación sin transacción: db.pool no disponible, no se ajustará stock automáticamente.');
+        const { rows } = await db.query(
+          'UPDATE computing_loans SET returned = TRUE, return_date = $1 WHERE id = $2 RETURNING id, data, user_email, loan_date, returned, return_date',
+          [returnDate, loanId]
+        );
+        if (rows.length === 0) return res.status(404).json({ message: 'Préstamo de computación no encontrado' });
+
+        const row = rows[0];
+        const data = row.data || {};
+        const loan = {
+          id: row.id,
+          ...data,
+          user: row.user_email || null,
+          loanDate: row.loan_date,
+          returned: row.returned,
+          returnDate: row.return_date
+        };
+
+        await addHistory({
+          lab: 'computing',
+          action: 'return-loan',
+          entityType: 'loan',
+          entityId: loanId,
+          userEmail,
+          data: loan
+        });
+
+        return res.json({ message: 'Préstamo de computación devuelto (sin ajuste de stock)', loan });
+      }
+
+      try {
+        await client.query('BEGIN');
+
+        // 1) Leer préstamo
+        const qLoan = await client.query(
+          `SELECT id, data, user_email, loan_date, returned, return_date
+           FROM computing_loans WHERE id = $1 FOR UPDATE`,
+          [loanId]
+        );
+        if (qLoan.rows.length === 0) {
+          await client.query('ROLLBACK');
+          return res.status(404).json({ message: 'Préstamo de computación no encontrado' });
+        }
+        const loanRow = qLoan.rows[0];
+        const loanData = loanRow.data || {};
+        const codigo = (loanData.codigo || loanData.itemCode || '').trim();
+
+        // 2) Marcar devuelto
+        await client.query(
+          `UPDATE computing_loans
+           SET returned = TRUE, return_date = $1
+           WHERE id = $2`,
+          [returnDate, loanId]
+        );
+
+        // 3) Sumar stock si existe el ítem en lab='computing'
+        if (codigo) {
+          const qItem = await client.query(
+            `SELECT id, data
+             FROM items
+             WHERE lab='computing' AND data->>'codigo' = $1
+             FOR UPDATE`,
+            [codigo]
+          );
+          if (qItem.rows.length > 0) {
+            const itemRow = qItem.rows[0];
+            const itemData = itemRow.data || {};
+            const cant = parseInt(itemData.cantidad, 10) || 0;
+            itemData.cantidad = cant + 1;
+
+            await client.query(
+              `UPDATE items
+               SET data = $1::jsonb
+               WHERE id = $2 AND lab='computing'`,
+              [JSON.stringify(itemData), itemRow.id]
+            );
+          }
+        }
+
+        await addHistory({
+          lab: 'computing',
+          action: 'return-loan',
+          entityType: 'loan',
+          entityId: loanId,
+          userEmail,
+          data: { codigo }
+        });
+
+        await client.query('COMMIT');
+
+        const loan = {
+          id: loanRow.id,
+          ...loanData,
+          user: loanRow.user_email || null,
+          loanDate: loanRow.loan_date,
+          returned: true,
+          returnDate
+        };
+        res.json({ message: 'Préstamo de computación devuelto', loan });
+      } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('Error al registrar devolución de computación (tx):', err);
+        res.status(500).json({ message: 'Error al registrar devolución' });
+      } finally {
+        client.release();
+      }
+    } catch (err) {
+      console.error('Error al registrar devolución de computación:', err);
+      res.status(500).json({ message: 'Error al registrar devolución' });
+    }
+  }
+);
+
+// Eliminar préstamo de Computación
+app.delete(
+  '/api/computing/loan/:loanId',
+  requireLogin,
+  canEditComputing,
+  async (req, res) => {
+    const loanId = req.params.loanId;
+
+    try {
+      const { rows } = await db.query(
+        'DELETE FROM computing_loans WHERE id = $1 RETURNING id, data, user_email, loan_date, returned, return_date',
+        [loanId]
+      );
+
+      if (rows.length === 0) {
+        return res.status(404).json({ message: 'Préstamo de computación no encontrado' });
+      }
+
+      const row = rows[0];
+      const data = row.data || {};
+
+      const removed = {
+        id: row.id,
+        ...data,
+        user: row.user_email || null,
+        loanDate: row.loan_date,
+        returned: row.returned,
+        returnDate: row.return_date
+      };
+
+      await addHistory({
+        lab: 'computing',
+        action: 'delete-loan',
+        entityType: 'loan',
+        entityId: loanId,
+        userEmail: req.session.user.email,
+        data: removed
+      });
+
+      res.json({ message: 'Préstamo de computación eliminado', loan: removed });
+    } catch (err) {
+      console.error('Error al eliminar préstamo de computación:', err);
+      res.status(500).json({ message: 'Error al eliminar préstamo' });
+    }
+  }
+);
 
 // =========================================================
 // INICIAR SERVIDOR
 // =========================================================
 db.initDb()
   .then(async () => {
+    // ✅ Aseguramos tabla history
     await ensureHistoryTable();
-    await migrateLegacyData(); // ← ¡NUEVO!
-    console.log(`Servidor corriendo en http://localhost:${PORT}`);
-    app.listen(PORT);
+
+    app.listen(PORT, () => {
+      console.log(`Servidor corriendo en http://localhost:${PORT}`);
+    });
   })
   .catch(err => {
     console.error('Error al inicializar la base de datos:', err);
