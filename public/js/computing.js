@@ -43,8 +43,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const compCantidad = document.getElementById('compCantidad');
 
   const compCPU = document.getElementById('compCPU') || document.getElementById('cpu');
-  const compRAM = document.getElementById('compRAM') || document.getElementById('memoriaRam') || document.getElementById('ram');
-  const compSO = document.getElementById('compSO') || document.getElementById('sistemaOperativo') || document.getElementById('so');
+  const compRAM =
+    document.getElementById('compRAM') ||
+    document.getElementById('memoriaRam') ||
+    document.getElementById('ram');
+  const compSO =
+    document.getElementById('compSO') ||
+    document.getElementById('sistemaOperativo') ||
+    document.getElementById('so');
   const compFechaCompra =
     document.getElementById('compFechaCompra') || document.getElementById('fechaCompra');
   const compEstado = document.getElementById('compEstado');
@@ -98,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ((url, options = {}) =>
       fetch(url, {
         credentials: 'include',
-        ...options,
+        ...options
       }));
 
   // Si no hay nada de computación en la página, salimos
@@ -106,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  // Inicializar automáticamente la fecha de préstamo al día actual si existe el campo
+  // Inicializar automáticamente la fecha de préstamo al día actual
   const loanDateAuto = document.getElementById('computingLoanFecha');
   if (loanDateAuto) {
     const now = new Date();
@@ -157,8 +163,8 @@ document.addEventListener('DOMContentLoaded', () => {
           action: entry.action,
           entityType: entry.type,
           entityId: entry.entityId,
-          data: { detail: entry.detail },
-        }),
+          data: { detail: entry.detail }
+        })
       });
     } catch (err) {
       console.warn('No se pudo registrar historial (computing):', err);
@@ -188,7 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
       aplicacion: 'compAppsBox',
       licencia: 'compLicenciasBox',
       mobiliario: 'compMobiliarioBox',
-      herramienta: 'compHerramientasBox',
+      herramienta: 'compHerramientasBox'
     };
 
     function updateFieldGroups() {
@@ -205,7 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const allowed = {
         hardware: ['computadora', 'periferico', 'red'],
         software: ['so', 'aplicacion', 'licencia'],
-        otros: ['mobiliario', 'herramienta'],
+        otros: ['mobiliario', 'herramienta']
       };
       Array.from(wSubtipo.options).forEach((opt) => {
         if (!opt.value) return;
@@ -272,7 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
       aplicaciones: 'compAppsBox',
       licencias: 'compLicenciasBox',
       mobiliario: 'compMobiliarioBox',
-      herramientas: 'compHerramientasBox',
+      herramientas: 'compHerramientasBox'
     };
 
     compCategory.addEventListener('change', () => {
@@ -348,7 +354,7 @@ document.addEventListener('DOMContentLoaded', () => {
         item.serie,
         item.ubicacion,
         item.estado,
-        item.descripcion,
+        item.descripcion
       ];
       return vals.some((v) => v && String(v).toLowerCase().includes(text));
     });
@@ -454,7 +460,7 @@ document.addEventListener('DOMContentLoaded', () => {
       aplicaciones: 'compAppsBox',
       licencias: 'compLicenciasBox',
       mobiliario: 'compMobiliarioBox',
-      herramientas: 'compHerramientasBox',
+      herramientas: 'compHerramientasBox'
     };
     Object.values(boxesMap).forEach((id) => {
       const el = document.getElementById(id);
@@ -479,7 +485,7 @@ document.addEventListener('DOMContentLoaded', () => {
   async function deleteComputingItem(id) {
     try {
       const resp = await apiFetch(`/api/computing/items/${encodeURIComponent(id)}`, {
-        method: 'DELETE',
+        method: 'DELETE'
       });
       if (!resp.ok) {
         const data = await resp.json().catch(() => ({}));
@@ -492,7 +498,7 @@ document.addEventListener('DOMContentLoaded', () => {
         action: 'delete',
         type: 'item',
         entityId: id,
-        detail: `Equipo/activo de computación eliminado (ID ${id})`,
+        detail: `Equipo/activo de computación eliminado (ID ${id})`
       });
     } catch (err) {
       console.error('Error al eliminar equipo/activo de computación:', err);
@@ -511,13 +517,13 @@ document.addEventListener('DOMContentLoaded', () => {
             `/api/computing/items/${encodeURIComponent(editingItemId)}`,
             {
               method: 'PUT',
-              body: formData,
+              body: formData
             }
           );
         } else {
           resp = await apiFetch('/api/computing/items', {
             method: 'POST',
-            body: formData,
+            body: formData
           });
         }
         if (!resp.ok) {
@@ -535,7 +541,7 @@ document.addEventListener('DOMContentLoaded', () => {
               action: 'update',
               type: 'item',
               entityId: item.id,
-              detail: `Equipo/activo de computación actualizado (ID ${item.id})`,
+              detail: `Equipo/activo de computación actualizado (ID ${item.id})`
             });
           } else {
             computingItems.push(item);
@@ -543,7 +549,7 @@ document.addEventListener('DOMContentLoaded', () => {
               action: 'create',
               type: 'item',
               entityId: item.id,
-              detail: `Equipo/activo de computación creado (ID ${item.id})`,
+              detail: `Equipo/activo de computación creado (ID ${item.id})`
             });
           }
           renderComputingTable();
@@ -638,7 +644,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const resp = await apiFetch('/api/computing/reservations', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
+          body: JSON.stringify(data)
         });
         if (!resp.ok) {
           const d = await resp.json().catch(() => ({}));
@@ -655,7 +661,7 @@ document.addEventListener('DOMContentLoaded', () => {
             entityId: result.reservation.id,
             detail: `Reserva de sala de computación creada para ${
               result.reservation.solicitante || ''
-            }`,
+            }`
           });
         }
         reservationForm.reset();
@@ -715,7 +721,7 @@ document.addEventListener('DOMContentLoaded', () => {
         item.descripcion || item.detalleTipo || '',
         item.marca || '',
         item.modelo || '',
-        item.ubicacion || '',
+        item.ubicacion || ''
       ]
         .filter(Boolean)
         .join(' – ');
@@ -863,7 +869,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const resp = await apiFetch(
         `/api/computing/loans/${encodeURIComponent(loanId)}/return`,
         {
-          method: 'POST',
+          method: 'POST'
         }
       );
       if (!resp.ok) {
@@ -877,7 +883,7 @@ document.addEventListener('DOMContentLoaded', () => {
         action: 'update',
         type: 'loan',
         entityId: loanId,
-        detail: `Préstamo de computación ${loanId} marcado como devuelto`,
+        detail: `Préstamo de computación ${loanId} marcado como devuelto`
       });
     } catch (err) {
       console.error('Error al marcar devolución de préstamo de computación:', err);
@@ -894,7 +900,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const resp = await apiFetch('/api/computing/loans', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
+          body: JSON.stringify(data)
         });
         if (!resp.ok) {
           const d = await resp.json().catch(() => ({}));
@@ -913,7 +919,7 @@ document.addEventListener('DOMContentLoaded', () => {
             entityId: result.loan.id,
             detail: `Préstamo de computación creado para ${
               result.loan.persona || result.loan.nombre || ''
-            }`,
+            }`
           });
         }
         loanForm.reset();
