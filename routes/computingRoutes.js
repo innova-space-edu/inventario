@@ -162,8 +162,8 @@ router.get("/loans", async (req, res) => {
     }));
     res.json(loans);
   } catch (err) {
-    console.error("Error GET /computing/loans:", err);
-    res.status(500).json({ message: "Error al obtener préstamos" });
+    console.error("Error GET /api/computing/loans:", err);
+    res.status(500).json({ message: "Error al obtener préstamos de computación" });
   }
 });
 
