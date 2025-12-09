@@ -244,7 +244,11 @@ app.get('/logout', (req, res) => {
 
 app.get('/api/session', (req, res) => {
   if (!req.session.user) return res.json({ email: null, role: null });
-  res.json(req.session.user);
+  res.json({
+    email: req.session.user.email,
+    role: req.session.user.role,
+    name: req.session.user.name || 'Usuario'  // opcional, para el banner
+  });
 });
 
 app.get('/health', async (req, res) => {
