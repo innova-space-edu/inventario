@@ -21,7 +21,8 @@ body {
   position: relative;
 }
 
-.space-bg ison: fixed;
+.space-bg {
+  position: fixed;
   inset: 0;
   z-index: -2;
   background: radial-gradient(circle at 20% 20%, #1e293b 0, #020617 50%, #000 100%);
