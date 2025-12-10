@@ -43,14 +43,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const compCantidad = document.getElementById('compCantidad');
 
   const compCPU = document.getElementById('compCPU') || document.getElementById('cpu');
-  const compRAM = document.getElementById('compRAM') || document.getElementById('memoriaRam') || document.getElementById('ram');
-  const compSO = document.getElementById('compSO') || document.getElementById('sistemaOperativo') || document.getElementById('so');
+  const compRAM =
+    document.getElementById('compRAM') ||
+    document.getElementById('memoriaRam') ||
+    document.getElementById('ram');
+  const compSO =
+    document.getElementById('compSO') ||
+    document.getElementById('sistemaOperativo') ||
+    document.getElementById('so');
   const compFechaCompra =
     document.getElementById('compFechaCompra') || document.getElementById('fechaCompra');
   const compEstado = document.getElementById('compEstado');
 
-  const compTipoSO =
-    document.getElementById('compTipoSO') || document.getElementById('soTipo');
+  const compTipoSO = document.getElementById('compTipoSO') || document.getElementById('soTipo');
   const compVersionSO =
     document.getElementById('compVersionSO') || document.getElementById('soVersion');
   const compAppNombre =
@@ -307,7 +312,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   })();
-
   // ========================================================
   //                    INVENTARIO
   // ========================================================
@@ -563,23 +567,81 @@ document.addEventListener('DOMContentLoaded', () => {
     );
   }
 
-  if (exportBtn && computingTableBody) {
+  // ============================
+  //  EXPORTACIÓN CSV – OPCIÓN B
+  // ============================
+  if (exportBtn) {
     exportBtn.addEventListener('click', () => {
-      const rows = Array.from(
-        computingTableBody.parentElement.querySelectorAll('tr')
-      );
-      if (!rows.length) return;
-      const csv = rows
-        .map((row) =>
-          Array.from(row.children)
-            .slice(0, 20) // hasta Descripción; Foto y Acciones no son tan necesarias
-            .map((cell) => {
-              const text = cell.innerText.replace(/\s+/g, ' ').trim();
-              return `"${text.replace(/"/g, '""')}"`;
-            })
-            .join(',')
-        )
-        .join('\n');
+      const itemsToExport = getFilteredComputingItems();
+      if (!itemsToExport.length) {
+        alert('No hay registros de inventario para exportar.');
+        return;
+      }
+
+      const headers = [
+        'ID',
+        'ID Equipo',
+        'Código',
+        'Tipo',
+        'Subtipo',
+        'Detalle',
+        'Marca',
+        'Modelo',
+        'CPU',
+        'RAM',
+        'Sistema operativo',
+        'Versión SO / App',
+        'N° serie',
+        'Cantidad',
+        'Ubicación',
+        'Estado',
+        'Fecha compra',
+        'Última actualización',
+        'Descripción',
+        'Foto'
+      ];
+
+      const lines = [];
+
+      // Cabecera
+      const headerLine = headers
+        .map((h) => `"${h.replace(/"/g, '""')}"`)
+        .join(';'); // <-- separador ; para Excel Chile
+      lines.push(headerLine);
+
+      // Filas de datos
+      itemsToExport.forEach((item) => {
+        const rowArr = [
+          safe(item.id),
+          safe(item.idEquip),
+          safe(item.codigo),
+          safe(item.tipoActivo),
+          safe(item.subtipo),
+          safe(item.detalleTipo),
+          safe(item.marca),
+          safe(item.modelo),
+          safe(item.cpu),
+          safe(item.memoriaRam),
+          safe(item.sistemaOperativo),
+          safe(item.soVersion || item.appVersion || ''),
+          safe(item.serie),
+          safe(item.cantidad),
+          safe(item.ubicacion),
+          safe(item.estado),
+          safe((item.fechaCompra || '').substring(0, 10)),
+          safe((item.fechaActualizacion || '').substring(0, 10)),
+          safe(item.descripcion),
+          safe(item.photo || ''),
+        ];
+
+        const line = rowArr
+          .map((value) => `"${value.replace(/"/g, '""')}"`)
+          .join(';'); // <-- separador ;
+
+        lines.push(line);
+      });
+
+      const csv = lines.join('\n');
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -665,7 +727,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
-
   // ========================================================
   //     PRÉSTAMOS – BÚSQUEDA EN INVENTARIO (ID / CÓDIGO)
   // ========================================================
