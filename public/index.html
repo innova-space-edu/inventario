@@ -66,110 +66,140 @@
         <div class="panel-grid">
           <!-- Formulario de ingreso -->
           <div class="panel-block">
-            <h3>Agregar material de ciencias</h3>
-            <form id="scienceForm" enctype="multipart/form-data">
-              <div class="form-grid">
-                <label>
-                  Código
-                  <input type="text" name="codigo" required />
-                </label>
-                <label>
-                  Nombre
-                  <input type="text" name="nombre" required />
-                </label>
-                <label>
-                  Descripción
-                  <input type="text" name="descripcion" />
-                </label>
-                <!-- NUEVO: Categoría ciencias -->
-                <label>
-                  Categoría
-                  <select name="categoria" required>
-                    <option value="instrumento">Instrumento de Laboratorio</option>
-                    <option value="material químico">Material Químico</option>
-                    <option value="material biológico">Material Biológico</option>
-                    <option value="instrumento electrónico">Instrumento Electrónico</option>
-                    <option value="modelo educativo">Modelo o Material Didáctico</option>
-                    <option value="seguridad">Elemento de Seguridad</option>
-                    <option value="otro">Otro</option>
-                  </select>
-                </label>
-                <label>
-                  Cantidad
-                  <input type="number" name="cantidad" min="0" required />
-                </label>
-                <label>
-                  Fecha de ingreso
-                  <input type="date" name="fecha" required />
-                </label>
-                <label>
-                  Foto
-                  <input type="file" name="photo" accept="image/*" />
-                </label>
+            <div class="collapsible-card" data-collapsible>
+              <div class="collapsible-header">
+                <h3>Agregar material de ciencias</h3>
+                <button type="button" class="collapse-toggle" aria-expanded="true">
+                  <span>Ocultar</span>
+                  <span class="collapse-icon">▲</span>
+                </button>
               </div>
+              <div class="collapsible-body">
+                <form id="scienceForm" enctype="multipart/form-data">
+                  <div class="form-grid">
+                    <label>
+                      Código
+                      <input type="text" name="codigo" required />
+                    </label>
+                    <label>
+                      Nombre
+                      <input type="text" name="nombre" required />
+                    </label>
+                    <label>
+                      Descripción
+                      <input type="text" name="descripcion" />
+                    </label>
+                    <!-- NUEVO: Categoría ciencias -->
+                    <label>
+                      Categoría
+                      <select name="categoria" required>
+                        <option value="instrumento">Instrumento de Laboratorio</option>
+                        <option value="material químico">Material Químico</option>
+                        <option value="material biológico">Material Biológico</option>
+                        <option value="instrumento electrónico">Instrumento Electrónico</option>
+                        <option value="modelo educativo">Modelo o Material Didáctico</option>
+                        <option value="seguridad">Elemento de Seguridad</option>
+                        <option value="otro">Otro</option>
+                      </select>
+                    </label>
+                    <label>
+                      Cantidad
+                      <input type="number" name="cantidad" min="0" required />
+                    </label>
+                    <label>
+                      Fecha de ingreso
+                      <input type="date" name="fecha" required />
+                    </label>
+                    <label>
+                      Foto
+                      <input type="file" name="photo" accept="image/*" />
+                    </label>
+                  </div>
 
-              <button type="submit" class="btn-primary">
-                Guardar material
-              </button>
-            </form>
+                  <button type="submit" class="btn-primary">
+                    Guardar material
+                  </button>
+                </form>
+              </div>
+            </div>
           </div>
 
           <!-- Tabla de elementos -->
           <div class="panel-block">
-            <h3>Listado de materiales</h3>
-            <div class="table-wrapper">
-              <table id="scienceTable" class="inventory-table">
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Código</th>
-                    <th>Nombre</th>
-                    <th>Descripción</th>
-                    <th>Categoría</th>
-                    <th>Cantidad</th>
-                    <th>Fecha</th>
-                    <th>Foto</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <!-- science.js llenará aquí -->
-                </tbody>
-              </table>
+            <div class="collapsible-card" data-collapsible>
+              <div class="collapsible-header">
+                <h3>Listado de materiales</h3>
+                <button type="button" class="collapse-toggle" aria-expanded="true">
+                  <span>Ocultar</span>
+                  <span class="collapse-icon">▲</span>
+                </button>
+              </div>
+              <div class="collapsible-body">
+                <div class="table-wrapper">
+                  <table id="scienceTable" class="inventory-table">
+                    <thead>
+                      <tr>
+                        <th>ID</th>
+                        <th>Código</th>
+                        <th>Nombre</th>
+                        <th>Descripción</th>
+                        <th>Categoría</th>
+                        <th>Cantidad</th>
+                        <th>Fecha</th>
+                        <th>Foto</th>
+                        <th>Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <!-- science.js llenará aquí -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         <!-- Reserva de laboratorio ciencias -->
         <div class="panel-block">
-          <h3>Reserva de laboratorio de ciencias</h3>
-          <form id="scienceReservationForm">
-            <div class="form-grid">
-              <label>
-                Nombre del solicitante
-                <input type="text" name="solicitante" required />
-              </label>
-              <label>
-                Curso
-                <input type="text" name="curso" required />
-              </label>
-              <label>
-                Fecha de uso
-                <input type="date" name="fechaUso" required />
-              </label>
-              <label>
-                Horario
-                <input type="text" name="horario" placeholder="Ej: 08:00 - 09:30" />
-              </label>
-              <label>
-                Observaciones
-                <input type="text" name="observaciones" />
-              </label>
+          <div class="collapsible-card" data-collapsible>
+            <div class="collapsible-header">
+              <h3>Reserva de laboratorio de ciencias</h3>
+              <button type="button" class="collapse-toggle" aria-expanded="true">
+                <span>Ocultar</span>
+                <span class="collapse-icon">▲</span>
+              </button>
             </div>
-            <button type="submit" class="btn-secondary">
-              Registrar reserva
-            </button>
-          </form>
+            <div class="collapsible-body">
+              <form id="scienceReservationForm">
+                <div class="form-grid">
+                  <label>
+                    Nombre del solicitante
+                    <input type="text" name="solicitante" required />
+                  </label>
+                  <label>
+                    Curso
+                    <input type="text" name="curso" required />
+                  </label>
+                  <label>
+                    Fecha de uso
+                    <input type="date" name="fechaUso" required />
+                  </label>
+                  <label>
+                    Horario
+                    <input type="text" name="horario" placeholder="Ej: 08:00 - 09:30" />
+                  </label>
+                  <label>
+                    Observaciones
+                    <input type="text" name="observaciones" />
+                  </label>
+                </div>
+                <button type="submit" class="btn-secondary">
+                  Registrar reserva
+                </button>
+              </form>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -183,445 +213,464 @@
         <!-- 1) FORMULARIO INVENTARIO COMPUTACIÓN -->
         <div class="panel-grid">
           <div class="panel-block">
-            <h3>Registrar equipo / software / activo</h3>
-
-            <!-- IMPORTANTE: enctype para subir foto + id que espera computing.js -->
-            <form id="computingForm" class="card" enctype="multipart/form-data">
-              <!-- Identificación básica -->
-              <div class="form-grid">
-                <div class="form-group">
-                  <label for="compIdEquip">ID equipo / etiqueta interna</label>
-                  <input
-                    type="text"
-                    id="compIdEquip"
-                    name="idEquip"
-                    placeholder="Ej: PC-001"
-                  />
-                </div>
-
-                <div class="form-group">
-                  <label for="compCodigo">Código inventario / código barra</label>
-                  <input
-                    type="text"
-                    id="compCodigo"
-                    name="codigo"
-                    placeholder="Ej: INV-2025-001"
-                    required
-                  />
-                </div>
-
-                <div class="form-group">
-                  <label for="compMarca">Marca</label>
-                  <input
-                    type="text"
-                    id="compMarca"
-                    name="marca"
-                    placeholder="Ej: HP, Dell, Lenovo..."
-                  />
-                </div>
-
-                <div class="form-group">
-                  <label for="compModelo">Modelo</label>
-                  <input
-                    type="text"
-                    id="compModelo"
-                    name="modelo"
-                    placeholder="Ej: EliteDesk 800 G3"
-                  />
-                </div>
-
-                <div class="form-group">
-                  <label for="compSerie">N° de serie</label>
-                  <input
-                    type="text"
-                    id="compSerie"
-                    name="serie"
-                    placeholder="Serie del fabricante"
-                  />
-                </div>
-
-                <div class="form-group">
-                  <label for="compCantidad">Cantidad</label>
-                  <input
-                    type="number"
-                    id="compCantidad"
-                    name="cantidad"
-                    min="1"
-                    step="1"
-                    value="1"
-                    required
-                  />
-                </div>
-
-                <div class="form-group">
-                  <label for="compEstado">Estado</label>
-                  <select id="compEstado" name="estado">
-                    <option value="">Seleccionar...</option>
-                    <option value="operativo">Operativo</option>
-                    <option value="en_reparacion">En reparación</option>
-                    <option value="dado_de_baja">Dado de baja</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="compFechaCompra">Fecha de compra</label>
-                  <input
-                    type="date"
-                    id="compFechaCompra"
-                    name="fechaCompra"
-                  />
-                </div>
+            <div class="collapsible-card" data-collapsible>
+              <div class="collapsible-header">
+                <h3>Registrar equipo / software / activo</h3>
+                <button type="button" class="collapse-toggle" aria-expanded="true">
+                  <span>Ocultar</span>
+                  <span class="collapse-icon">▲</span>
+                </button>
               </div>
+              <div class="collapsible-body">
+                <!-- IMPORTANTE: enctype para subir foto + id que espera computing.js -->
+                <form id="computingForm" class="card" enctype="multipart/form-data">
+                  <!-- Identificación básica -->
+                  <div class="form-grid">
+                    <div class="form-group">
+                      <label for="compIdEquip">ID equipo / etiqueta interna</label>
+                      <input
+                        type="text"
+                        id="compIdEquip"
+                        name="idEquip"
+                        placeholder="Ej: PC-001"
+                      />
+                    </div>
 
-              <hr />
+                    <div class="form-group">
+                      <label for="compCodigo">Código inventario / código barra</label>
+                      <input
+                        type="text"
+                        id="compCodigo"
+                        name="codigo"
+                        placeholder="Ej: INV-2025-001"
+                        required
+                      />
+                    </div>
 
-              <!-- Clasificación -->
-              <h3>Clasificación del activo</h3>
-              <div class="form-grid">
-                <div class="form-group">
-                  <label for="compTipoActivo">Tipo de activo</label>
-                  <select id="compTipoActivo" name="tipoActivo">
-                    <option value="">Seleccionar...</option>
-                    <option value="hardware">Hardware</option>
-                    <option value="software">Software</option>
-                    <option value="otros-activos">Otros activos</option>
-                  </select>
-                </div>
+                    <div class="form-group">
+                      <label for="compMarca">Marca</label>
+                      <input
+                        type="text"
+                        id="compMarca"
+                        name="marca"
+                        placeholder="Ej: HP, Dell, Lenovo..."
+                      />
+                    </div>
 
-                <div class="form-group">
-                  <label for="compSubtipo">Subtipo</label>
-                  <!-- IMPORTANTE: los value coinciden con lo que usa computing.js para mostrar cajas -->
-                  <select id="compSubtipo" name="subtipo">
-                    <option value="">Seleccionar...</option>
-                    <!-- Hardware -->
-                    <option value="computadoras">Computadoras</option>
-                    <option value="perifericos">Periféricos</option>
-                    <option value="dispositivos-red">Dispositivos de red</option>
-                    <!-- Software -->
-                    <option value="sistemas-operativos">Sistemas operativos</option>
-                    <option value="aplicaciones">Aplicaciones</option>
-                    <option value="licencias">Licencias</option>
-                    <!-- Otros activos -->
-                    <option value="mobiliario">Mobiliario</option>
-                    <option value="herramientas">Herramientas / otros</option>
-                  </select>
-                </div>
+                    <div class="form-group">
+                      <label for="compModelo">Modelo</label>
+                      <input
+                        type="text"
+                        id="compModelo"
+                        name="modelo"
+                        placeholder="Ej: EliteDesk 800 G3"
+                      />
+                    </div>
 
-                <div class="form-group">
-                  <label for="compDetalleTipo">Detalle tipo (ej: PC escritorio, switch, mesa)</label>
-                  <input
-                    type="text"
-                    id="compDetalleTipo"
-                    name="detalleTipo"
-                  />
-                </div>
+                    <div class="form-group">
+                      <label for="compSerie">N° de serie</label>
+                      <input
+                        type="text"
+                        id="compSerie"
+                        name="serie"
+                        placeholder="Serie del fabricante"
+                      />
+                    </div>
 
-                <div class="form-group">
-                  <label for="compUbicacion">Ubicación</label>
-                  <input
-                    type="text"
-                    id="compUbicacion"
-                    name="ubicacion"
-                    placeholder="Ej: Sala de computación, Laboratorio 1, Bodega..."
-                  />
-                </div>
+                    <div class="form-group">
+                      <label for="compCantidad">Cantidad</label>
+                      <input
+                        type="number"
+                        id="compCantidad"
+                        name="cantidad"
+                        min="1"
+                        step="1"
+                        value="1"
+                        required
+                      />
+                    </div>
 
-                <div class="form-group">
-                  <label for="compFechaActualizacion">Fecha última actualización</label>
-                  <input
-                    type="date"
-                    id="compFechaActualizacion"
-                    name="fechaActualizacion"
-                  />
-                </div>
+                    <div class="form-group">
+                      <label for="compEstado">Estado</label>
+                      <select id="compEstado" name="estado">
+                        <option value="">Seleccionar...</option>
+                        <option value="operativo">Operativo</option>
+                        <option value="en_reparacion">En reparación</option>
+                        <option value="dado_de_baja">Dado de baja</option>
+                      </select>
+                    </div>
+
+                    <div class="form-group">
+                      <label for="compFechaCompra">Fecha de compra</label>
+                      <input
+                        type="date"
+                        id="compFechaCompra"
+                        name="fechaCompra"
+                      />
+                    </div>
+                  </div>
+
+                  <hr />
+
+                  <!-- Clasificación -->
+                  <h3>Clasificación del activo</h3>
+                  <div class="form-grid">
+                    <div class="form-group">
+                      <label for="compTipoActivo">Tipo de activo</label>
+                      <select id="compTipoActivo" name="tipoActivo">
+                        <option value="">Seleccionar...</option>
+                        <option value="hardware">Hardware</option>
+                        <option value="software">Software</option>
+                        <option value="otros-activos">Otros activos</option>
+                      </select>
+                    </div>
+
+                    <div class="form-group">
+                      <label for="compSubtipo">Subtipo</label>
+                      <!-- IMPORTANTE: los value coinciden con lo que usa computing.js para mostrar cajas -->
+                      <select id="compSubtipo" name="subtipo">
+                        <option value="">Seleccionar...</option>
+                        <!-- Hardware -->
+                        <option value="computadoras">Computadoras</option>
+                        <option value="perifericos">Periféricos</option>
+                        <option value="dispositivos-red">Dispositivos de red</option>
+                        <!-- Software -->
+                        <option value="sistemas-operativos">Sistemas operativos</option>
+                        <option value="aplicaciones">Aplicaciones</option>
+                        <option value="licencias">Licencias</option>
+                        <!-- Otros activos -->
+                        <option value="mobiliario">Mobiliario</option>
+                        <option value="herramientas">Herramientas / otros</option>
+                      </select>
+                    </div>
+
+                    <div class="form-group">
+                      <label for="compDetalleTipo">Detalle tipo (ej: PC escritorio, switch, mesa)</label>
+                      <input
+                        type="text"
+                        id="compDetalleTipo"
+                        name="detalleTipo"
+                      />
+                    </div>
+
+                    <div class="form-group">
+                      <label for="compUbicacion">Ubicación</label>
+                      <input
+                        type="text"
+                        id="compUbicacion"
+                        name="ubicacion"
+                        placeholder="Ej: Sala de computación, Laboratorio 1, Bodega..."
+                      />
+                    </div>
+
+                    <div class="form-group">
+                      <label for="compFechaActualizacion">Fecha última actualización</label>
+                      <input
+                        type="date"
+                        id="compFechaActualizacion"
+                        name="fechaActualizacion"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- ===================== HARDWARE ===================== -->
+                  <div class="subbox" id="compComputadorasBox" style="display:none;">
+                    <h3>Datos de hardware – Computadoras</h3>
+                    <div class="form-grid">
+                      <div class="form-group">
+                        <label for="compCPU">CPU / Procesador</label>
+                        <input
+                          type="text"
+                          id="compCPU"
+                          name="cpu"
+                          placeholder="Ej: Intel i5 8ª gen"
+                        />
+                      </div>
+
+                      <div class="form-group">
+                        <label for="compRAM">Memoria RAM</label>
+                        <input
+                          type="text"
+                          id="compRAM"
+                          name="memoriaRam"
+                          placeholder="Ej: 8 GB DDR4"
+                        />
+                      </div>
+
+                      <div class="form-group">
+                        <label for="compSO">Sistema operativo instalado</label>
+                        <input
+                          type="text"
+                          id="compSO"
+                          name="sistemaOperativo"
+                          placeholder="Ej: Windows 10 Pro, Ubuntu 22.04"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="subbox" id="compPerifericosBox" style="display:none;">
+                    <h3>Datos de hardware – Periféricos</h3>
+                    <div class="form-grid">
+                      <div class="form-group">
+                        <label>Descripción periférico</label>
+                        <input
+                          type="text"
+                          id="compDescripcionOtros"
+                          name="descripcionOtros"
+                          placeholder="Ej: Teclado mecánico, mouse inalámbrico, monitor 24''..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="subbox" id="compRedBox" style="display:none;">
+                    <h3>Datos de hardware – Dispositivos de red</h3>
+                    <div class="form-grid">
+                      <div class="form-group">
+                        <label>Descripción / características</label>
+                        <input
+                          type="text"
+                          id="compDescripcionRed"
+                          name="descripcionOtros"
+                          placeholder="Ej: Switch 24 puertos, router WiFi AC1200..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- ===================== SOFTWARE / LICENCIAS ===================== -->
+                  <div class="subbox" id="compSOBox" style="display:none;">
+                    <h3>Sistemas operativos</h3>
+                    <div class="form-grid">
+                      <div class="form-group">
+                        <label for="compTipoSO">Nombre / tipo de SO</label>
+                        <input
+                          type="text"
+                          id="compTipoSO"
+                          name="soTipo"
+                          placeholder="Ej: Windows 10 Pro, Ubuntu 22.04..."
+                        />
+                      </div>
+
+                      <div class="form-group">
+                        <label for="compVersionSO">Versión SO</label>
+                        <input
+                          type="text"
+                          id="compVersionSO"
+                          name="soVersion"
+                          placeholder="Ej: 22H2, 20.04 LTS..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="subbox" id="compAppsBox" style="display:none;">
+                    <h3>Aplicaciones</h3>
+                    <div class="form-grid">
+                      <div class="form-group">
+                        <label for="compAppNombre">Nombre de la aplicación</label>
+                        <input
+                          type="text"
+                          id="compAppNombre"
+                          name="appNombre"
+                          placeholder="Ej: Office 365, Adobe Photoshop..."
+                        />
+                      </div>
+
+                      <div class="form-group">
+                        <label for="compAppVersion">Versión</label>
+                        <input
+                          type="text"
+                          id="compAppVersion"
+                          name="appVersion"
+                          placeholder="Ej: 2021, CC 2024..."
+                        />
+                      </div>
+
+                      <div class="form-group">
+                        <label for="compAppFechaInstalacion">Fecha de instalación</label>
+                        <input
+                          type="date"
+                          id="compAppFechaInstalacion"
+                          name="appFechaInstalacion"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="subbox" id="compLicenciasBox" style="display:none;">
+                    <h3>Licencias</h3>
+                    <div class="form-grid">
+                      <div class="form-group">
+                        <label for="compLicenciaTipo">Tipo de licencia</label>
+                        <input
+                          type="text"
+                          id="compLicenciaTipo"
+                          name="licenciaTipo"
+                          placeholder="Ej: Individual, volumen, suscripción anual..."
+                        />
+                      </div>
+
+                      <div class="form-group">
+                        <label for="compLicenciaNumero">N° / clave de licencia</label>
+                        <input
+                          type="text"
+                          id="compLicenciaNumero"
+                          name="licenciaNumero"
+                        />
+                      </div>
+
+                      <div class="form-group">
+                        <label for="compLicenciaVencimiento">Fecha de vencimiento</label>
+                        <input
+                          type="date"
+                          id="compLicenciaVencimiento"
+                          name="licenciaVencimiento"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- ===================== OTROS ACTIVOS ===================== -->
+                  <div class="subbox" id="compMobiliarioBox" style="display:none;">
+                    <h3>Mobiliario</h3>
+                    <div class="form-grid">
+                      <div class="form-group">
+                        <label>Descripción mobiliario</label>
+                        <input
+                          type="text"
+                          id="compDescripcionMobiliario"
+                          name="descripcionOtros"
+                          placeholder="Ej: Mesa para PC, silla ergonómica, estantería..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="subbox" id="compHerramientasBox" style="display:none;">
+                    <h3>Herramientas / otros activos</h3>
+                    <div class="form-grid">
+                      <div class="form-group">
+                        <label>Descripción</label>
+                        <input
+                          type="text"
+                          id="compDescripcionHerramientas"
+                          name="descripcionOtros"
+                          placeholder="Ej: Kit de herramientas, adaptadores, cables..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <hr />
+
+                  <!-- Mantenimiento y notas generales -->
+                  <h3>Mantenimiento y descripción general</h3>
+                  <div class="form-grid">
+                    <div class="form-group">
+                      <label for="compMantenimientoNotas">Notas de mantenimiento</label>
+                      <textarea
+                        id="compMantenimientoNotas"
+                        name="mantenimientoNotas"
+                        rows="2"
+                        placeholder="Historial de mantenciones, reparaciones, observaciones técnicas..."
+                      ></textarea>
+                    </div>
+
+                    <div class="form-group">
+                      <label for="compDescripcion">Descripción general / observaciones</label>
+                      <textarea
+                        id="compDescripcion"
+                        name="descripcion"
+                        rows="2"
+                        placeholder="Cualquier detalle adicional del equipo o activo..."
+                      ></textarea>
+                    </div>
+                  </div>
+
+                  <!-- Foto -->
+                  <div class="form-group">
+                    <label for="compPhoto">Foto del equipo (opcional)</label>
+                    <input
+                      type="file"
+                      id="compPhoto"
+                      name="photo"
+                      accept="image/*"
+                    />
+                  </div>
+
+                  <!-- Botones -->
+                  <div class="form-actions">
+                    <button type="submit" class="btn-primary">Guardar equipo</button>
+                    <button type="reset" class="btn-secondary">Limpiar formulario</button>
+                  </div>
+                </form>
               </div>
-
-              <!-- ===================== HARDWARE ===================== -->
-              <div class="subbox" id="compComputadorasBox" style="display:none;">
-                <h3>Datos de hardware – Computadoras</h3>
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label for="compCPU">CPU / Procesador</label>
-                    <input
-                      type="text"
-                      id="compCPU"
-                      name="cpu"
-                      placeholder="Ej: Intel i5 8ª gen"
-                    />
-                  </div>
-
-                  <div class="form-group">
-                    <label for="compRAM">Memoria RAM</label>
-                    <input
-                      type="text"
-                      id="compRAM"
-                      name="memoriaRam"
-                      placeholder="Ej: 8 GB DDR4"
-                    />
-                  </div>
-
-                  <div class="form-group">
-                    <label for="compSO">Sistema operativo instalado</label>
-                    <input
-                      type="text"
-                      id="compSO"
-                      name="sistemaOperativo"
-                      placeholder="Ej: Windows 10 Pro, Ubuntu 22.04"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div class="subbox" id="compPerifericosBox" style="display:none;">
-                <h3>Datos de hardware – Periféricos</h3>
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label>Descripción periférico</label>
-                    <input
-                      type="text"
-                      id="compDescripcionOtros"
-                      name="descripcionOtros"
-                      placeholder="Ej: Teclado mecánico, mouse inalámbrico, monitor 24''..."
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div class="subbox" id="compRedBox" style="display:none;">
-                <h3>Datos de hardware – Dispositivos de red</h3>
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label>Descripción / características</label>
-                    <input
-                      type="text"
-                      id="compDescripcionRed"
-                      name="descripcionOtros"
-                      placeholder="Ej: Switch 24 puertos, router WiFi AC1200..."
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <!-- ===================== SOFTWARE / LICENCIAS ===================== -->
-              <div class="subbox" id="compSOBox" style="display:none;">
-                <h3>Sistemas operativos</h3>
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label for="compTipoSO">Nombre / tipo de SO</label>
-                    <input
-                      type="text"
-                      id="compTipoSO"
-                      name="soTipo"
-                      placeholder="Ej: Windows 10 Pro, Ubuntu 22.04..."
-                    />
-                  </div>
-
-                  <div class="form-group">
-                    <label for="compVersionSO">Versión SO</label>
-                    <input
-                      type="text"
-                      id="compVersionSO"
-                      name="soVersion"
-                      placeholder="Ej: 22H2, 20.04 LTS..."
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div class="subbox" id="compAppsBox" style="display:none;">
-                <h3>Aplicaciones</h3>
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label for="compAppNombre">Nombre de la aplicación</label>
-                    <input
-                      type="text"
-                      id="compAppNombre"
-                      name="appNombre"
-                      placeholder="Ej: Office 365, Adobe Photoshop..."
-                    />
-                  </div>
-
-                  <div class="form-group">
-                    <label for="compAppVersion">Versión</label>
-                    <input
-                      type="text"
-                      id="compAppVersion"
-                      name="appVersion"
-                      placeholder="Ej: 2021, CC 2024..."
-                    />
-                  </div>
-
-                  <div class="form-group">
-                    <label for="compAppFechaInstalacion">Fecha de instalación</label>
-                    <input
-                      type="date"
-                      id="compAppFechaInstalacion"
-                      name="appFechaInstalacion"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div class="subbox" id="compLicenciasBox" style="display:none;">
-                <h3>Licencias</h3>
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label for="compLicenciaTipo">Tipo de licencia</label>
-                    <input
-                      type="text"
-                      id="compLicenciaTipo"
-                      name="licenciaTipo"
-                      placeholder="Ej: Individual, volumen, suscripción anual..."
-                    />
-                  </div>
-
-                  <div class="form-group">
-                    <label for="compLicenciaNumero">N° / clave de licencia</label>
-                    <input
-                      type="text"
-                      id="compLicenciaNumero"
-                      name="licenciaNumero"
-                    />
-                  </div>
-
-                  <div class="form-group">
-                    <label for="compLicenciaVencimiento">Fecha de vencimiento</label>
-                    <input
-                      type="date"
-                      id="compLicenciaVencimiento"
-                      name="licenciaVencimiento"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <!-- ===================== OTROS ACTIVOS ===================== -->
-              <div class="subbox" id="compMobiliarioBox" style="display:none;">
-                <h3>Mobiliario</h3>
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label>Descripción mobiliario</label>
-                    <input
-                      type="text"
-                      id="compDescripcionMobiliario"
-                      name="descripcionOtros"
-                      placeholder="Ej: Mesa para PC, silla ergonómica, estantería..."
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div class="subbox" id="compHerramientasBox" style="display:none;">
-                <h3>Herramientas / otros activos</h3>
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label>Descripción</label>
-                    <input
-                      type="text"
-                      id="compDescripcionHerramientas"
-                      name="descripcionOtros"
-                      placeholder="Ej: Kit de herramientas, adaptadores, cables..."
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <hr />
-
-              <!-- Mantenimiento y notas generales -->
-              <h3>Mantenimiento y descripción general</h3>
-              <div class="form-grid">
-                <div class="form-group">
-                  <label for="compMantenimientoNotas">Notas de mantenimiento</label>
-                  <textarea
-                    id="compMantenimientoNotas"
-                    name="mantenimientoNotas"
-                    rows="2"
-                    placeholder="Historial de mantenciones, reparaciones, observaciones técnicas..."
-                  ></textarea>
-                </div>
-
-                <div class="form-group">
-                  <label for="compDescripcion">Descripción general / observaciones</label>
-                  <textarea
-                    id="compDescripcion"
-                    name="descripcion"
-                    rows="2"
-                    placeholder="Cualquier detalle adicional del equipo o activo..."
-                  ></textarea>
-                </div>
-              </div>
-
-              <!-- Foto -->
-              <div class="form-group">
-                <label for="compPhoto">Foto del equipo (opcional)</label>
-                <input
-                  type="file"
-                  id="compPhoto"
-                  name="photo"
-                  accept="image/*"
-                />
-              </div>
-
-              <!-- Botones -->
-              <div class="form-actions">
-                <button type="submit" class="btn-primary">Guardar equipo</button>
-                <button type="reset" class="btn-secondary">Limpiar formulario</button>
-              </div>
-            </form>
+            </div>
           </div>
 
           <!-- TABLA INVENTARIO COMPUTACIÓN -->
           <div class="panel-block">
-            <h3>Inventario de computación</h3>
+            <div class="collapsible-card" data-collaps
+ible>
+              <div class="collapsible-header">
+                <h3>Inventario de computación</h3>
+                <button type="button" class="collapse-toggle" aria-expanded="true">
+                  <span>Ocultar</span>
+                  <span class="collapse-icon">▲</span>
+                </button>
+              </div>
+              <div class="collapsible-body">
+                <!-- Buscador y exportación (lo usa computing.js) -->
+                <div class="filters-row">
+                  <label>
+                    Buscar
+                    <input
+                      type="text"
+                      id="computingSearch"
+                      placeholder="Código, marca, modelo, ubicación..."
+                    />
+                  </label>
+                  <button type="button" id="btnExportComputingCSV" class="btn-secondary">
+                    Exportar CSV
+                  </button>
+                </div>
 
-            <!-- Buscador y exportación (lo usa computing.js) -->
-            <div class="filters-row">
-              <label>
-                Buscar
-                <input
-                  type="text"
-                  id="computingSearch"
-                  placeholder="Código, marca, modelo, ubicación..."
-                />
-              </label>
-              <button type="button" id="btnExportComputingCSV" class="btn-secondary">
-                Exportar CSV
-              </button>
-            </div>
-
-            <div class="table-wrapper">
-              <!-- IDs que espera computing.js -->
-              <table id="computingTable" class="inventory-table">
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>ID Equipo</th>
-                    <th>Código</th>
-                    <th>Tipo</th>
-                    <th>Subtipo</th>
-                    <th>Detalle</th>
-                    <th>Marca</th>
-                    <th>Modelo</th>
-                    <th>CPU</th>
-                    <th>RAM</th>
-                    <th>Sistema operativo</th>
-                    <th>Versión SO / App</th>
-                    <th>N° serie</th>
-                    <th>Cantidad</th>
-                    <th>Ubicación</th>
-                    <th>Estado</th>
-                    <th>Fecha compra</th>
-                    <th>Última actualización</th>
-                    <th>Descripción</th>
-                    <th>Foto</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody id="computingTableBody">
-                  <!-- computing.js llenará aquí -->
-                </tbody>
-              </table>
+                <div class="table-wrapper">
+                  <!-- IDs que espera computing.js -->
+                  <table id="computingTable" class="inventory-table">
+                    <thead>
+                      <tr>
+                        <th>ID</th>
+                        <th>ID Equipo</th>
+                        <th>Código</th>
+                        <th>Tipo</th>
+                        <th>Subtipo</th>
+                        <th>Detalle</th>
+                        <th>Marca</th>
+                        <th>Modelo</th>
+                        <th>CPU</th>
+                        <th>RAM</th>
+                        <th>Sistema operativo</th>
+                        <th>Versión SO / App</th>
+                        <th>N° serie</th>
+                        <th>Cantidad</th>
+                        <th>Ubicación</th>
+                        <th>Estado</th>
+                        <th>Fecha compra</th>
+                        <th>Última actualización</th>
+                        <th>Descripción</th>
+                        <th>Foto</th>
+                        <th>Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody id="computingTableBody">
+                      <!-- computing.js llenará aquí -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -629,127 +678,147 @@
         <!-- 2) PRÉSTAMOS COMPUTACIÓN -->
         <div class="panel-grid">
           <div class="panel-block">
-            <h3>Registrar préstamo de equipo de computación</h3>
-            <form id="computingLoanForm" class="form-grid">
-              <div class="form-grid">
-                <label>
-                  ID del equipo / activo
-                  <input
-                    type="text"
-                    id="computingLoanItemId"
-                    name="itemId"
-                    placeholder="ID o código del inventario"
-                    required
-                  />
-                </label>
-                <label>
-                  Código del equipo
-                  <input
-                    type="text"
-                    id="computingLoanCodigo"
-                    name="codigo"
-                    placeholder="Código interno (opcional si ya se identifica por ID)"
-                  />
-                </label>
-                <label>
-                  Tipo de persona
-                  <select id="computingLoanTipoPersona" name="tipoPersona" required>
-                    <option value="" selected disabled>Seleccione tipo</option>
-                    <option value="estudiante">Estudiante</option>
-                    <option value="funcionario">Funcionario</option>
-                  </select>
-                </label>
-              </div>
-
-              <div class="form-grid">
-                <label>
-                  Persona
-                  <input
-                    type="text"
-                    id="computingLoanUser"
-                    name="persona"
-                    placeholder="Nombre completo"
-                    required
-                  />
-                </label>
-                <label>
-                  Curso / Grupo
-                  <input
-                    type="text"
-                    id="computingLoanCurso"
-                    name="curso"
-                    placeholder="Ej: 2°B, Funcionarios, UTP"
-                  />
-                </label>
-              </div>
-
-              <div class="form-grid">
-                <label>
-                  Fecha de préstamo
-                  <input
-                    type="date"
-                    id="computingLoanFecha"
-                    name="fechaPrestamo"
-                    readonly
-                  />
-                </label>
-                <label>
-                  Observaciones
-                  <input
-                    type="text"
-                    id="computingLoanObs"
-                    name="observaciones"
-                    placeholder="Ej: Uso en sala 2, hora de clase, proyecto X"
-                  />
-                </label>
-              </div>
-
-              <!-- Panel informativo con datos del equipo seleccionado -->
-              <div class="form-grid">
-                <label class="full-width">
-                  Equipo seleccionado
-                  <div
-                    id="computingLoanItemInfo"
-                    class="info-box"
-                    style="min-height: 2.5rem; padding: 0.5rem 0; font-size: 0.9rem; opacity: 0.9;"
-                  >
-                    Escribe el <strong>ID</strong> o el <strong>código</strong> del equipo para ver su descripción,
-                    marca, modelo y ubicación antes de registrar el préstamo.
-                  </div>
-                </label>
-              </div>
-
-              <div class="form-actions">
-                <button type="submit" class="btn-secondary">
-                  Registrar préstamo
+            <div class="collapsible-card" data-collapsible>
+              <div class="collapsible-header">
+                <h3>Registrar préstamo de equipo de computación</h3>
+                <button type="button" class="collapse-toggle" aria-expanded="true">
+                  <span>Ocultar</span>
+                  <span class="collapse-icon">▲</span>
                 </button>
               </div>
-            </form>
+              <div class="collapsible-body">
+                <form id="computingLoanForm" class="form-grid">
+                  <div class="form-grid">
+                    <label>
+                      ID del equipo / activo
+                      <input
+                        type="text"
+                        id="computingLoanItemId"
+                        name="itemId"
+                        placeholder="ID o código del inventario"
+                        required
+                      />
+                    </label>
+                    <label>
+                      Código del equipo
+                      <input
+                        type="text"
+                        id="computingLoanCodigo"
+                        name="codigo"
+                        placeholder="Código interno (opcional si ya se identifica por ID)"
+                      />
+                    </label>
+                    <label>
+                      Tipo de persona
+                      <select id="computingLoanTipoPersona" name="tipoPersona" required>
+                        <option value="" selected disabled>Seleccione tipo</option>
+                        <option value="estudiante">Estudiante</option>
+                        <option value="funcionario">Funcionario</option>
+                      </select>
+                    </label>
+                  </div>
+
+                  <div class="form-grid">
+                    <label>
+                      Persona
+                      <input
+                        type="text"
+                        id="computingLoanUser"
+                        name="persona"
+                        placeholder="Nombre completo"
+                        required
+                      />
+                    </label>
+                    <label>
+                      Curso / Grupo
+                      <input
+                        type="text"
+                        id="computingLoanCurso"
+                        name="curso"
+                        placeholder="Ej: 2°B, Funcionarios, UTP"
+                      />
+                    </label>
+                  </div>
+
+                  <div class="form-grid">
+                    <label>
+                      Fecha de préstamo
+                      <input
+                        type="date"
+                        id="computingLoanFecha"
+                        name="fechaPrestamo"
+                        readonly
+                      />
+                    </label>
+                    <label>
+                      Observaciones
+                      <input
+                        type="text"
+                        id="computingLoanObs"
+                        name="observaciones"
+                        placeholder="Ej: Uso en sala 2, hora de clase, proyecto X"
+                      />
+                    </label>
+                  </div>
+
+                  <!-- Panel informativo con datos del equipo seleccionado -->
+                  <div class="form-grid">
+                    <label class="full-width">
+                      Equipo seleccionado
+                      <div
+                        id="computingLoanItemInfo"
+                        class="info-box"
+                        style="min-height: 2.5rem; padding: 0.5rem 0; font-size: 0.9rem; opacity: 0.9;"
+                      >
+                        Escribe el <strong>ID</strong> o el <strong>código</strong> del equipo para ver su descripción,
+                        marca, modelo y ubicación antes de registrar el préstamo.
+                      </div>
+                    </label>
+                  </div>
+
+                  <div class="form-actions">
+                    <button type="submit" class="btn-secondary">
+                      Registrar préstamo
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
           </div>
 
           <div class="panel-block">
-            <h3>Listado de préstamos de computación</h3>
-            <div class="table-wrapper">
-              <!-- IDs que espera computing.js -->
-              <table id="computingLoanTable" class="inventory-table">
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>ID Equipo</th>
-                    <th>Código</th>
-                    <th>Tipo persona</th>
-                    <th>Persona</th>
-                    <th>Curso / Grupo</th>
-                    <th>Fecha préstamo</th>
-                    <th>Fecha devolución</th>
-                    <th>Devuelto</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody id="computingLoanTableBody">
-                  <!-- computing.js llenará aquí -->
-                </tbody>
-              </table>
+            <div class="collapsible-card" data-collapsible>
+              <div class="collapsible-header">
+                <h3>Listado de préstamos de computación</h3>
+                <button type="button" class="collapse-toggle" aria-expanded="true">
+                  <span>Ocultar</span>
+                  <span class="collapse-icon">▲</span>
+                </button>
+              </div>
+              <div class="collapsible-body">
+                <div class="table-wrapper">
+                  <!-- IDs que espera computing.js -->
+                  <table id="computingLoanTable" class="inventory-table">
+                    <thead>
+                      <tr>
+                        <th>ID</th>
+                        <th>ID Equipo</th>
+                        <th>Código</th>
+                        <th>Tipo persona</th>
+                        <th>Persona</th>
+                        <th>Curso / Grupo</th>
+                        <th>Fecha préstamo</th>
+                        <th>Fecha devolución</th>
+                        <th>Devuelto</th>
+                        <th>Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody id="computingLoanTableBody">
+                      <!-- computing.js llenará aquí -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -757,22 +826,43 @@
         <!-- 3) PENDIENTES / DEUDORES -->
         <div class="panel-grid">
           <div class="panel-block">
-            <h3>Préstamos vencidos (más de 7 días)</h3>
-            <p>
-              Los préstamos vencidos se destacan automáticamente en la tabla anterior
-              y se listan aquí abajo.
-            </p>
-            <!-- NUEVO: lista que usa computing.js (overdueList) -->
-            <ul id="computingOverdueList" class="list-container">
-              <!-- computing.js llenará aquí los préstamos vencidos -->
-            </ul>
+            <div class="collapsible-card" data-collapsible>
+              <div class="collapsible-header">
+                <h3>Préstamos vencidos (más de 7 días)</h3>
+                <button type="button" class="collapse-toggle" aria-expanded="true">
+                  <span>Ocultar</span>
+                  <span class="collapse-icon">▲</span>
+                </button>
+              </div>
+              <div class="collapsible-body">
+                <p>
+                  Los préstamos vencidos se destacan automáticamente en la tabla anterior
+                  y se listan aquí abajo.
+                </p>
+                <!-- NUEVO: lista que usa computing.js (overdueList) -->
+                <ul id="computingOverdueList" class="list-container">
+                  <!-- computing.js llenará aquí los préstamos vencidos -->
+                </ul>
+              </div>
+            </div>
           </div>
+
           <div class="panel-block">
-            <h3>Equipos pendientes por devolver</h3>
-            <!-- Lista que usa computing.js (renderDebtorsList) -->
-            <ul id="computingLoanDebtorsList" class="list-container">
-              <!-- JS llenará aquí las personas que aún tienen material pendiente -->
-            </ul>
+            <div class="collapsible-card" data-collapsible>
+              <div class="collapsible-header">
+                <h3>Equipos pendientes por devolver</h3>
+                <button type="button" class="collapse-toggle" aria-expanded="true">
+                  <span>Ocultar</span>
+                  <span class="collapse-icon">▲</span>
+                </button>
+              </div>
+              <div class="collapsible-body">
+                <!-- Lista que usa computing.js (renderDebtorsList) -->
+                <ul id="computingLoanDebtorsList" class="list-container">
+                  <!-- JS llenará aquí las personas que aún tienen material pendiente -->
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -789,146 +879,165 @@
 
         <div class="panel-grid">
           <div class="panel-block">
-            <h3>Agregar libro a la biblioteca</h3>
-            <form id="libraryForm" enctype="multipart/form-data">
-              <div class="form-grid">
-                <label>
-                  Código
-                  <input type="text" name="codigo" required />
-                </label>
-                <label>
-                  Título
-                  <input type="text" name="titulo" required />
-                </label>
-                <label>
-                  Autor
-                  <input type="text" name="autor" />
-                </label>
-                <label>
-                  Año
-                  <input type="number" name="anio" min="1900" max="2100" />
-                </label>
-                <label>
-                  Serie
-                  <input type="text" name="serie" />
-                </label>
-                <!-- NUEVO: Categoría biblioteca -->
-                <label>
-                  Categoría
-                  <select name="categoria" required>
-                    <option value="libro">Libro</option>
-                    <option value="material escolar">Material Escolar</option>
-                    <option value="material multimedia">Material Multimedia</option>
-                    <option value="instrumento musical">Instrumento Musical</option>
-                    <option value="material didáctico">Material Didáctico</option>
-                    <option value="documento">Documento</option>
-                    <option value="otros">Otros</option>
-                  </select>
-                </label>
-                <label>
-                  Cantidad
-                  <input type="number" name="cantidad" min="0" required />
-                </label>
-                <label>
-                  Descripción
-                  <input type="text" name="descripcion" />
-                </label>
-                <label>
-                  Foto
-                  <input type="file" name="photo" accept="image/*" />
-                </label>
+            <div class="collapsible-card" data-collapsible>
+              <div class="collapsible-header">
+                <h3>Agregar libro a la biblioteca</h3>
+                <button type="button" class="collapse-toggle" aria-expanded="true">
+                  <span>Ocultar</span>
+                  <span class="collapse-icon">▲</span>
+                </button>
               </div>
+              <div class="collapsible-body">
+                <form id="libraryForm" enctype="multipart/form-data">
+                  <div class="form-grid">
+                    <label>
+                      Código
+                      <input type="text" name="codigo" required />
+                    </label>
+                    <label>
+                      Título
+                      <input type="text" name="titulo" required />
+                    </label>
+                    <label>
+                      Autor
+                      <input type="text" name="autor" />
+                    </label>
+                    <label>
+                      Año
+                      <input type="number" name="anio" min="1900" max="2100" />
+                    </label>
+                    <label>
+                      Serie
+                      <input type="text" name="serie" />
+                    </label>
+                    <!-- NUEVO: Categoría biblioteca -->
+                    <label>
+                      Categoría
+                      <select name="categoria" required>
+                        <option value="libro">Libro</option>
+                        <option value="material escolar">Material Escolar</option>
+                        <option value="material multimedia">Material Multimedia</option>
+                        <option value="instrumento musical">Instrumento Musical</option>
+                        <option value="material didáctico">Material Didáctico</option>
+                        <option value="documento">Documento</option>
+                        <option value="otros">Otros</option>
+                      </select>
+                    </label>
+                    <label>
+                      Cantidad
+                      <input type="number" name="cantidad" min="0" required />
+                    </label>
+                    <label>
+                      Descripción
+                      <input type="text" name="descripcion" />
+                    </label>
+                    <label>
+                      Foto
+                      <input type="file" name="photo" accept="image/*" />
+                    </label>
+                  </div>
 
-              <button type="submit" class="btn-primary">
-                Guardar libro
-              </button>
-            </form>
+                  <button type="submit" class="btn-primary">
+                    Guardar libro
+                  </button>
+                </form>
+              </div>
+            </div>
           </div>
 
           <div class="panel-block">
-            <h3>Listado de libros</h3>
-
-            <!-- NUEVO: barra de búsqueda y filtros de biblioteca -->
-            <div class="filters-row" data-library-filters="container">
-              <!-- Filtros simples -->
-              <div class="filters-group" data-library-filters="simple" style="display: flex;">
-                <label>
-                  Buscar
-                  <input
-                    type="text"
-                    id="librarySearch"
-                    placeholder="Código, título, autor, categoría..."
-                  />
-                </label>
+            <div class="collapsible-card" data-collapsible>
+              <div class="collapsible-header">
+                <h3>Listado de libros</h3>
+                <button type="button" class="collapse-toggle" aria-expanded="true">
+                  <span>Ocultar</span>
+                  <span class="collapse-icon">▲</span>
+                </button>
               </div>
+              <div class="collapsible-body">
+                <!-- NUEVO: barra de búsqueda y filtros de biblioteca -->
+                <div class="filters-row" data-library-filters="container">
+                  <!-- Filtros simples -->
+                  <div class="filters-group" data-library-filters="simple" style="display: flex;">
+                    <label>
+                      Buscar
+                      <input
+                        type="text"
+                        id="librarySearch"
+                        placeholder="Código, título, autor, categoría..."
+                      />
+                    </label>
+                  </div>
 
-              <!-- Filtros avanzados -->
-              <div class="filters-group" data-library-filters="advanced" style="display: none;">
-                <label>
-                  Categoría
-                  <select id="libraryFilterCategoria">
-                    <option value="all">Todas</option>
-                    <option value="libro">Libro</option>
-                    <option value="material escolar">Material Escolar</option>
-                    <option value="material multimedia">Material Multimedia</option>
-                    <option value="instrumento musical">Instrumento Musical</option>
-                    <option value="material didáctico">Material Didáctico</option>
-                    <option value="documento">Documento</option>
-                    <option value="otros">Otros</option>
-                  </select>
-                </label>
+                  <!-- Filtros avanzados -->
+                  <div class="filters-group" data-library-filters="advanced" style="display: none;">
+                    <label>
+                      Categoría
+                      <select id="libraryFilterCategoria">
+                        <option value="all">Todas</option>
+                        <option value="libro">Libro</option>
+                        <option value="material escolar">Material Escolar</option>
+                        <option value="material multimedia">Material Multimedia</option>
+                        <option value="instrumento musical">Instrumento Musical</option>
+                        <option value="material didáctico">Material Didáctico</option>
+                        <option value="documento">Documento</option>
+                        <option value="otros">Otros</option>
+                      </select>
+                    </label>
 
-                <label>
-                  Año desde
-                  <input type="number" id="libraryFilterYearFrom" min="1900" max="2100" />
-                </label>
+                    <label>
+                      Año desde
+                      <input type="number" id="libraryFilterYearFrom" min="1900" max="2100" />
+                    </label>
 
-                <label>
-                  Año hasta
-                  <input type="number" id="libraryFilterYearTo" min="1900" max="2100" />
-                </label>
+                    <label>
+                      Año hasta
+                      <input type="number" id="libraryFilterYearTo" min="1900" max="2100" />
+                    </label>
 
-                <label class="checkbox-inline">
-                  <input type="checkbox" id="libraryFilterHasPhoto" />
-                  Solo con foto
-                </label>
+                    <label class="checkbox-inline">
+                      <input type="checkbox" id="libraryFilterHasPhoto" />
+                      Solo con foto
+                    </label>
+                  </div>
+
+                  <!-- Selector modo filtros -->
+                  <div class="filters-mode">
+                    <label>
+                      Modo filtros
+                      <select id="libraryFilterMode">
+                        <option value="simple">Búsqueda simple</option>
+                        <option value="advanced">Solo avanzados</option>
+                        <option value="both" selected>Ambos</option>
+                      </select>
+                    </label>
+                  </div>
+                </div>
+                <!-- FIN filtros biblioteca -->
+
+                <div class="table-wrapper">
+                  <table id="libraryTable" class="inventory-table">
+                    <thead>
+                      <tr>
+                        <th>ID</th>
+                        <th>Código</th>
+                        <th>Título</th>
+                        <th>Autor</th>
+                        <th>Año</th>
+                        <th>Serie</th>
+                        <th>Categoría</th>
+                        <th>Cantidad</th>
+                        <th>Descripción</th>
+                        <th>Foto</th>
+                        <th>Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <!-- library.js llenará aquí -->
+                    </tbody>
+                  </table>
+                </div>
               </div>
-
-              <!-- Selector modo filtros -->
-              <div class="filters-mode">
-                <label>
-                  Modo filtros
-                  <select id="libraryFilterMode">
-                    <option value="simple">Búsqueda simple</option>
-                    <option value="advanced">Solo avanzados</option>
-                    <option value="both" selected>Ambos</option>
-                  </select>
-                </label>
-              </div>
-            </div>
-            <!-- FIN filtros biblioteca -->
-
-            <div class="table-wrapper">
-              <table id="libraryTable" class="inventory-table">
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Código</th>
-                    <th>Título</th>
-                    <th>Autor</th>
-                    <th>Año</th>
-                    <th>Serie</th>
-                    <th>Categoría</th>
-                    <th>Cantidad</th>
-                    <th>Descripción</th>
-                    <th>Foto</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <!-- library.js llenará aquí -->
-                </tbody>
-              </table>
             </div>
           </div>
         </div>
@@ -936,197 +1045,246 @@
         <!-- Préstamos -->
         <div class="panel-grid">
           <div class="panel-block">
-            <h3>Registrar préstamo</h3>
-            <form id="loanForm">
-              <div class="form-grid">
-                <label>
-                  Código del libro
-                  <input type="text" name="codigo" required />
-                </label>
-
-                <!-- NUEVO: selector de estudiante/funcionario -->
-                <label>
-                  Estudiante / Funcionario
-                  <select name="personaId" id="loanPersonaSelect">
-                    <option value="">Escribe o selecciona una persona</option>
-                    <!-- library.js llenará las opciones dinámicamente -->
-                  </select>
-                </label>
-
-                <label>
-                  Nombre de quien pide
-                  <input type="text" name="nombre" id="loanNombre" required />
-                </label>
-                <label>
-                  Curso / Funcionario
-                  <input type="text" name="curso" id="loanCurso" />
-                </label>
-
-                <!-- NUEVO: tipo persona (estudiante/funcionario) para el backend (oculto) -->
-                <input type="hidden" name="tipoPersona" id="loanTipoPersona" />
-
-                <label>
-                  Observaciones
-                  <input type="text" name="observaciones" />
-                </label>
+            <div class="collapsible-card" data-collapsible>
+              <div class="collapsible-header">
+                <h3>Registrar préstamo</h3>
+                <button type="button" class="collapse-toggle" aria-expanded="true">
+                  <span>Ocultar</span>
+                  <span class="collapse-icon">▲</span>
+                </button>
               </div>
-              <button type="submit" class="btn-secondary">
-                Registrar préstamo
-              </button>
-            </form>
+              <div class="collapsible-body">
+                <form id="loanForm">
+                  <div class="form-grid">
+                    <label>
+                      Código del libro
+                      <input type="text" name="codigo" required />
+                    </label>
+
+                    <!-- NUEVO: selector de estudiante/funcionario -->
+                    <label>
+                      Estudiante / Funcionario
+                      <select name="personaId" id="loanPersonaSelect">
+                        <option value="">Escribe o selecciona una persona</option>
+                        <!-- library.js llenará las opciones dinámicamente -->
+                      </select>
+                    </label>
+
+                    <label>
+                      Nombre de quien pide
+                      <input type="text" name="nombre" id="loanNombre" required />
+                    </label>
+                    <label>
+                      Curso / Funcionario
+                      <input type="text" name="curso" id="loanCurso" />
+                    </label>
+
+                    <!-- NUEVO: tipo persona (estudiante/funcionario) para el backend (oculto) -->
+                    <input type="hidden" name="tipoPersona" id="loanTipoPersona" />
+
+                    <label>
+                      Observaciones
+                      <input type="text" name="observaciones" />
+                    </label>
+                  </div>
+                  <button type="submit" class="btn-secondary">
+                    Registrar préstamo
+                  </button>
+                </form>
+              </div>
+            </div>
           </div>
 
           <div class="panel-block">
-            <h3>Registrar devolución</h3>
-            <form id="returnForm">
-              <div class="form-grid">
-                <label>
-                  ID del préstamo
-                  <input type="text" name="loanId" required />
-                </label>
+            <div class="collapsible-card" data-collapsible>
+              <div class="collapsible-header">
+                <h3>Registrar devolución</h3>
+                <button type="button" class="collapse-toggle" aria-expanded="true">
+                  <span>Ocultar</span>
+                  <span class="collapse-icon">▲</span>
+                </button>
               </div>
-              <button type="submit" class="btn-ghost">
-                Registrar devolución
-              </button>
-            </form>
+              <div class="collapsible-body">
+                <form id="returnForm">
+                  <div class="form-grid">
+                    <label>
+                      ID del préstamo
+                      <input type="text" name="loanId" required />
+                    </label>
+                  </div>
+                  <button type="submit" class="btn-ghost">
+                    Registrar devolución
+                  </button>
+                </form>
+              </div>
+            </div>
           </div>
         </div>
 
         <!-- Listado de préstamos -->
         <div class="panel-block">
-          <h3>Listado de préstamos</h3>
-
-          <!-- NUEVO: barra de búsqueda y filtros de préstamos -->
-          <div class="filters-row" data-loans-filters="container">
-            <!-- Filtros simples -->
-            <div class="filters-group" data-loans-filters="simple" style="display: flex;">
-              <label>
-                Buscar
-                <input
-                  type="text"
-                  id="loansSearch"
-                  placeholder="ID, código, nombre, curso..."
-                />
-              </label>
+          <div class="collapsible-card" data-collapsible>
+            <div class="collapsible-header">
+              <h3>Listado de préstamos</h3>
+              <button type="button" class="collapse-toggle" aria-expanded="true">
+                <span>Ocultar</span>
+                <span class="collapse-icon">▲</span>
+              </button>
             </div>
+            <div class="collapsible-body">
+              <!-- NUEVO: barra de búsqueda y filtros de préstamos -->
+              <div class="filters-row" data-loans-filters="container">
+                <!-- Filtros simples -->
+                <div class="filters-group" data-loans-filters="simple" style="display: flex;">
+                  <label>
+                    Buscar
+                    <input
+                      type="text"
+                      id="loansSearch"
+                      placeholder="ID, código, nombre, curso..."
+                    />
+                  </label>
+                </div>
 
-            <!-- Filtros avanzados -->
-            <div class="filters-group" data-loans-filters="advanced" style="display: none;">
-              <label>
-                Estado
-                <select id="loansFilterReturned">
-                  <option value="all">Todos</option>
-                  <option value="yes">Solo devueltos</option>
-                  <option value="no">Solo pendientes</option>
-                </select>
-              </label>
+                <!-- Filtros avanzados -->
+                <div class="filters-group" data-loans-filters="advanced" style="display: none;">
+                  <label>
+                    Estado
+                    <select id="loansFilterReturned">
+                      <option value="all">Todos</option>
+                      <option value="yes">Solo devueltos</option>
+                      <option value="no">Solo pendientes</option>
+                    </select>
+                  </label>
 
-              <label>
-                Desde
-                <input type="date" id="loansFilterDateFrom" />
-              </label>
+                  <label>
+                    Desde
+                    <input type="date" id="loansFilterDateFrom" />
+                  </label>
 
-              <label>
-                Hasta
-                <input type="date" id="loansFilterDateTo" />
-              </label>
+                  <label>
+                    Hasta
+                    <input type="date" id="loansFilterDateTo" />
+                  </label>
+                </div>
+
+                <!-- Selector modo filtros -->
+                <div class="filters-mode">
+                  <label>
+                    Modo filtros
+                    <select id="loansFilterMode">
+                      <option value="simple">Búsqueda simple</option>
+                      <option value="advanced">Solo avanzados</option>
+                      <option value="both" selected>Ambos</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+              <!-- FIN filtros préstamos -->
+
+              <div class="table-wrapper">
+                <table id="loansTable" class="inventory-table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Código libro</th>
+                      <th>Nombre quien pide</th>
+                      <th>Curso / Funcionario</th>
+                      <th>Fecha préstamo</th>
+                      <th>Devuelto</th>
+                      <th>Fecha devolución</th>
+                      <th>Observaciones</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- library.js llenará aquí -->
+                  </tbody>
+                </table>
+              </div>
             </div>
-
-            <!-- Selector modo filtros -->
-            <div class="filters-mode">
-              <label>
-                Modo filtros
-                <select id="loansFilterMode">
-                  <option value="simple">Búsqueda simple</option>
-                  <option value="advanced">Solo avanzados</option>
-                  <option value="both" selected>Ambos</option>
-                </select>
-              </label>
-            </div>
-          </div>
-          <!-- FIN filtros préstamos -->
-
-          <div class="table-wrapper">
-            <table id="loansTable" class="inventory-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Código libro</th>
-                  <th>Nombre quien pide</th>
-                  <th>Curso / Funcionario</th>
-                  <th>Fecha préstamo</th>
-                  <th>Devuelto</th>
-                  <th>Fecha devolución</th>
-                  <th>Observaciones</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                <!-- library.js llenará aquí -->
-              </tbody>
-            </table>
           </div>
         </div>
 
         <!-- NUEVO: Panel de administración de estudiantes y funcionarios -->
         <div class="panel-grid">
           <div class="panel-block">
-            <h3>Personas registradas (Estudiantes / Funcionarios)</h3>
-            <form id="peopleForm">
-              <div class="form-grid">
-                <label>
-                  ID
-                  <input type="text" name="id" placeholder="Ej: STU-001, FUNC-001" />
-                </label>
-                <label>
-                  Nombre completo
-                  <input type="text" name="nombre" required />
-                </label>
-                <label>
-                  Tipo
-                  <select name="tipo" required>
-                    <option value="estudiante">Estudiante</option>
-                    <option value="funcionario">Funcionario</option>
-                  </select>
-                </label>
-                <label>
-                  Curso / Cargo
-                  <input type="text" name="curso" placeholder="Ej: 7°A, Inspectoría" />
-                </label>
-              </div>
-              <div class="form-actions">
-                <button type="submit" class="btn-secondary" id="peopleFormSubmit">
-                  Guardar persona
-                </button>
-                <button
-                  type="button"
-                  class="btn-ghost"
-                  id="peopleFormCancel"
-                  style="display: none;"
-                >
-                  Cancelar edición
+            <div class="collapsible-card" data-collapsible>
+              <div class="collapsible-header">
+                <h3>Personas registradas (Estudiantes / Funcionarios)</h3>
+                <button type="button" class="collapse-toggle" aria-expanded="true">
+                  <span>Ocultar</span>
+                  <span class="collapse-icon">▲</span>
                 </button>
               </div>
-            </form>
+              <div class="collapsible-body">
+                <form id="peopleForm">
+                  <div class="form-grid">
+                    <label>
+                      ID
+                      <input type="text" name="id" placeholder="Ej: STU-001, FUNC-001" />
+                    </label>
+                    <label>
+                      Nombre completo
+                      <input type="text" name="nombre" required />
+                    </label>
+                    <label>
+                      Tipo
+                      <select name="tipo" required>
+                        <option value="estudiante">Estudiante</option>
+                        <option value="funcionario">Funcionario</option>
+                      </select>
+                    </label>
+                    <label>
+                      Curso / Cargo
+                      <input type="text" name="curso" placeholder="Ej: 7°A, Inspectoría" />
+                    </label>
+                  </div>
+                  <div class="form-actions">
+                    <button type="submit" class="btn-secondary" id="peopleFormSubmit">
+                      Guardar persona
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-ghost"
+                      id="peopleFormCancel"
+                      style="display: none;"
+                    >
+                      Cancelar edición
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
           </div>
 
           <div class="panel-block">
-            <h3>Listado de personas</h3>
-            <div class="table-wrapper">
-              <table id="peopleTable" class="inventory-table">
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Nombre</th>
-                    <th>Tipo</th>
-                    <th>Curso / Cargo</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <!-- library.js llenará aquí -->
-                </tbody>
-              </table>
+            <div class="collapsible-card" data-collapsible>
+              <div class="collapsible-header">
+                <h3>Listado de personas</h3>
+                <button type="button" class="collapse-toggle" aria-expanded="true">
+                  <span>Ocultar</span>
+                  <span class="collapse-icon">▲</span>
+                </button>
+              </div>
+              <div class="collapsible-body">
+                <div class="table-wrapper">
+                  <table id="peopleTable" class="inventory-table">
+                    <thead>
+                      <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Tipo</th>
+                        <th>Curso / Cargo</th>
+                        <th>Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <!-- library.js llenará aquí -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1141,45 +1299,56 @@
         </p>
 
         <div class="panel-block">
-          <div class="filters-row">
-            <label>
-              Módulo
-              <select id="historyLabFilter">
-                <option value="all">Todos los módulos</option>
-                <option value="science">Laboratorio de Ciencias</option>
-                <option value="computing">Sala de Computación</option>
-                <option value="library">Biblioteca</option>
-              </select>
-            </label>
+          <div class="collapsible-card" data-collapsible>
+            <div class="collapsible-header">
+              <h3>Historial del sistema</h3>
+              <button type="button" class="collapse-toggle" aria-expanded="true">
+                <span>Ocultar</span>
+                <span class="collapse-icon">▲</span>
+              </button>
+            </div>
+            <div class="collapsible-body">
+              <div class="filters-row">
+                <label>
+                  Módulo
+                  <select id="historyLabFilter">
+                    <option value="all">Todos los módulos</option>
+                    <option value="science">Laboratorio de Ciencias</option>
+                    <option value="computing">Sala de Computación</option>
+                    <option value="library">Biblioteca</option>
+                  </select>
+                </label>
 
-            <label>
-              Cantidad de registros
-              <select id="historyLimit">
-                <option value="50">Últimos 50</option>
-                <option value="100" selected>Últimos 100</option>
-                <option value="200">Últimos 200</option>
-                <option value="500">Últimos 500</option>
-              </select>
-            </label>
-          </div>
+                <label>
+                  Cantidad de registros
+                  <select id="historyLimit">
+                    <option value="50">Últimos 50</option>
+                    <option value="100" selected>Últimos 100</option>
+                    <option value="200">Últimos 200</option>
+                    <option value="500">Últimos 500</option>
+                  </select>
+                </label>
+              </div>
 
-          <div class="table-wrapper">
-            <table id="historyTable" class="inventory-table">
-              <thead>
-                <tr>
-                  <th>Fecha</th>
-                  <th>Módulo</th>
-                  <th>Acción</th>
-                  <th>Tipo</th>
-                  <th>ID entidad</th>
-                  <th>Usuario</th>
-                  <th>Detalle</th>
-                </tr>
-              </thead>
-              <tbody>
-                <!-- history.js llenará aquí -->
-              </tbody>
-            </table>
+              <div class="table-wrapper">
+                <table id="historyTable" class="inventory-table">
+                  <thead>
+                    <tr>
+                      <th>Fecha</th>
+                      <th>Módulo</th>
+                      <th>Acción</th>
+                      <th>Tipo</th>
+                      <th>ID entidad</th>
+                      <th>Usuario</th>
+                      <th>Detalle</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- history.js llenará aquí -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -1195,6 +1364,8 @@
 
   <!-- Scripts específicos de UI y módulos -->
   <script src="/js/tabs.js"></script>
+  <!-- NUEVO: paneles desplegables -->
+  <script src="/js/collapsibles.js"></script>
   <script src="/js/science.js"></script>
   <script src="/js/computing.js"></script>
   <script src="/js/library.js"></script>
