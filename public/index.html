@@ -612,8 +612,7 @@
 
           <!-- TABLA INVENTARIO COMPUTACIÓN -->
           <div class="panel-block">
-            <div class="collapsible-card" data-collaps
-ible>
+            <div class="collapsible-card" data-collapsible>
               <div class="collapsible-header">
                 <h3>Inventario de computación</h3>
                 <button type="button" class="collapse-toggle" aria-expanded="true">
@@ -1012,6 +1011,15 @@ ible>
                       </select>
                     </label>
                   </div>
+
+                  <!-- NUEVO: Botón exportar CSV de biblioteca -->
+                  <button
+                    type="button"
+                    id="btnExportLibraryCSV"
+                    class="btn-secondary"
+                  >
+                    Exportar CSV
+                  </button>
                 </div>
                 <!-- FIN filtros biblioteca -->
 
@@ -1348,6 +1356,74 @@ ible>
                   </tbody>
                 </table>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- NUEVO: PANEL DE ANÁLISIS DE DATOS -->
+        <div class="panel-block">
+          <div class="collapsible-card" data-collapsible>
+            <div class="collapsible-header">
+              <h3>Análisis de datos</h3>
+              <button type="button" class="collapse-toggle" aria-expanded="true">
+                <span>Ocultar</span>
+                <span class="collapse-icon">▲</span>
+              </button>
+            </div>
+            <div class="collapsible-body">
+              <!-- Resumen rápido tipo tarjetas futuristas -->
+              <div class="analytics-summary-grid">
+                <div class="analytics-card">
+                  <span class="analytics-label">Total de préstamos</span>
+                  <span id="analyticsTotalLoans" class="analytics-value">0</span>
+                </div>
+                <div class="analytics-card">
+                  <span class="analytics-label">Préstamos a estudiantes</span>
+                  <span id="analyticsStudentLoans" class="analytics-value">0</span>
+                </div>
+                <div class="analytics-card">
+                  <span class="analytics-label">Préstamos a funcionarios</span>
+                  <span id="analyticsStaffLoans" class="analytics-value">0</span>
+                </div>
+                <div class="analytics-card">
+                  <span class="analytics-label">Promedio días de préstamo</span>
+                  <span id="analyticsAvgLoanDays" class="analytics-value">0</span>
+                </div>
+                <div class="analytics-card">
+                  <span class="analytics-label">Sala / curso más activo</span>
+                  <span id="analyticsTopRoom" class="analytics-value">—</span>
+                </div>
+                <div class="analytics-card">
+                  <span class="analytics-label">Módulo con más movimientos</span>
+                  <span id="analyticsTopModule" class="analytics-value">—</span>
+                </div>
+              </div>
+
+              <!-- Gráficas futuristas -->
+              <div class="analytics-charts-grid">
+                <div class="chart-card">
+                  <h4>Préstamos por tipo de persona</h4>
+                  <canvas id="chartLoansByPersonType"></canvas>
+                </div>
+                <div class="chart-card">
+                  <h4>Uso por sala / curso</h4>
+                  <canvas id="chartLoansByRoom"></canvas>
+                </div>
+                <div class="chart-card">
+                  <h4>Duración de los préstamos (días)</h4>
+                  <canvas id="chartLoanDuration"></canvas>
+                </div>
+                <div class="chart-card">
+                  <h4>Movimientos por módulo</h4>
+                  <canvas id="chartHistoryByModule"></canvas>
+                </div>
+              </div>
+
+              <p class="section-description">
+                Estas métricas se calculan automáticamente a partir del historial:
+                se considera cuántas veces se usa cada recurso y sala, quién pide más
+                (estudiantes o funcionarios) y cuánto tiempo tardan en devolver los materiales.
+              </p>
             </div>
           </div>
         </div>
