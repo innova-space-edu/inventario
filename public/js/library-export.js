@@ -1,53 +1,60 @@
 // /public/js/library-export.js
-// Exporta el inventario de biblioteca a CSV usando ; como separador
-// para que Excel en Chile lo abra en columnas correctas.
+// Exportar a CSV el inventario y los préstamos de Biblioteca
 
 document.addEventListener('DOMContentLoaded', () => {
-  const exportBtn = document.getElementById('btnExportLibraryCSV');
+  const btnExportInventory = document.getElementById('btnExportLibraryCSV');
+  const btnExportLoans = document.getElementById('btnExportLoansCSV');
 
-  // Buscamos el tbody de la tabla de biblioteca en varios posibles IDs
-  const libraryTableBody =
-    document.getElementById('libraryTableBody') ||
-    (document.querySelector('#libraryTable tbody')) ||
-    (document.querySelector('#libraryItemsTable tbody'));
+  // Utilidad general para exportar una tabla a CSV
+  function exportTableToCSV(tableElement, filename) {
+    if (!tableElement) return;
 
-  if (!exportBtn || !libraryTableBody) {
-    // Si no existen, no hacemos nada (evita errores)
-    return;
-  }
+    const rows = Array.from(tableElement.querySelectorAll('tr'));
+    if (!rows.length) return;
 
-  const safe = (v) => (v == null ? '' : String(v));
+    const csv = rows
+      .map((row) =>
+        Array.from(row.children)
+          .map((cell) => {
+            const text = cell.innerText.replace(/\s+/g, ' ').trim();
+            return `"${text.replace(/"/g, '""')}"`;
+          })
+          .join(',')
+      )
+      .join('\n');
 
-  exportBtn.addEventListener('click', () => {
-    // Tomamos todas las filas de la tabla (thead + tbody)
-    const table = libraryTableBody.parentElement; // <table> o <tbody>.parentElement => <table>
-    const rows = Array.from(table.querySelectorAll('tr'));
-
-    if (!rows.length) {
-      alert('No hay registros de biblioteca para exportar.');
-      return;
-    }
-
-    const lines = rows.map((row) => {
-      const cells = Array.from(row.children);
-      const line = cells
-        .map((cell) => {
-          const text = safe(cell.innerText).replace(/\s+/g, ' ').trim();
-          return `"${text.replace(/"/g, '""')}"`;
-        })
-        .join(';'); // IMPORTANTE: separador en ; para que Excel lo vea por columnas
-      return line;
-    });
-
-    const csv = lines.join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'inventario_biblioteca.csv';
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  });
+  }
+
+  // Exportar INVENTARIO de biblioteca
+  if (btnExportInventory) {
+    btnExportInventory.addEventListener('click', () => {
+      const table = document.getElementById('libraryTable');
+      if (!table) {
+        alert('No se encontró la tabla de inventario de biblioteca.');
+        return;
+      }
+      exportTableToCSV(table, 'inventario_biblioteca.csv');
+    });
+  }
+
+  // Exportar PRÉSTAMOS de biblioteca
+  if (btnExportLoans) {
+    btnExportLoans.addEventListener('click', () => {
+      const table = document.getElementById('loansTable');
+      if (!table) {
+        alert('No se encontró la tabla de préstamos de biblioteca.');
+        return;
+      }
+      exportTableToCSV(table, 'prestamos_biblioteca.csv');
+    });
+  }
 });
