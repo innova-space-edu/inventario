@@ -7,7 +7,7 @@
 // ===============================
 
 document.addEventListener('DOMContentLoaded', () => {
-  // ------------------ Referencias base ------------------
+  // ------------------ Referencias base ------------------  
   const libraryForm = document.getElementById('libraryForm');
   const libraryTableBody = document.querySelector('#libraryTable tbody');
 
@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const overdueBanner = document.getElementById('libraryOverdueBanner');
 
-  // ------------------ Filtros inventario ------------------
+  // ------------------ Filtros inventario ------------------  
   const librarySearchInput = document.getElementById('librarySearch');
   const libraryFilterMode = document.getElementById('libraryFilterMode');
   const libraryFilterCategoria = document.getElementById('libraryFilterCategoria');
@@ -28,16 +28,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const libraryFilterYearTo = document.getElementById('libraryFilterYearTo');
   const libraryFilterHasPhoto = document.getElementById('libraryFilterHasPhoto');
 
-  // ------------------ Filtros préstamos ------------------
+  // ------------------ Filtros préstamos ------------------  
   const loansSearchInput = document.getElementById('loansSearch');
   const loansFilterMode = document.getElementById('loansFilterMode');
   const loansFilterReturned = document.getElementById('loansFilterReturned');
   const loansFilterDateFrom = document.getElementById('loansFilterDateFrom');
   const loansFilterDateTo = document.getElementById('loansFilterDateTo');
 
-  // ------------------ Personas (estudiantes/func.) ------------------
-  // En la UI: <select id="loanPersonSelect"> para auto-completar préstamo
-  const loanPersonSelect = document.getElementById('loanPersonSelect');
+  // ------------------ Personas (estudiantes/func.) ------------------  
+  // En la UI: <select id="loanPersonaSelect"> para auto-completar préstamo
+  const loanPersonSelect = document.getElementById('loanPersonaSelect');
   const loanTipoPersonaInput = document.getElementById('loanTipoPersona');
 
   const peopleForm = document.getElementById('peopleForm');
@@ -45,13 +45,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const peopleFormCancel = document.getElementById('peopleFormCancel');
   const peopleTableBody = document.querySelector('#peopleTable tbody');
 
-  // ------------------ Botones de reporte (si existen en tu HTML) ------------------
+  // ------------------ Botones de reporte (si existen en tu HTML) ------------------  
   const btnExportLibraryCSV = document.getElementById('btnExportLibraryCSV');
   const btnExportLoansCSV = document.getElementById('btnExportLoansCSV');
   const btnPrintLibraryReport = document.getElementById('btnPrintLibraryReport');
   const btnPrintLoansReport = document.getElementById('btnPrintLoansReport');
 
-  // ------------------ Helper de API (con credenciales) ------------------
+  // ------------------ Helper de API (con credenciales) ------------------  
   const apiFetch =
     window.guardedFetch ||
     ((url, options = {}) => fetch(url, { credentials: 'include', ...options }));
@@ -59,13 +59,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // Si no estamos en la pantalla de biblioteca, salir silenciosamente
   if (!libraryForm || !libraryTableBody) return;
 
-  // ================== Estado local ==================
+  // ================== Estado local ==================  
   let libraryItems = [];
   let libraryLoans = [];
   let libraryPeople = [];
   let editingPersonId = null;
 
-  // ================== Utils ==================
+  // ================== Utils ==================  
   function formatDate(dateValue) {
     if (!dateValue) return '';
     const d = new Date(dateValue);
@@ -114,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // ================== INVENTARIO ==================
+  // ================== INVENTARIO ==================  
   async function loadLibraryItems() {
     try {
       const resp = await apiFetch('/api/library/items');
@@ -256,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return items;
   }
 
-  // Persistencia de filtros de inventario
+  // Persistencia de filtros de inventario  
   function persistInventoryFiltersToStorage() {
     try {
       const state = {
@@ -286,7 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (_) {}
   }
 
-  // Envío del formulario de alta de libros/material
+  // Envío del formulario de alta de libros/material  
   libraryForm.addEventListener('submit', async e => {
     e.preventDefault();
 
@@ -324,7 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // ================== PRÉSTAMOS ==================
+  // ================== PRÉSTAMOS ==================  
   async function loadLoans() {
     if (!loansTableBody) return;
     try {
@@ -501,7 +501,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Persistencia de filtros de préstamos
+  // Persistencia de filtros de préstamos  
   function persistLoanFiltersToStorage() {
     try {
       const state = {
@@ -529,7 +529,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (_) {}
   }
 
-  // Formularios de préstamos
+  // Formularios de préstamos  
   if (loanForm) {
     loanForm.addEventListener('submit', async e => {
       e.preventDefault();
@@ -613,7 +613,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ================== PERSONAS (listado) ==================
+  // ================== PERSONAS (listado) ==================  
   async function loadLibraryPeople() {
     if (!peopleTableBody && !loanPersonSelect) return;
 
@@ -822,7 +822,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ================== Alertas (vencidos) ==================
+  // ================== Alertas (vencidos) ==================  
   async function checkOverdueLoans() {
     if (!overdueBanner) return;
 
@@ -849,7 +849,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // ================== Exportaciones (CSV / Print) ==================
+  // ================== Exportaciones (CSV / Print) ==================  
   function toCSVRow(values) {
     return values
       .map(v => {
@@ -1026,13 +1026,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Enganchar botones de reporte si existen en el DOM
+  // Enganchar botones de reporte si existen en el DOM  
   if (btnExportLibraryCSV) btnExportLibraryCSV.addEventListener('click', exportInventoryCSV);
   if (btnExportLoansCSV) btnExportLoansCSV.addEventListener('click', exportLoansCSV);
   if (btnPrintLibraryReport) btnPrintLibraryReport.addEventListener('click', printInventoryReport);
   if (btnPrintLoansReport) btnPrintLoansReport.addEventListener('click', printLoansReport);
 
-  // ================== Listeners de filtros ==================
+  // ================== Listeners de filtros ==================  
   function attachLibraryFiltersListeners() {
     if (librarySearchInput) {
       librarySearchInput.addEventListener('input', debounce(() => {
@@ -1127,7 +1127,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // ================== Inicialización ==================
+  // ================== Inicialización ==================  
   loadLibraryItems();
   loadLoans();
   checkOverdueLoans();
