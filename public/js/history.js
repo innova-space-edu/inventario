@@ -42,13 +42,18 @@ document.addEventListener("DOMContentLoaded", () => {
     return d.toLocaleString("es-CL");
   }
 
+  function safeText(v) {
+    if (v === null || v === undefined) return "";
+    return String(v);
+  }
+
   function formatDetails(data) {
     if (!data) return "";
     try {
       const str = JSON.stringify(data);
       return str.length > 140 ? str.slice(0, 140) + "..." : str;
     } catch {
-      return String(data);
+      return safeText(data);
     }
   }
 
@@ -67,26 +72,79 @@ document.addEventListener("DOMContentLoaded", () => {
     return x.charAt(0).toUpperCase() + x.slice(1);
   }
 
+  function getDataObj(log) {
+    const d = log.data || log.details || log.payload || log.meta || null;
+    return d && typeof d === "object" ? d : null;
+  }
+
+  function inferEntityType(log) {
+    const raw = (log.entityType || log.entity_type || "").toString().trim().toLowerCase();
+    if (raw) return raw;
+
+    const d = getDataObj(log);
+    const fallback =
+      (d?.entityType || d?.entity_type || d?.tipoEntidad || d?.tipo_entidad || d?.tipo || "")
+        .toString()
+        .trim()
+        .toLowerCase();
+
+    return fallback || "";
+  }
+
+  function inferAction(log) {
+    const raw = (log.action || log.action_type || "").toString().trim().toLowerCase();
+    if (raw) return raw;
+
+    const d = getDataObj(log);
+    const fallback =
+      (d?.action || d?.action_type || d?.accion || d?.tipoAccion || "")
+        .toString()
+        .trim()
+        .toLowerCase();
+
+    return fallback || "";
+  }
+
+  function inferEntityId(log) {
+    const raw = (log.entityId || log.entity_id || "").toString().trim();
+    if (raw) return raw;
+
+    const d = getDataObj(log);
+    const fallback =
+      (d?.entityId || d?.entity_id || d?.id || d?.loanId || d?.loan_id || "")
+        .toString()
+        .trim();
+
+    return fallback || "";
+  }
+
+  function inferCreatedAt(log) {
+    const raw = log.createdAt || log.created_at || null;
+    if (raw) return raw;
+
+    const d = getDataObj(log);
+    return d?.createdAt || d?.created_at || d?.fecha || null;
+  }
+
+  function inferReturnedAt(log) {
+    const d = getDataObj(log);
+    return d?.returnedAt || d?.returned_at || d?.returnAt || d?.return_at || d?.fechaDevolucion || null;
+  }
+
   // ====== STATS ======
   function computeStats(logs) {
-    const movementsByModule = {}; // total logs por módulo (para gráfico)
+    const movementsByModule = {}; // total logs por módulo
     const loansByPersonType = { estudiante: 0, funcionario: 0, desconocido: 0 };
-    const loansByRoom = {}; // curso/ubicación/room
-    const loanDurations = []; // array de días
+    const loansByRoom = {};
+    const loanDurations = [];
     const loanPairs = new Map(); // key: module|entityId -> { created, returned }
 
-    // Para "Top room" y "Top module"
     let topRoom = null;
     let topRoomCount = 0;
 
-    // Heurística para sacar "room/curso":
-    // - log.data.curso
-    // - log.data.room
-    // - log.data.ubicacion
-    // - log.data.grupo
     const getRoomFromLog = (log) => {
-      const d = log.data || log.details || log.payload || log.meta || null;
-      if (!d || typeof d !== "object") return "";
+      const d = getDataObj(log);
+      if (!d) return "";
       return (
         d.curso ||
         d.room ||
@@ -94,33 +152,32 @@ document.addEventListener("DOMContentLoaded", () => {
         d.ubicacion ||
         d.grupo ||
         d.location ||
+        d.classroom ||
         ""
       ).toString().trim();
     };
 
-    // Heurística persona tipo (loan):
-    // - log.data.tipoPersona
-    // - log.data.tipo_persona
-    // - log.data.personType
     const getPersonTypeFromLog = (log) => {
-      const d = log.data || log.details || log.payload || log.meta || null;
-      if (!d || typeof d !== "object") return "";
+      const d = getDataObj(log);
+      if (!d) return "";
       return (
         d.tipoPersona ||
         d.tipo_persona ||
         d.personType ||
         d.person_type ||
+        d.rol ||
+        d.role ||
         ""
       ).toString().trim().toLowerCase();
     };
 
     logs.forEach((log) => {
       const lab = normalizeLab(log.lab || log.module);
-      const action = (log.action || log.action_type || "").toString().toLowerCase();
-      const entityType = (log.entityType || log.entity_type || "").toString().toLowerCase();
-      const entityId = (log.entityId || log.entity_id || "").toString();
+      const action = inferAction(log);
+      const entityType = inferEntityType(log);
+      const entityId = inferEntityId(log);
 
-      const createdAtRaw = log.createdAt || log.created_at;
+      const createdAtRaw = inferCreatedAt(log);
       const createdAt = createdAtRaw ? new Date(createdAtRaw) : null;
 
       movementsByModule[lab] = (movementsByModule[lab] || 0) + 1;
@@ -128,9 +185,14 @@ document.addEventListener("DOMContentLoaded", () => {
       // --- Conteo de préstamos por tipo de persona ---
       if (entityType === "loan" && action === "create") {
         const personType = getPersonTypeFromLog(log);
-        if (personType === "estudiante") loansByPersonType.estudiante += 1;
-        else if (personType === "funcionario") loansByPersonType.funcionario += 1;
-        else loansByPersonType.desconocido += 1;
+
+        if (personType === "estudiante" || personType === "alumno") {
+          loansByPersonType.estudiante += 1;
+        } else if (personType === "funcionario" || personType === "docente" || personType === "profesor") {
+          loansByPersonType.funcionario += 1;
+        } else {
+          loansByPersonType.desconocido += 1;
+        }
 
         // --- Conteo por sala/curso ---
         const room = getRoomFromLog(log);
@@ -145,14 +207,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // --- Duración de préstamos (si hay create + return/update) ---
       if (entityType === "loan" && createdAt && !Number.isNaN(createdAt.getTime())) {
-        const key = `${lab}|${entityId}`;
+        const key = `${lab}|${entityId || "sin-id"}`;
         let rec = loanPairs.get(key);
         if (!rec) rec = { created: null, returned: null };
 
         if (action === "create") {
           if (!rec.created || createdAt < rec.created) rec.created = createdAt;
-        } else if (action === "return" || action === "update") {
+        } else if (action === "return" || action === "returned" || action === "update") {
           if (!rec.returned || createdAt > rec.returned) rec.returned = createdAt;
+        }
+
+        // Si el backend trae explícito returnedAt dentro de data, lo usamos
+        const returnedAtRaw = inferReturnedAt(log);
+        if (returnedAtRaw) {
+          const r = new Date(returnedAtRaw);
+          if (!Number.isNaN(r.getTime())) {
+            if (!rec.returned || r > rec.returned) rec.returned = r;
+          }
         }
 
         loanPairs.set(key, rec);
@@ -168,9 +239,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     const totalLoans =
-      loansByPersonType.estudiante +
-      loansByPersonType.funcionario +
-      loansByPersonType.desconocido;
+      (loansByPersonType.estudiante || 0) +
+      (loansByPersonType.funcionario || 0) +
+      (loansByPersonType.desconocido || 0);
 
     const avgLoanDays =
       loanDurations.length > 0
@@ -223,31 +294,26 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderCharts(stats) {
-    if (typeof Chart === "undefined") return; // Si no está Chart.js, no hacemos nada
+    if (typeof Chart === "undefined") return;
 
-    // ---- 1) Préstamos por tipo persona (pie/doughnut) ----
+    // ---- 1) Préstamos por tipo persona (doughnut) ----
     if (cvLoansByPersonType) {
       chartLoansByPersonType = destroyChart(chartLoansByPersonType);
       const ctx = cvLoansByPersonType.getContext("2d");
 
       const labels = ["Estudiante", "Funcionario", "Desconocido"];
       const data = [
-        stats.loansByPersonType.estudiante || 0,
-        stats.loansByPersonType.funcionario || 0,
-        stats.loansByPersonType.desconocido || 0,
+        stats.loansByPersonType?.estudiante || 0,
+        stats.loansByPersonType?.funcionario || 0,
+        stats.loansByPersonType?.desconocido || 0,
       ];
 
       chartLoansByPersonType = new Chart(ctx, {
         type: "doughnut",
-        data: {
-          labels,
-          datasets: [{ data }],
-        },
+        data: { labels, datasets: [{ data }] },
         options: {
           responsive: true,
-          plugins: {
-            legend: { labels: { color: "#e5e7eb" } },
-          },
+          plugins: { legend: { labels: { color: "#e5e7eb" } } },
         },
       });
     }
@@ -257,8 +323,10 @@ document.addEventListener("DOMContentLoaded", () => {
       chartLoansByRoom = destroyChart(chartLoansByRoom);
       const ctx = cvLoansByRoom.getContext("2d");
 
-      // Top 10 para que no explote si hay muchos cursos
-      const entries = Object.entries(stats.loansByRoom || {}).sort((a, b) => b[1] - a[1]).slice(0, 10);
+      const entries = Object.entries(stats.loansByRoom || {})
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10);
+
       const labels = entries.map(([k]) => k);
       const data = entries.map(([, v]) => v);
 
@@ -270,9 +338,7 @@ document.addEventListener("DOMContentLoaded", () => {
         },
         options: {
           responsive: true,
-          plugins: {
-            legend: { labels: { color: "#e5e7eb" } },
-          },
+          plugins: { legend: { labels: { color: "#e5e7eb" } } },
           scales: {
             x: { ticks: { color: "#cbd5f5" }, grid: { color: "rgba(148,163,184,0.12)" } },
             y: { beginAtZero: true, ticks: { color: "#cbd5f5" }, grid: { color: "rgba(148,163,184,0.18)" } },
@@ -281,12 +347,11 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    // ---- 3) Duración de préstamos (histogram-like bar) ----
+    // ---- 3) Duración de préstamos (histogram-like) ----
     if (cvLoanDuration) {
       chartLoanDuration = destroyChart(chartLoanDuration);
       const ctx = cvLoanDuration.getContext("2d");
 
-      // bucket simple: 0-1,1-3,3-7,7-14,14+
       const buckets = [
         { label: "0-1", min: 0, max: 1 },
         { label: "1-3", min: 1, max: 3 },
@@ -294,26 +359,24 @@ document.addEventListener("DOMContentLoaded", () => {
         { label: "7-14", min: 7, max: 14 },
         { label: "14+", min: 14, max: Infinity },
       ];
-      const counts = buckets.map(b => 0);
+      const counts = buckets.map(() => 0);
 
-      (stats.loanDurations || []).forEach(d => {
+      (stats.loanDurations || []).forEach((d) => {
         const days = Number(d);
         if (Number.isNaN(days)) return;
-        const idx = buckets.findIndex(b => days >= b.min && days < b.max);
+        const idx = buckets.findIndex((b) => days >= b.min && days < b.max);
         if (idx >= 0) counts[idx] += 1;
       });
 
       chartLoanDuration = new Chart(ctx, {
         type: "bar",
         data: {
-          labels: buckets.map(b => b.label),
+          labels: buckets.map((b) => b.label),
           datasets: [{ label: "Cantidad de préstamos", data: counts, borderRadius: 12 }],
         },
         options: {
           responsive: true,
-          plugins: {
-            legend: { labels: { color: "#e5e7eb" } },
-          },
+          plugins: { legend: { labels: { color: "#e5e7eb" } } },
           scales: {
             x: { ticks: { color: "#cbd5f5" }, grid: { color: "rgba(148,163,184,0.12)" } },
             y: { beginAtZero: true, ticks: { color: "#cbd5f5" }, grid: { color: "rgba(148,163,184,0.18)" } },
@@ -339,9 +402,7 @@ document.addEventListener("DOMContentLoaded", () => {
         },
         options: {
           responsive: true,
-          plugins: {
-            legend: { labels: { color: "#e5e7eb" } },
-          },
+          plugins: { legend: { labels: { color: "#e5e7eb" } } },
           scales: {
             x: { ticks: { color: "#cbd5f5" }, grid: { color: "rgba(148,163,184,0.12)" } },
             y: { beginAtZero: true, ticks: { color: "#cbd5f5" }, grid: { color: "rgba(148,163,184,0.18)" } },
@@ -383,16 +444,18 @@ document.addEventListener("DOMContentLoaded", () => {
         .forEach((log) => {
           const tr = document.createElement("tr");
 
-          const labText = log.lab || log.module || "";
-          const actionText = log.action || log.action_type || "";
-          const entityType = log.entityType || log.entity_type || "";
-          const entityId = log.entityId || log.entity_id || "";
+          const labText = safeText(log.lab || log.module || "");
+          const actionText = safeText(log.action || log.action_type || "");
+          const entityType = safeText(log.entityType || log.entity_type || "");
+          const entityId = safeText(log.entityId || log.entity_id || "");
           const user =
-            log.user ||
-            log.user_email ||
-            log.performed_by ||
-            log.created_by ||
-            "";
+            safeText(
+              log.user ||
+                log.user_email ||
+                log.performed_by ||
+                log.created_by ||
+                ""
+            );
 
           const createdAt = formatDate(log.createdAt || log.created_at);
           const details = formatDetails(log.data || log.details || log.payload || log.meta);
