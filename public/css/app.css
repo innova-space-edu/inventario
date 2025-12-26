@@ -102,6 +102,96 @@ body {
   gap: 1.5rem;
 }
 
+/* =========================================================
+   ✅ NUEVO: EFECTO CIRCUITO TRANSLÚCIDO + GLOW GLOBAL
+   ========================================================= */
+
+:root{
+  --fx-glow-blue: rgba(56, 189, 248, 0.28);
+  --fx-glow-violet: rgba(124, 58, 237, 0.24);
+  --fx-glow-indigo: rgba(99, 102, 241, 0.22);
+  --fx-border: rgba(148, 163, 184, 0.4);
+  --fx-border-strong: rgba(129, 140, 248, 0.85);
+  --fx-circuit-opacity: 0.12;
+}
+
+/* Aplica un pseudo “circuito” elegante a paneles */
+.glass-panel,
+.panel-block,
+.collapsible-card,
+.card {
+  position: relative;
+  overflow: hidden;
+  transform: translateZ(0);
+}
+
+.glass-panel::before,
+.panel-block::before,
+.collapsible-card::before,
+.card::before{
+  content:"";
+  position:absolute;
+  inset:-1px;
+  pointer-events:none;
+  opacity: var(--fx-circuit-opacity);
+  mix-blend-mode: screen;
+  background:
+    radial-gradient(circle at 18% 20%, rgba(34, 211, 238, 0.65), transparent 45%),
+    radial-gradient(circle at 82% 30%, rgba(99, 102, 241, 0.55), transparent 48%),
+    radial-gradient(circle at 55% 82%, rgba(236, 72, 153, 0.45), transparent 52%),
+    linear-gradient(90deg, rgba(56,189,248,0.22), rgba(124,58,237,0.16), rgba(34,211,238,0.20));
+  filter: blur(0.2px);
+}
+
+/* líneas tipo “circuit board” */
+.glass-panel::after,
+.panel-block::after,
+.collapsible-card::after,
+.card::after{
+  content:"";
+  position:absolute;
+  inset:-2px;
+  pointer-events:none;
+  opacity: calc(var(--fx-circuit-opacity) * 0.85);
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(148,163,184,0.00) 0px,
+      rgba(148,163,184,0.00) 26px,
+      rgba(56,189,248,0.18) 27px,
+      rgba(148,163,184,0.00) 28px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(148,163,184,0.00) 0px,
+      rgba(148,163,184,0.00) 34px,
+      rgba(99,102,241,0.16) 35px,
+      rgba(148,163,184,0.00) 36px
+    );
+  mask-image: radial-gradient(circle at 30% 25%, black 35%, transparent 70%);
+  -webkit-mask-image: radial-gradient(circle at 30% 25%, black 35%, transparent 70%);
+}
+
+/* Glow suave al hover (por zona) */
+.glass-panel:hover,
+.panel-block:hover,
+.collapsible-card:hover,
+.card:hover {
+  border-color: var(--fx-border-strong);
+  box-shadow:
+    0 18px 50px rgba(15, 23, 42, 0.85),
+    0 0 0 1px rgba(99, 102, 241, 0.22),
+    0 0 34px rgba(56, 189, 248, 0.22),
+    0 0 44px rgba(124, 58, 237, 0.18);
+  transform: translateY(-1px);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+/* En móviles reducimos el “circuito” para rendimiento */
+@media (max-width: 520px){
+  :root{ --fx-circuit-opacity: 0.08; }
+}
+
 /* Panel efecto vidrio */
 
 .glass-panel {
@@ -122,6 +212,11 @@ body {
   gap: 1rem;
 }
 
+/* ✅ NUEVO: estado cuando scrolleas (si usas document.body.classList.toggle("has-scrolled"...)) */
+body.has-scrolled .main-header{
+  backdrop-filter: blur(18px);
+}
+
 .header-left {
   display: flex;
   align-items: center;
@@ -129,12 +224,28 @@ body {
 }
 
 .header-logo {
-  width: 56px;
-  height: 56px;
+  width: 72px;          /* ✅ antes 56px */
+  height: 72px;         /* ✅ antes 56px */
   object-fit: contain;
   border-radius: 999px;
   background: rgba(15, 23, 42, 0.9);
-  padding: 0.25rem;
+  padding: 0.35rem;
+  border: 1px solid rgba(56,189,248,0.45);
+  box-shadow:
+    0 12px 34px rgba(15, 23, 42, 0.75),
+    0 0 0 1px rgba(99, 102, 241, 0.18),
+    0 0 24px rgba(56, 189, 248, 0.18);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.header-logo:hover{
+  transform: translateY(-1px) scale(1.02);
+  border-color: rgba(34,211,238,0.9);
+  box-shadow:
+    0 16px 44px rgba(15, 23, 42, 0.85),
+    0 0 0 1px rgba(99, 102, 241, 0.24),
+    0 0 34px rgba(56, 189, 248, 0.30),
+    0 0 46px rgba(124, 58, 237, 0.22);
 }
 
 .header-title h1 {
@@ -225,13 +336,14 @@ body {
   color: #cbd5f5;
   font-size: 0.85rem;
   cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .tab-button.active {
   background: radial-gradient(circle at 0 0, #4f46e5, #0f172a);
   color: #f9fafb;
   transform: translateY(-1px);
+  box-shadow: 0 10px 28px rgba(99, 102, 241, 0.25);
 }
 
 .tab-panel {
@@ -389,13 +501,17 @@ body {
 }
 
 .login-logo img {
-  width: 80px;
-  height: 80px;
+  width: 84px;         /* ✅ un poquito más grande */
+  height: 84px;
   border-radius: 999px;
   object-fit: contain;
   margin-bottom: 0.8rem;
   background: rgba(15, 23, 42, 0.9);
-  padding: 0.25rem;
+  padding: 0.35rem;
+  border: 1px solid rgba(56,189,248,0.45);
+  box-shadow:
+    0 12px 34px rgba(15, 23, 42, 0.75),
+    0 0 28px rgba(56, 189, 248, 0.18);
 }
 
 .login-title {
@@ -701,6 +817,34 @@ body {
   box-shadow: 0 12px 30px rgba(248, 113, 113, 0.45);
 }
 
+/* ✅ NUEVO: banners más “power” (cuando quieras usar .alert-banner o mejorar el actual) */
+.alert-banner,
+.overdue-banner {
+  position: relative;
+  overflow: hidden;
+}
+
+.alert-banner::before,
+.overdue-banner::before{
+  content:"";
+  position:absolute;
+  inset:-2px;
+  opacity: 0.55;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at 10% 40%, rgba(255,255,255,0.55), transparent 40%),
+    radial-gradient(circle at 80% 10%, rgba(255,255,255,0.35), transparent 45%),
+    linear-gradient(90deg, rgba(255,255,255,0.10), transparent 60%);
+  mix-blend-mode: overlay;
+  filter: blur(0.4px);
+}
+
+.alert-banner{
+  box-shadow:
+    0 14px 34px rgba(248, 113, 113, 0.34),
+    0 0 28px rgba(249, 115, 22, 0.25);
+}
+
 /* Estado solo-lectura (roleGuard) */
 
 .readonly,
@@ -824,6 +968,11 @@ button.readonly {
 
   .modal-card {
     padding-inline: 1rem;
+  }
+
+  .header-logo{
+    width: 64px;
+    height: 64px;
   }
 }
 
