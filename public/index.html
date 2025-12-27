@@ -11,6 +11,15 @@
 
   <!-- CSS principal -->
   <link rel="stylesheet" href="/css/app.css" />
+
+  <!-- Librerías para exportar: PDF / XLSX -->
+  <!-- (Las usaremos desde /js/history.js o /js/reports.js) -->
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <!-- Chart.js (para analytics) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 
 <body class="body-space" data-page="dashboard">
@@ -55,7 +64,8 @@
       <button class="tab-button active" type="button" data-target="#tab-science">Laboratorio de Ciencias</button>
       <button class="tab-button" type="button" data-target="#tab-computing">Sala de Computación</button>
       <button class="tab-button" type="button" data-target="#tab-library">Biblioteca</button>
-      <button class="tab-button" type="button" data-target="#tab-history">Historial</button>
+      <button class="tab-button" type="button" data-target="#tab-reservations">Reservas</button>
+      <button class="tab-button" type="button" data-target="#tab-history">Historial + Reportes</button>
     </nav>
 
     <!-- CONTENIDO PRINCIPAL -->
@@ -65,7 +75,7 @@
       <section id="tab-science" class="tab-panel active glass-panel" role="region" aria-label="Laboratorio de Ciencias">
         <h2>Inventario – Laboratorio de Ciencias</h2>
         <p class="section-description">
-          Registra materiales de laboratorio y genera reservas de uso para cursos y docentes.
+          Registra materiales de laboratorio, controla stock automáticamente con préstamos/devoluciones y genera reservas.
         </p>
 
         <div class="panel-grid">
@@ -111,7 +121,7 @@
                     </label>
 
                     <label>
-                      Cantidad
+                      Cantidad (stock inicial)
                       <input type="number" name="cantidad" min="0" required />
                     </label>
 
@@ -152,7 +162,7 @@
                         <th>Nombre</th>
                         <th>Descripción</th>
                         <th>Categoría</th>
-                        <th>Cantidad</th>
+                        <th>Stock</th>
                         <th>Fecha</th>
                         <th>Foto</th>
                         <th>Acciones</th>
@@ -163,52 +173,197 @@
                     </tbody>
                   </table>
                 </div>
+
+                <p class="section-description" style="margin-top:12px;">
+                  ✅ El stock se actualiza automáticamente cuando registras <strong>préstamos</strong> y <strong>devoluciones</strong>.
+                </p>
               </div>
             </div>
           </div>
         </div>
 
         <!-- Reserva de laboratorio ciencias -->
-        <div class="panel-block">
-          <div class="collapsible-card" data-collapsed="true">
-            <div class="collapsible-header">
-              <h3>Reserva de laboratorio de ciencias</h3>
-              <button type="button" class="collapse-toggle" aria-expanded="false">
-                <span class="collapse-icon">⌄</span> Mostrar
-              </button>
+        <div class="panel-grid">
+          <div class="panel-block">
+            <div class="collapsible-card" data-collapsed="true">
+              <div class="collapsible-header">
+                <h3>Reserva de laboratorio de ciencias</h3>
+                <button type="button" class="collapse-toggle" aria-expanded="false">
+                  <span class="collapse-icon">⌄</span> Mostrar
+                </button>
+              </div>
+
+              <div class="collapsible-body">
+                <form id="scienceReservationForm">
+                  <div class="form-grid">
+                    <label>
+                      Nombre del solicitante
+                      <input type="text" name="solicitante" required />
+                    </label>
+
+                    <label>
+                      Curso
+                      <input type="text" name="curso" required />
+                    </label>
+
+                    <label>
+                      Fecha de uso
+                      <input type="date" name="fechaUso" required />
+                    </label>
+
+                    <label>
+                      Hora inicio
+                      <input type="time" name="horaInicio" required />
+                    </label>
+
+                    <label>
+                      Hora término
+                      <input type="time" name="horaTermino" required />
+                    </label>
+
+                    <label class="full-width">
+                      Recursos / materiales (opcional)
+                      <input type="text" name="recursos" placeholder="Ej: microscopio x2, vasos precipitados x10..." />
+                    </label>
+
+                    <label class="full-width">
+                      Observaciones
+                      <input type="text" name="observaciones" />
+                    </label>
+                  </div>
+
+                  <div class="form-actions">
+                    <button type="submit" class="btn-secondary">Registrar reserva</button>
+                    <span class="mini-hint">✅ Validación anti-choques: no permite misma fecha/horario superpuesto.</span>
+                  </div>
+                </form>
+
+                <div id="scienceReservationStatus" class="info-box" style="margin-top:12px; display:none;"></div>
+              </div>
             </div>
+          </div>
 
-            <div class="collapsible-body">
-              <form id="scienceReservationForm">
-                <div class="form-grid">
-                  <label>
-                    Nombre del solicitante
-                    <input type="text" name="solicitante" required />
-                  </label>
+          <!-- Préstamo / devolución (Ciencias) -->
+          <div class="panel-block">
+            <div class="collapsible-card" data-collapsed="true" id="science-loans-card">
+              <div class="collapsible-header">
+                <h3>Préstamos / devoluciones (Ciencias)</h3>
+                <button type="button" class="collapse-toggle" aria-expanded="false">
+                  <span class="collapse-icon">⌄</span> Mostrar
+                </button>
+              </div>
 
-                  <label>
-                    Curso
-                    <input type="text" name="curso" required />
-                  </label>
+              <div class="collapsible-body">
+                <form id="scienceLoanForm" class="form-grid">
+                  <div class="form-grid">
+                    <label>
+                      ID / Código del material
+                      <input type="text" id="scienceLoanItemId" name="itemId" placeholder="ID o código" required />
+                    </label>
 
-                  <label>
-                    Fecha de uso
-                    <input type="date" name="fechaUso" required />
-                  </label>
+                    <label>
+                      Cantidad a prestar
+                      <input type="number" id="scienceLoanQty" name="cantidad" min="1" value="1" required />
+                    </label>
 
-                  <label>
-                    Horario
-                    <input type="text" name="horario" placeholder="Ej: 08:00 - 09:30" />
-                  </label>
+                    <label>
+                      Tipo de persona
+                      <select id="scienceLoanTipoPersona" name="tipoPersona" required>
+                        <option value="" selected disabled>Seleccione tipo</option>
+                        <option value="estudiante">Estudiante</option>
+                        <option value="funcionario">Funcionario</option>
+                      </select>
+                    </label>
+                  </div>
 
-                  <label>
-                    Observaciones
-                    <input type="text" name="observaciones" />
-                  </label>
+                  <div class="form-grid">
+                    <label>
+                      Persona
+                      <input type="text" id="scienceLoanUser" name="persona" placeholder="Nombre completo" required />
+                    </label>
+
+                    <label>
+                      Curso / Grupo
+                      <input type="text" id="scienceLoanCurso" name="curso" placeholder="Ej: 3°B, UTP, Taller..." />
+                    </label>
+                  </div>
+
+                  <div class="form-grid">
+                    <label class="full-width">
+                      Observaciones
+                      <input type="text" id="scienceLoanObs" name="observaciones" placeholder="Ej: práctica de química, guía 2..." />
+                    </label>
+                  </div>
+
+                  <div class="form-actions">
+                    <button type="submit" class="btn-secondary">Registrar préstamo</button>
+                    <button type="button" class="btn-ghost" id="btnScienceReturn" title="Registrar devolución por ID de préstamo">
+                      Registrar devolución
+                    </button>
+                  </div>
+
+                  <div id="scienceLoanItemInfo" class="info-box" style="margin-top:10px; display:block;">
+                    Escribe el <strong>ID</strong> o <strong>código</strong> para validar stock y mostrar detalle antes de prestar.
+                  </div>
+
+                  <div id="scienceReturnInline" class="subbox" style="display:none; margin-top:12px;">
+                    <h4>Devolución (Ciencias)</h4>
+                    <div class="form-grid">
+                      <label>
+                        ID del préstamo
+                        <input type="text" id="scienceReturnLoanId" placeholder="Ej: 1021" />
+                      </label>
+                      <label>
+                        Cantidad a devolver (opcional)
+                        <input type="number" id="scienceReturnQty" min="1" placeholder="Si aplica" />
+                      </label>
+                    </div>
+                    <div class="form-actions">
+                      <button type="button" id="scienceReturnSubmit" class="btn-primary">Confirmar devolución</button>
+                      <button type="button" id="scienceReturnCancel" class="btn-ghost">Cancelar</button>
+                    </div>
+                  </div>
+                </form>
+
+                <div class="table-wrapper" style="margin-top:14px;">
+                  <table id="scienceLoanTable" class="inventory-table">
+                    <thead>
+                      <tr>
+                        <th>ID</th>
+                        <th>ID Material</th>
+                        <th>Código</th>
+                        <th>Cantidad</th>
+                        <th>Tipo persona</th>
+                        <th>Persona</th>
+                        <th>Curso / Grupo</th>
+                        <th>Fecha préstamo</th>
+                        <th>Fecha devolución</th>
+                        <th>Devuelto</th>
+                        <th>Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody id="scienceLoanTableBody">
+                      <!-- science.js llenará aquí -->
+                    </tbody>
+                  </table>
                 </div>
 
-                <button type="submit" class="btn-secondary">Registrar reserva</button>
-              </form>
+                <div class="panel-grid" style="margin-top:14px;">
+                  <div class="panel-block">
+                    <div class="info-box">
+                      <strong>⚠️ Vencidos (+7 días):</strong>
+                      <ul id="scienceOverdueList" class="list-container" style="margin-top:8px;"></ul>
+                    </div>
+                  </div>
+                  <div class="panel-block">
+                    <div class="info-box">
+                      <strong>📌 Pendientes por devolver:</strong>
+                      <ul id="scienceDebtorsList" class="list-container" style="margin-top:8px;"></ul>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
             </div>
           </div>
         </div>
@@ -218,7 +373,7 @@
       <section id="tab-computing" class="tab-panel glass-panel" role="region" aria-label="Sala de Computación">
         <h2>Inventario – Sala de Computación</h2>
         <p class="section-description">
-          Controla equipos de computación, periféricos, software y préstamos de forma centralizada.
+          Controla equipos, periféricos, software y préstamos con stock automático + alertas por atraso.
         </p>
 
         <!-- 1) FORMULARIO INVENTARIO COMPUTACIÓN -->
@@ -261,7 +416,7 @@
                     </div>
 
                     <div class="form-group">
-                      <label for="compCantidad">Cantidad</label>
+                      <label for="compCantidad">Cantidad (stock)</label>
                       <input type="number" id="compCantidad" name="cantidad" min="1" step="1" value="1" required />
                     </div>
 
@@ -490,9 +645,14 @@
                     <input type="text" id="computingSearch" placeholder="Código, marca, modelo, ubicación..." />
                   </label>
 
-                  <button type="button" id="btnExportComputingCSV" class="btn-secondary">
-                    Exportar CSV
-                  </button>
+                  <div class="form-actions" style="gap:10px;">
+                    <button type="button" id="btnExportComputingCSV" class="btn-secondary">
+                      Exportar CSV
+                    </button>
+                    <button type="button" id="btnExportComputingXLSX" class="btn-secondary">
+                      Exportar XLSX
+                    </button>
+                  </div>
                 </div>
 
                 <div class="table-wrapper">
@@ -512,7 +672,7 @@
                         <th>Sistema operativo</th>
                         <th>Versión SO / App</th>
                         <th>N° serie</th>
-                        <th>Cantidad</th>
+                        <th>Stock</th>
                         <th>Ubicación</th>
                         <th>Estado</th>
                         <th>Fecha compra</th>
@@ -528,6 +688,10 @@
                     </tbody>
                   </table>
                 </div>
+
+                <p class="section-description" style="margin-top:12px;">
+                  ✅ El stock baja con préstamos y sube con devoluciones (y queda registrado en historial sí o sí).
+                </p>
               </div>
             </div>
           </div>
@@ -553,8 +717,8 @@
                     </label>
 
                     <label>
-                      Código del equipo
-                      <input type="text" id="computingLoanCodigo" name="codigo" placeholder="Código interno (opcional si ya se identifica por ID)" />
+                      Cantidad a prestar
+                      <input type="number" id="computingLoanQty" name="cantidad" min="1" value="1" required />
                     </label>
 
                     <label>
@@ -585,7 +749,7 @@
                       <input type="date" id="computingLoanFecha" name="fechaPrestamo" readonly />
                     </label>
 
-                    <label>
+                    <label class="full-width">
                       Observaciones
                       <input type="text" id="computingLoanObs" name="observaciones" placeholder="Ej: Uso en sala 2, hora de clase, proyecto X" />
                     </label>
@@ -607,7 +771,29 @@
 
                   <div class="form-actions">
                     <button type="submit" class="btn-secondary">Registrar préstamo</button>
+                    <button type="button" class="btn-ghost" id="btnComputingReturn" title="Registrar devolución por ID de préstamo">
+                      Registrar devolución
+                    </button>
                   </div>
+
+                  <div id="computingReturnInline" class="subbox" style="display:none; margin-top:12px;">
+                    <h4>Devolución (Computación)</h4>
+                    <div class="form-grid">
+                      <label>
+                        ID del préstamo
+                        <input type="text" id="computingReturnLoanId" placeholder="Ej: 558" />
+                      </label>
+                      <label>
+                        Cantidad a devolver (opcional)
+                        <input type="number" id="computingReturnQty" min="1" placeholder="Si aplica" />
+                      </label>
+                    </div>
+                    <div class="form-actions">
+                      <button type="button" id="computingReturnSubmit" class="btn-primary">Confirmar devolución</button>
+                      <button type="button" id="computingReturnCancel" class="btn-ghost">Cancelar</button>
+                    </div>
+                  </div>
+
                 </form>
               </div>
             </div>
@@ -630,6 +816,7 @@
                         <th>ID</th>
                         <th>ID Equipo</th>
                         <th>Código</th>
+                        <th>Cantidad</th>
                         <th>Tipo persona</th>
                         <th>Persona</th>
                         <th>Curso / Grupo</th>
@@ -689,7 +876,7 @@
       <section id="tab-library" class="tab-panel glass-panel" role="region" aria-label="Biblioteca">
         <h2>Inventario – Biblioteca</h2>
         <p class="section-description">
-          Registra libros, controla préstamos y devoluciones de forma centralizada.
+          Registra libros, controla stock automáticamente con préstamos/devoluciones y deja historial completo.
         </p>
 
         <div id="libraryOverdueBanner" class="alert-banner" style="display: none;"></div>
@@ -746,7 +933,7 @@
                     </label>
 
                     <label>
-                      Cantidad
+                      Cantidad (stock)
                       <input type="number" name="cantidad" min="0" required />
                     </label>
 
@@ -827,9 +1014,10 @@
                     </label>
                   </div>
 
-                  <button type="button" id="btnExportLibraryCSV" class="btn-secondary">
-                    Exportar CSV
-                  </button>
+                  <div class="form-actions" style="gap:10px;">
+                    <button type="button" id="btnExportLibraryCSV" class="btn-secondary">Exportar CSV</button>
+                    <button type="button" id="btnExportLibraryXLSX" class="btn-secondary">Exportar XLSX</button>
+                  </div>
                 </div>
 
                 <div class="table-wrapper">
@@ -843,7 +1031,7 @@
                         <th>Año</th>
                         <th>Serie</th>
                         <th>Categoría</th>
-                        <th>Cantidad</th>
+                        <th>Stock</th>
                         <th>Descripción</th>
                         <th>Foto</th>
                         <th>Acciones</th>
@@ -854,6 +1042,10 @@
                     </tbody>
                   </table>
                 </div>
+
+                <p class="section-description" style="margin-top:12px;">
+                  ✅ Stock automático: baja con préstamo, sube con devolución, y queda registro en historial.
+                </p>
               </div>
             </div>
           </div>
@@ -897,7 +1089,7 @@
 
                     <input type="hidden" name="tipoPersona" id="loanTipoPersona" />
 
-                    <label>
+                    <label class="full-width">
                       Observaciones
                       <input type="text" name="observaciones" />
                     </label>
@@ -983,6 +1175,11 @@
                       <option value="both" selected>Ambos</option>
                     </select>
                   </label>
+                </div>
+
+                <div class="form-actions" style="gap:10px;">
+                  <button type="button" id="btnExportLoansXLSX" class="btn-secondary">Exportar XLSX</button>
+                  <button type="button" id="btnExportLoansPDF" class="btn-secondary">Exportar PDF</button>
                 </div>
               </div>
 
@@ -1090,18 +1287,227 @@
 
       </section>
 
-      <!-- HISTORIAL -->
-      <section id="tab-history" class="tab-panel glass-panel" role="region" aria-label="Historial">
-        <h2>Historial de movimientos</h2>
+      <!-- RESERVAS (TABLA + VALIDACIÓN CHOQUES) -->
+      <section id="tab-reservations" class="tab-panel glass-panel" role="region" aria-label="Reservas">
+        <h2>Reservas (todas las salas / módulos)</h2>
         <p class="section-description">
-          Revisa los movimientos del sistema: ingresos, eliminaciones, reservas y préstamos.
+          Agenda y revisa reservas en una tabla única. El sistema valida choques (misma fecha/horario superpuesto)
+          y deja registro en historial sí o sí.
         </p>
 
-        <!-- HISTORIAL TABLA -->
+        <div class="panel-grid">
+          <!-- Formulario reserva general -->
+          <div class="panel-block">
+            <div class="collapsible-card" data-collapsed="true" id="reservations-card-form">
+              <div class="collapsible-header">
+                <h3>Nueva reserva</h3>
+                <button type="button" class="collapse-toggle" aria-expanded="false">
+                  <span class="collapse-icon">⌄</span> Mostrar
+                </button>
+              </div>
+
+              <div class="collapsible-body">
+                <form id="reservationForm">
+                  <div class="form-grid">
+                    <label>
+                      Módulo
+                      <select name="module" required>
+                        <option value="" disabled selected>Seleccionar...</option>
+                        <option value="science">Laboratorio de Ciencias</option>
+                        <option value="computing">Sala de Computación</option>
+                        <option value="library">Biblioteca</option>
+                        <option value="other">Otro espacio</option>
+                      </select>
+                    </label>
+
+                    <label>
+                      Espacio / sala
+                      <input type="text" name="space" placeholder="Ej: Lab 1, Sala Computación, Biblioteca..." required />
+                    </label>
+
+                    <label>
+                      Solicitante
+                      <input type="text" name="solicitante" required />
+                    </label>
+
+                    <label>
+                      Curso / Grupo
+                      <input type="text" name="curso" placeholder="Ej: 2°B, UTP, Taller..." />
+                    </label>
+
+                    <label>
+                      Fecha
+                      <input type="date" name="date" required />
+                    </label>
+
+                    <label>
+                      Hora inicio
+                      <input type="time" name="start" required />
+                    </label>
+
+                    <label>
+                      Hora término
+                      <input type="time" name="end" required />
+                    </label>
+
+                    <label class="full-width">
+                      Recursos (opcional)
+                      <input type="text" name="recursos" placeholder="Ej: proyectores, kits, materiales..." />
+                    </label>
+
+                    <label class="full-width">
+                      Observaciones
+                      <input type="text" name="observaciones" />
+                    </label>
+                  </div>
+
+                  <div class="form-actions">
+                    <button type="submit" class="btn-primary">Guardar reserva</button>
+                    <button type="reset" class="btn-secondary">Limpiar</button>
+                  </div>
+
+                  <div id="reservationStatus" class="info-box" style="margin-top:12px; display:none;"></div>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabla reservas -->
+          <div class="panel-block">
+            <div class="collapsible-card" data-collapsed="true" id="reservations-card-table">
+              <div class="collapsible-header">
+                <h3>Tabla de reservas</h3>
+                <button type="button" class="collapse-toggle" aria-expanded="false">
+                  <span class="collapse-icon">⌄</span> Mostrar
+                </button>
+              </div>
+
+              <div class="collapsible-body">
+                <div class="filters-row">
+                  <label>
+                    Buscar
+                    <input type="text" id="reservationsSearch" placeholder="Sala, solicitante, curso, fecha..." />
+                  </label>
+
+                  <label>
+                    Módulo
+                    <select id="reservationsModuleFilter">
+                      <option value="all" selected>Todos</option>
+                      <option value="science">Ciencias</option>
+                      <option value="computing">Computación</option>
+                      <option value="library">Biblioteca</option>
+                      <option value="other">Otros</option>
+                    </select>
+                  </label>
+
+                  <div class="form-actions" style="gap:10px;">
+                    <button type="button" id="btnExportReservationsXLSX" class="btn-secondary">Exportar XLSX</button>
+                    <button type="button" id="btnExportReservationsPDF" class="btn-secondary">Exportar PDF</button>
+                  </div>
+                </div>
+
+                <div class="table-wrapper">
+                  <table id="reservationsTable" class="inventory-table">
+                    <thead>
+                      <tr>
+                        <th>ID</th>
+                        <th>Módulo</th>
+                        <th>Espacio</th>
+                        <th>Solicitante</th>
+                        <th>Curso/Grupo</th>
+                        <th>Fecha</th>
+                        <th>Inicio</th>
+                        <th>Término</th>
+                        <th>Recursos</th>
+                        <th>Obs.</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <!-- reservations.js llenará aquí -->
+                    </tbody>
+                  </table>
+                </div>
+
+                <p class="section-description" style="margin-top:12px;">
+                  ✅ Validación anti-choques: el sistema bloquea reservas superpuestas en el mismo espacio/fecha.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- HISTORIAL + REPORTES -->
+      <section id="tab-history" class="tab-panel glass-panel" role="region" aria-label="Historial">
+        <h2>Historial + Reportes</h2>
+        <p class="section-description">
+          Historial “bonito y útil” con todo lo necesario: movimientos, préstamos/devoluciones (con impacto en stock),
+          reservas (con validación de choques), y reportes para Dirección / UTP (pantalla + PDF/XLSX).
+        </p>
+
+        <!-- CONTROLES DE REPORTE -->
+        <div class="panel-block">
+          <div class="collapsible-card" data-collapsed="true" id="reports-card-controls">
+            <div class="collapsible-header">
+              <h3>Reportes (Dirección / UTP)</h3>
+              <button type="button" class="collapse-toggle" aria-expanded="false">
+                <span class="collapse-icon">⌄</span> Mostrar
+              </button>
+            </div>
+
+            <div class="collapsible-body">
+              <div class="filters-row">
+                <label>
+                  Período
+                  <select id="reportRange">
+                    <option value="7">Últimos 7 días</option>
+                    <option value="30" selected>Últimos 30 días</option>
+                    <option value="90">Últimos 90 días</option>
+                    <option value="365">Último año</option>
+                    <option value="custom">Personalizado</option>
+                  </select>
+                </label>
+
+                <label>
+                  Desde
+                  <input type="date" id="reportFrom" />
+                </label>
+
+                <label>
+                  Hasta
+                  <input type="date" id="reportTo" />
+                </label>
+
+                <label>
+                  Módulo
+                  <select id="reportModule">
+                    <option value="all" selected>Todos</option>
+                    <option value="science">Ciencias</option>
+                    <option value="computing">Computación</option>
+                    <option value="library">Biblioteca</option>
+                    <option value="reservations">Reservas</option>
+                  </select>
+                </label>
+
+                <div class="form-actions" style="gap:10px;">
+                  <button type="button" id="btnRunReport" class="btn-primary">Generar reporte</button>
+                  <button type="button" id="btnExportReportPDF" class="btn-secondary">Descargar PDF</button>
+                  <button type="button" id="btnExportReportXLSX" class="btn-secondary">Descargar XLSX</button>
+                </div>
+              </div>
+
+              <div id="reportStatus" class="info-box" style="margin-top:12px; display:none;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- HISTORIAL TABLA (BONITO + FILTROS) -->
         <div class="panel-block">
           <div class="collapsible-card" data-collapsed="true" id="history-card-table">
             <div class="collapsible-header">
-              <h3>Historial del sistema</h3>
+              <h3>Historial del sistema (auditoría completa)</h3>
               <button type="button" class="collapse-toggle" aria-expanded="false">
                 <span class="collapse-icon">⌄</span> Mostrar
               </button>
@@ -1116,7 +1522,27 @@
                     <option value="science">Laboratorio de Ciencias</option>
                     <option value="computing">Sala de Computación</option>
                     <option value="library">Biblioteca</option>
+                    <option value="reservations">Reservas</option>
                   </select>
+                </label>
+
+                <label>
+                  Tipo de acción
+                  <select id="historyActionFilter">
+                    <option value="all" selected>Todas</option>
+                    <option value="create">Ingreso/Creación</option>
+                    <option value="update">Edición</option>
+                    <option value="delete">Eliminación</option>
+                    <option value="loan">Préstamo</option>
+                    <option value="return">Devolución</option>
+                    <option value="reserve">Reserva</option>
+                    <option value="cancel_reserve">Cancelación reserva</option>
+                  </select>
+                </label>
+
+                <label>
+                  Buscar
+                  <input type="text" id="historySearch" placeholder="Código, persona, curso, detalle..." />
                 </label>
 
                 <label>
@@ -1128,6 +1554,11 @@
                     <option value="500">Últimos 500</option>
                   </select>
                 </label>
+
+                <div class="form-actions" style="gap:10px;">
+                  <button type="button" id="btnExportHistoryPDF" class="btn-secondary">PDF</button>
+                  <button type="button" id="btnExportHistoryXLSX" class="btn-secondary">XLSX</button>
+                </div>
               </div>
 
               <div class="table-wrapper">
@@ -1139,8 +1570,15 @@
                       <th>Acción</th>
                       <th>Tipo</th>
                       <th>ID entidad</th>
+                      <th>Código</th>
                       <th>Usuario</th>
+                      <th>Tipo persona</th>
+                      <th>Curso / Sala</th>
+                      <th>Cantidad</th>
+                      <th>Stock antes</th>
+                      <th>Stock después</th>
                       <th>Detalle</th>
+                      <th>IP/Dispositivo</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1148,6 +1586,10 @@
                   </tbody>
                 </table>
               </div>
+
+              <p class="section-description" style="margin-top:12px;">
+                ✅ Este historial es el “libro” del sistema: todo movimiento se guarda aquí (sí o sí).
+              </p>
             </div>
           </div>
         </div>
@@ -1168,7 +1610,7 @@
               <div class="collapsible-body">
                 <div class="analytics-summary-grid">
                   <div class="analytics-card">
-                    <span class="analytics-label">Total de préstamos</span>
+                    <span class="analytics-label">Total préstamos</span>
                     <span id="analyticsTotalLoans" class="analytics-value">0</span>
                   </div>
                   <div class="analytics-card">
@@ -1180,7 +1622,7 @@
                     <span id="analyticsStaffLoans" class="analytics-value">0</span>
                   </div>
                   <div class="analytics-card">
-                    <span class="analytics-label">Promedio días de préstamo</span>
+                    <span class="analytics-label">Promedio días préstamo</span>
                     <span id="analyticsAvgLoanDays" class="analytics-value">0</span>
                   </div>
                   <div class="analytics-card">
@@ -1193,11 +1635,9 @@
                   </div>
                 </div>
 
-                <!-- narrativa/explicación (history.js puede rellenar esto después) -->
                 <div class="analytics-narrative" id="analyticsNarrativeSummary" aria-live="polite">
                   <p class="section-description" style="margin-top: 14px;">
-                    Aquí verás un resumen de uso: cuántos préstamos hay, quién presta más y cuáles son las salas/módulos más activos.
-                    (Esto se calcula automáticamente desde el historial.)
+                    Aquí verás el resumen global calculado desde historial y préstamos (incluye reservas).
                   </p>
                 </div>
               </div>
@@ -1222,15 +1662,14 @@
 
                 <div class="analytics-narrative" id="analyticsNarrativePersonType" aria-live="polite">
                   <p class="section-description">
-                    Interpretación: este gráfico muestra qué grupo está usando más recursos.
-                    Si “Desconocido” sube, conviene mejorar el registro de “tipo de persona” al prestar.
+                    Interpretación: muestra qué grupo usa más recursos. “Desconocido” sugiere mejorar registro.
                   </p>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- 3) USO POR SALA / CURSO (SEPARADO) -->
+          <!-- 3) USO POR SALA / CURSO -->
           <div class="panel-block">
             <div class="collapsible-card" data-collapsed="true" id="analytics-card-room" data-analytics-section="roomUsage">
               <div class="collapsible-header">
@@ -1242,14 +1681,13 @@
 
               <div class="collapsible-body">
                 <div class="chart-card">
-                  <h4>Salas / cursos con más préstamos</h4>
+                  <h4>Salas / cursos con más actividad</h4>
                   <canvas id="chartLoansByRoom"></canvas>
                 </div>
 
                 <div class="analytics-narrative" id="analyticsNarrativeRoom" aria-live="polite">
                   <p class="section-description">
-                    Interpretación: identifica cursos o grupos con mayor actividad para planificar mantención,
-                    reposición y priorizar inventario.
+                    Identifica grupos con mayor uso para reposición, mantención y planificación.
                   </p>
                 </div>
               </div>
@@ -1260,7 +1698,7 @@
           <div class="panel-block">
             <div class="collapsible-card" data-collapsed="true" id="analytics-card-duration" data-analytics-section="duration">
               <div class="collapsible-header">
-                <h3>Análisis – Duración de los préstamos</h3>
+                <h3>Análisis – Duración de préstamos</h3>
                 <button type="button" class="collapse-toggle" aria-expanded="false">
                   <span class="collapse-icon">⌄</span> Mostrar
                 </button>
@@ -1268,14 +1706,13 @@
 
               <div class="collapsible-body">
                 <div class="chart-card">
-                  <h4>Distribución de días (cuánto tardan en devolver)</h4>
+                  <h4>Distribución de días (demora en devolución)</h4>
                   <canvas id="chartLoanDuration"></canvas>
                 </div>
 
                 <div class="analytics-narrative" id="analyticsNarrativeDuration" aria-live="polite">
                   <p class="section-description">
-                    Interpretación: si la mayoría cae en rangos altos, conviene reforzar reglas de devolución
-                    y alertas automáticas.
+                    Si la mayoría cae en rangos altos, reforzar reglas y alertas automáticas.
                   </p>
                 </div>
               </div>
@@ -1294,20 +1731,20 @@
 
               <div class="collapsible-body">
                 <div class="chart-card">
-                  <h4>Actividad por módulo (Ciencias / Computación / Biblioteca)</h4>
+                  <h4>Actividad por módulo (incluye reservas)</h4>
                   <canvas id="chartHistoryByModule"></canvas>
                 </div>
 
                 <div class="analytics-narrative" id="analyticsNarrativeModule" aria-live="polite">
                   <p class="section-description">
-                    Interpretación: ayuda a detectar qué módulo está moviendo más inventario y requiere mayor gestión.
+                    Ayuda a detectar módulos con más carga de gestión.
                   </p>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- 6) PANEL “EXPLICACIÓN IA” (OPCIONAL, LISTO PARA USAR) -->
+          <!-- 6) PANEL “EXPLICACIÓN IA” -->
           <div class="panel-block">
             <div class="collapsible-card" data-collapsed="true" id="analytics-card-ai" data-analytics-section="ai">
               <div class="collapsible-header">
@@ -1319,8 +1756,7 @@
 
               <div class="collapsible-body">
                 <p class="section-description">
-                  Este cuadro queda listo para que history.js (o un módulo futuro) genere una explicación “tipo informe”
-                  en base a los resultados. Si luego conectas una IA, puedes resumir patrones y recomendaciones.
+                  Cuadro listo para generar una explicación estilo informe desde los datos del reporte/historial.
                 </p>
 
                 <div id="analyticsAIReport" class="info-box" style="min-height: 90px;">
@@ -1328,12 +1764,8 @@
                 </div>
 
                 <div class="form-actions" style="margin-top: 12px;">
-                  <button type="button" id="btnGenerateAIReport" class="btn-secondary">
-                    Generar informe (próximamente)
-                  </button>
-                  <button type="button" id="btnCopyAIReport" class="btn-ghost">
-                    Copiar
-                  </button>
+                  <button type="button" id="btnGenerateAIReport" class="btn-secondary">Generar informe (próximamente)</button>
+                  <button type="button" id="btnCopyAIReport" class="btn-ghost">Copiar</button>
                 </div>
               </div>
             </div>
@@ -1357,13 +1789,16 @@
   <script src="/js/tabs.js" defer></script>
   <script src="/js/collapsibles.js" defer></script>
 
-  <!-- Chart.js (antes de history.js) -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-
   <!-- 4) Módulos -->
   <script src="/js/science.js" defer></script>
   <script src="/js/computing.js" defer></script>
   <script src="/js/library.js" defer></script>
+
+  <!-- ✅ NUEVO: reservas globales (tabla + validación choques) -->
+  <script src="/js/reservations.js" defer></script>
+
+  <!-- ✅ Historial + reportes + analytics + export PDF/XLSX -->
   <script src="/js/history.js" defer></script>
+  <script src="/js/reports.js" defer></script>
 </body>
 </html>
