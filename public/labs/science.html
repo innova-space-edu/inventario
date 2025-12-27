@@ -1,17 +1,20 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Inventario - Laboratorio de Ciencias</title>
+  <title>Inventario – Laboratorio de Ciencias</title>
 
-  <!-- Estilos originales -->
+  <!-- Mantengo tu CSS original por compatibilidad -->
   <link rel="stylesheet" href="/css/styles.css" />
-  <!-- Fondo espacial + glass UI -->
+  <!-- UI futurista / glass -->
   <link rel="stylesheet" href="/css/app.css" />
 
   <!-- Utilidades compartidas de personas (Biblioteca + Ciencias) -->
   <script defer src="/js/peopleUtils.js"></script>
+
+  <!-- Collapsibles (modo accordion, todo cerrado por defecto) -->
+  <script defer src="/js/collapsibles.js"></script>
 
   <!-- JS específico de Ciencias -->
   <script defer src="/js/science.js"></script>
@@ -19,309 +22,553 @@
 
 <body data-page="science" class="body-space">
   <!-- Fondo espacial animado -->
-  <div class="background space-bg"></div>
+  <div class="background space-bg" aria-hidden="true"></div>
 
   <div class="app-shell">
-    <div class="glass-panel">
-      <header>
-        <h1>Laboratorio de Ciencias</h1>
-        <nav>
-          <a href="/">Inicio</a>
-        </nav>
-      </header>
-
-      <!-- =========================
-           SECCIÓN: INVENTARIO
-      ========================== -->
-      <section class="form-section">
-        <h2>Agregar / Editar material de laboratorio</h2>
-
-        <form id="scienceForm" enctype="multipart/form-data" method="post">
-          <!-- id oculto para modo edición -->
-          <input type="hidden" name="id" id="sciId" />
-
-          <label for="sciCode">Código:</label>
-          <input
-            type="text"
-            name="codigo"
-            id="sciCode"
-            required
-            data-message="Ingresa el código interno del material de laboratorio."
-          />
-
-          <label for="sciName">Nombre del material:</label>
-          <input
-            type="text"
-            name="nombre"
-            id="sciName"
-            required
-            data-message="Escribe el nombre del material, por ejemplo: probeta de 100 mililitros."
-          />
-
-          <label for="sciDescription">Descripción:</label>
-          <textarea
-            name="descripcion"
-            id="sciDescription"
-            required
-            data-message="Describe brevemente el material, su uso o sus características principales."
-          ></textarea>
-
-          <label for="sciCategory">Categoría:</label>
-          <select
-            id="sciCategory"
-            name="categoria"
-            required
-            data-message="Selecciona el tipo de material: instrumento, químico, biológico, seguridad u otro."
-          >
-            <option value="instrumento">Instrumento de laboratorio</option>
-            <option value="material químico">Material químico</option>
-            <option value="material biológico">Material biológico</option>
-            <option value="instrumento electrónico">Instrumento electrónico</option>
-            <option value="modelo didáctico">Modelo didáctico / maqueta</option>
-            <option value="seguridad">Elemento de seguridad</option>
-            <option value="otros">Otros</option>
-          </select>
-
-          <label for="sciQuantity">Cantidad:</label>
-          <input
-            type="number"
-            name="cantidad"
-            id="sciQuantity"
-            required
-            data-message="Indica la cantidad de unidades de este material que se incorporan al inventario."
-          />
-
-          <label for="sciDate">Fecha de ingreso:</label>
-          <input
-            type="date"
-            name="fecha"
-            id="sciDate"
-            required
-            data-message="Selecciona la fecha de ingreso del material al laboratorio."
-          />
-
-          <label for="sciPhoto">Fotografía:</label>
-          <input
-            type="file"
-            id="sciPhoto"
-            name="photo"
-            accept="image/*"
-            data-message="Opcional: agrega una fotografía del material para identificarlo visualmente."
-          />
-
-          <div style="display:flex; gap:.75rem; margin-top:1rem;">
-            <button
-              type="submit"
-              id="scienceFormSubmit"
-              class="button"
-              data-message="Guardar o actualizar este material en el inventario del laboratorio de ciencias."
-            >
-              Guardar
-            </button>
-            <button
-              type="button"
-              id="scienceFormCancelEdit"
-              class="button secondary"
-              style="display:none;"
-              data-message="Cancelar la edición actual y volver al modo de registro normal."
-            >
-              Cancelar edición
-            </button>
-          </div>
-        </form>
-      </section>
-
-      <section class="inventory-section">
-        <h2>Inventario general de Ciencias</h2>
-
-        <div class="filters-bar">
-          <input
-            type="text"
-            id="scienceSearch"
-            placeholder="Buscar por código, nombre, descripción..."
-            class="input-search"
-            data-message="Escribe aquí para filtrar el inventario por código, nombre o descripción."
-          />
+    <!-- HEADER (estilo dashboard) -->
+    <header class="main-header glass-panel">
+      <div class="header-left">
+        <img
+          src="/img/logo-colegio.png"
+          alt="Logo Colegio Providencia"
+          class="header-logo"
+          loading="lazy"
+          decoding="async"
+        />
+        <div class="header-title">
+          <h1>Laboratorio de Ciencias</h1>
+          <span class="header-subtitle">Innova Space Track</span>
         </div>
+      </div>
 
-        <table id="scienceTable">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Código</th>
-              <th>Nombre</th>
-              <th>Descripción</th>
-              <th>Categoría</th>
-              <th>Cantidad</th>
-              <th>Fecha</th>
-              <th>Foto</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="scienceTableBody">
-            <!-- Elementos cargados dinámicamente -->
-          </tbody>
-        </table>
-      </section>
+      <nav class="header-right" aria-label="Acciones principales">
+        <a
+          href="https://sites.google.com/colprovidencia.cl/agenda-hora/inicio"
+          class="btn-secondary"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Agendar hora
+        </a>
+
+        <a href="/" class="btn-ghost">Inicio</a>
+      </nav>
+    </header>
+
+    <main class="main-content">
 
       <!-- =========================
-           SECCIÓN: PRÉSTAMOS
+           BLOQUE: INVENTARIO
       ========================== -->
-      <section class="loans-section">
-        <h2>Registrar préstamo</h2>
-
-        <form id="scienceLoanForm">
-          <label for="sciLoanCodigo">Código del material:</label>
-          <input
-            type="text"
-            id="sciLoanCodigo"
-            name="codigo"
-            required
-            data-message="Ingresa el código del material de ciencias que se va a prestar."
-          />
-
-          <!-- Selector de persona (compartido con Biblioteca) -->
-          <label for="sciLoanPersonSelect">Persona (desde listado):</label>
-          <select
-            id="sciLoanPersonSelect"
-            name="personaId"
-            class="persona-select"
-            data-curso-target="sciLoanCurso"
-            data-message="Selecciona a la persona desde el listado de estudiantes o funcionarios."
-          >
-            <option value="">-- Seleccionar desde lista --</option>
-          </select>
-
-          <label for="sciLoanNombre">Nombre:</label>
-          <input
-            type="text"
-            id="sciLoanNombre"
-            name="nombre"
-            required
-            data-message="Escribe el nombre de la persona que recibe el material, si no aparece en la lista."
-          />
-
-          <label for="sciLoanCurso">Curso / Unidad:</label>
-          <input
-            type="text"
-            id="sciLoanCurso"
-            name="curso"
-            data-message="Indica el curso o unidad, por ejemplo: 2° medio B o Departamento de Ciencias."
-          />
-
-          <label for="sciLoanTipoPersona">Tipo de persona:</label>
-          <input
-            type="text"
-            id="sciLoanTipoPersona"
-            name="tipoPersona"
-            placeholder="estudiante / funcionario"
-            data-message="Especifica si la persona es estudiante, funcionario u otro tipo."
-          />
-
-          <label for="sciLoanObservaciones">Observaciones:</label>
-          <input
-            type="text"
-            id="sciLoanObservaciones"
-            name="observaciones"
-            placeholder="Opcional"
-            data-message="Puedes escribir observaciones del préstamo, como condiciones especiales o usos."
-          />
-
-          <button
-            type="submit"
-            class="button"
-            data-message="Registrar este préstamo en el sistema del laboratorio de ciencias."
-          >
-            Registrar préstamo
-          </button>
-        </form>
-
-        <!-- Cuadro de devolución rápida por ID -->
-        <form id="scienceReturnForm" style="margin-top: 1rem;">
-          <h3>Registrar devolución</h3>
-          <label for="scienceReturnId">ID del préstamo:</label>
-          <input
-            type="text"
-            id="scienceReturnId"
-            name="loanId"
-            placeholder="Ej: 17640888254868"
-            required
-            data-message="Escribe el ID del préstamo que deseas marcar como devuelto."
-          />
-          <button
-            type="submit"
-            class="button"
-            data-message="Registrar la devolución de este préstamo."
-          >
-            Registrar devolución
-          </button>
-        </form>
-
-        <div class="filters-bar" style="margin-top: 1.5rem;">
-          <input
-            type="text"
-            id="scienceLoansSearch"
-            placeholder="Buscar préstamo por ID, nombre, código, curso..."
-            class="input-search"
-            data-message="Filtra los préstamos por ID, nombre, código de material o curso."
-          />
-        </div>
-
-        <h3>Préstamos</h3>
-        <table id="scienceLoansTable">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Código</th>
-              <th>Nombre</th>
-              <th>Curso</th>
-              <th>Fecha</th>
-              <th>Devuelto</th>
-              <th>Devuelto el</th>
-              <th>Observaciones</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="scienceLoansTableBody">
-            <!-- Carga dinámica JS -->
-          </tbody>
-        </table>
-      </section>
-
-      <!-- =========================
-           SECCIÓN: PERSONAS
-           (solo lectura, compartidas con Biblioteca)
-      ========================== -->
-      <section class="people-section">
-        <h2>Personas registradas</h2>
-        <p class="hint-text">
-          Este listado se comparte con Biblioteca. Para agregar o editar
-          estudiantes/funcionarios, utiliza el módulo de <b>Biblioteca</b>.
+      <section class="glass-panel" aria-label="Inventario de Ciencias">
+        <h2>Inventario – Laboratorio de Ciencias</h2>
+        <p class="section-description">
+          Registra materiales del laboratorio, gestiona préstamos y agenda reservas de uso.
         </p>
 
-        <table id="sciencePeopleTable">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Nombre</th>
-              <th>Tipo</th>
-              <th>Curso / Cargo</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- Carga dinámica JS -->
-          </tbody>
-        </table>
+        <div class="panel-grid">
+
+          <!-- FORM INVENTARIO -->
+          <div class="panel-block">
+            <div class="collapsible-card" data-collapsed="true">
+              <div class="collapsible-header">
+                <h3>Agregar / Editar material</h3>
+                <button type="button" class="collapse-toggle" aria-expanded="false">
+                  <span class="collapse-icon">⌄</span> Mostrar
+                </button>
+              </div>
+
+              <div class="collapsible-body">
+                <form id="scienceForm" enctype="multipart/form-data" method="post">
+                  <!-- id oculto para modo edición -->
+                  <input type="hidden" name="id" id="sciId" />
+
+                  <div class="form-grid">
+                    <label for="sciCode">
+                      Código
+                      <input
+                        type="text"
+                        name="codigo"
+                        id="sciCode"
+                        required
+                        data-message="Ingresa el código interno del material de laboratorio."
+                      />
+                    </label>
+
+                    <label for="sciName">
+                      Nombre
+                      <input
+                        type="text"
+                        name="nombre"
+                        id="sciName"
+                        required
+                        data-message="Escribe el nombre del material, por ejemplo: probeta de 100 mL."
+                      />
+                    </label>
+
+                    <label for="sciDescription" class="full-width">
+                      Descripción
+                      <textarea
+                        name="descripcion"
+                        id="sciDescription"
+                        required
+                        rows="2"
+                        data-message="Describe brevemente el material, su uso o características principales."
+                      ></textarea>
+                    </label>
+
+                    <label for="sciCategory">
+                      Categoría
+                      <select
+                        id="sciCategory"
+                        name="categoria"
+                        required
+                        data-message="Selecciona el tipo de material."
+                      >
+                        <option value="instrumento">Instrumento de laboratorio</option>
+                        <option value="material químico">Material químico</option>
+                        <option value="material biológico">Material biológico</option>
+                        <option value="instrumento electrónico">Instrumento electrónico</option>
+                        <option value="modelo didáctico">Modelo didáctico / maqueta</option>
+                        <option value="seguridad">Elemento de seguridad</option>
+                        <option value="otros">Otros</option>
+                      </select>
+                    </label>
+
+                    <label for="sciQuantity">
+                      Cantidad
+                      <input
+                        type="number"
+                        name="cantidad"
+                        id="sciQuantity"
+                        min="0"
+                        required
+                        data-message="Indica cuántas unidades se incorporan."
+                      />
+                    </label>
+
+                    <label for="sciDate">
+                      Fecha de ingreso
+                      <input
+                        type="date"
+                        name="fecha"
+                        id="sciDate"
+                        required
+                        data-message="Selecciona la fecha de ingreso."
+                      />
+                    </label>
+
+                    <label for="sciPhoto">
+                      Fotografía
+                      <input
+                        type="file"
+                        id="sciPhoto"
+                        name="photo"
+                        accept="image/*"
+                        data-message="Opcional: agrega una foto del material."
+                      />
+                    </label>
+                  </div>
+
+                  <div class="form-actions" style="margin-top: 12px;">
+                    <button
+                      type="submit"
+                      id="scienceFormSubmit"
+                      class="btn-primary"
+                      data-message="Guardar o actualizar este material en el inventario."
+                    >
+                      Guardar
+                    </button>
+
+                    <button
+                      type="button"
+                      id="scienceFormCancelEdit"
+                      class="btn-ghost"
+                      style="display:none;"
+                      data-message="Cancelar la edición y volver al modo normal."
+                    >
+                      Cancelar edición
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          <!-- TABLA INVENTARIO -->
+          <div class="panel-block">
+            <div class="collapsible-card" data-collapsed="true">
+              <div class="collapsible-header">
+                <h3>Listado de materiales</h3>
+                <button type="button" class="collapse-toggle" aria-expanded="false">
+                  <span class="collapse-icon">⌄</span> Mostrar
+                </button>
+              </div>
+
+              <div class="collapsible-body">
+                <div class="filters-row">
+                  <label>
+                    Buscar
+                    <input
+                      type="text"
+                      id="scienceSearch"
+                      placeholder="Código, nombre, descripción..."
+                      class="input-search"
+                      data-message="Filtra el inventario por código, nombre o descripción."
+                    />
+                  </label>
+                </div>
+
+                <div class="table-wrapper">
+                  <table id="scienceTable" class="inventory-table">
+                    <thead>
+                      <tr>
+                        <th>ID</th>
+                        <th>Código</th>
+                        <th>Nombre</th>
+                        <th>Descripción</th>
+                        <th>Categoría</th>
+                        <th>Cantidad</th>
+                        <th>Fecha</th>
+                        <th>Foto</th>
+                        <th>Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody id="scienceTableBody">
+                      <!-- science.js llenará aquí -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
       </section>
 
-      <footer>
-        <p>© 2025 Innova Space Education - Laboratorio de Ciencias</p>
+      <!-- =========================
+           BLOQUE: RESERVAS (AGENDA)
+      ========================== -->
+      <section class="glass-panel" aria-label="Reservas del Laboratorio de Ciencias">
+        <h2>Reservas del laboratorio</h2>
+        <p class="section-description">
+          Registra reservas de uso. Estas reservas deben aparecer en Historial cuando se guarden correctamente.
+        </p>
+
+        <div class="panel-grid">
+
+          <!-- FORM RESERVA -->
+          <div class="panel-block">
+            <div class="collapsible-card" data-collapsed="true">
+              <div class="collapsible-header">
+                <h3>Reserva de laboratorio de ciencias</h3>
+                <button type="button" class="collapse-toggle" aria-expanded="false">
+                  <span class="collapse-icon">⌄</span> Mostrar
+                </button>
+              </div>
+
+              <div class="collapsible-body">
+                <form id="scienceReservationForm">
+                  <div class="form-grid">
+                    <label>
+                      Nombre del solicitante
+                      <input type="text" name="solicitante" required />
+                    </label>
+
+                    <label>
+                      Curso / Grupo
+                      <input type="text" name="curso" required />
+                    </label>
+
+                    <label>
+                      Fecha de uso
+                      <input type="date" name="fechaUso" required />
+                    </label>
+
+                    <label>
+                      Horario
+                      <input type="text" name="horario" placeholder="Ej: 08:00 - 09:30" />
+                    </label>
+
+                    <label class="full-width">
+                      Observaciones
+                      <input type="text" name="observaciones" placeholder="Opcional" />
+                    </label>
+                  </div>
+
+                  <div class="form-actions" style="margin-top: 12px;">
+                    <button type="submit" class="btn-secondary">Registrar reserva</button>
+                  </div>
+
+                  <p class="hint-text" style="margin-top: 10px;">
+                    Consejo: si el sistema no registra esto en <b>Historial</b>, falta que science.js envíe el evento al backend de historial.
+                  </p>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          <!-- TABLA RESERVAS (OPCIONAL si ya la tienes en backend) -->
+          <div class="panel-block">
+            <div class="collapsible-card" data-collapsed="true">
+              <div class="collapsible-header">
+                <h3>Listado de reservas</h3>
+                <button type="button" class="collapse-toggle" aria-expanded="false">
+                  <span class="collapse-icon">⌄</span> Mostrar
+                </button>
+              </div>
+
+              <div class="collapsible-body">
+                <div class="table-wrapper">
+                  <table id="scienceReservationsTable" class="inventory-table">
+                    <thead>
+                      <tr>
+                        <th>ID</th>
+                        <th>Solicitante</th>
+                        <th>Curso / Grupo</th>
+                        <th>Fecha de uso</th>
+                        <th>Horario</th>
+                        <th>Observaciones</th>
+                        <th>Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody id="scienceReservationsTableBody">
+                      <!-- science.js puede llenar aquí si implementas /api/science/reservations -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- =========================
+           BLOQUE: PRÉSTAMOS
+      ========================== -->
+      <section class="glass-panel" aria-label="Préstamos de Ciencias">
+        <h2>Préstamos</h2>
+        <p class="section-description">
+          Registra préstamos y devoluciones. Los vencidos deben quedar marcados.
+        </p>
+
+        <div class="panel-grid">
+
+          <!-- FORM PRÉSTAMO -->
+          <div class="panel-block">
+            <div class="collapsible-card" data-collapsed="true">
+              <div class="collapsible-header">
+                <h3>Registrar préstamo</h3>
+                <button type="button" class="collapse-toggle" aria-expanded="false">
+                  <span class="collapse-icon">⌄</span> Mostrar
+                </button>
+              </div>
+
+              <div class="collapsible-body">
+                <form id="scienceLoanForm">
+                  <div class="form-grid">
+                    <label for="sciLoanCodigo">
+                      Código del material
+                      <input
+                        type="text"
+                        id="sciLoanCodigo"
+                        name="codigo"
+                        required
+                        data-message="Ingresa el código del material a prestar."
+                      />
+                    </label>
+
+                    <label for="sciLoanPersonSelect">
+                      Persona (desde listado)
+                      <select
+                        id="sciLoanPersonSelect"
+                        name="personaId"
+                        class="persona-select"
+                        data-curso-target="sciLoanCurso"
+                        data-message="Selecciona a la persona desde el listado."
+                      >
+                        <option value="">-- Seleccionar desde lista --</option>
+                      </select>
+                    </label>
+
+                    <label for="sciLoanNombre">
+                      Nombre
+                      <input
+                        type="text"
+                        id="sciLoanNombre"
+                        name="nombre"
+                        required
+                        data-message="Nombre de la persona que recibe el material."
+                      />
+                    </label>
+
+                    <label for="sciLoanCurso">
+                      Curso / Unidad
+                      <input
+                        type="text"
+                        id="sciLoanCurso"
+                        name="curso"
+                        data-message="Ej: 2° medio B, Departamento de Ciencias, etc."
+                      />
+                    </label>
+
+                    <label for="sciLoanTipoPersona">
+                      Tipo de persona
+                      <input
+                        type="text"
+                        id="sciLoanTipoPersona"
+                        name="tipoPersona"
+                        placeholder="estudiante / funcionario"
+                        data-message="Ej: estudiante o funcionario."
+                      />
+                    </label>
+
+                    <label for="sciLoanObservaciones" class="full-width">
+                      Observaciones
+                      <input
+                        type="text"
+                        id="sciLoanObservaciones"
+                        name="observaciones"
+                        placeholder="Opcional"
+                      />
+                    </label>
+                  </div>
+
+                  <div class="form-actions" style="margin-top: 12px;">
+                    <button type="submit" class="btn-secondary">
+                      Registrar préstamo
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          <!-- DEVOLUCIÓN -->
+          <div class="panel-block">
+            <div class="collapsible-card" data-collapsed="true">
+              <div class="collapsible-header">
+                <h3>Registrar devolución</h3>
+                <button type="button" class="collapse-toggle" aria-expanded="false">
+                  <span class="collapse-icon">⌄</span> Mostrar
+                </button>
+              </div>
+
+              <div class="collapsible-body">
+                <form id="scienceReturnForm">
+                  <div class="form-grid">
+                    <label for="scienceReturnId" class="full-width">
+                      ID del préstamo
+                      <input
+                        type="text"
+                        id="scienceReturnId"
+                        name="loanId"
+                        placeholder="Ej: 17640888254868"
+                        required
+                      />
+                    </label>
+                  </div>
+
+                  <div class="form-actions" style="margin-top: 12px;">
+                    <button type="submit" class="btn-ghost">
+                      Registrar devolución
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- TABLA PRÉSTAMOS -->
+        <div class="panel-block" style="margin-top: 14px;">
+          <div class="collapsible-card" data-collapsed="true">
+            <div class="collapsible-header">
+              <h3>Listado de préstamos</h3>
+              <button type="button" class="collapse-toggle" aria-expanded="false">
+                <span class="collapse-icon">⌄</span> Mostrar
+              </button>
+            </div>
+
+            <div class="collapsible-body">
+              <div class="filters-row">
+                <label>
+                  Buscar
+                  <input
+                    type="text"
+                    id="scienceLoansSearch"
+                    placeholder="ID, nombre, código, curso..."
+                    class="input-search"
+                  />
+                </label>
+              </div>
+
+              <div class="table-wrapper">
+                <table id="scienceLoansTable" class="inventory-table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Código</th>
+                      <th>Nombre</th>
+                      <th>Curso</th>
+                      <th>Fecha</th>
+                      <th>Devuelto</th>
+                      <th>Devuelto el</th>
+                      <th>Observaciones</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody id="scienceLoansTableBody">
+                    <!-- science.js llenará aquí -->
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="hint-text" style="margin-top: 10px;">
+                Recomendación: resaltar vencidos (&gt; 7 días) con un badge/alerta, igual que computación.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================
+           BLOQUE: PERSONAS (solo lectura)
+      ========================== -->
+      <section class="glass-panel" aria-label="Personas registradas">
+        <h2>Personas registradas</h2>
+        <p class="hint-text">
+          Este listado se comparte con Biblioteca. Para agregar/editar estudiantes o funcionarios,
+          usa el módulo de <b>Biblioteca</b>.
+        </p>
+
+        <div class="table-wrapper">
+          <table id="sciencePeopleTable" class="inventory-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Tipo</th>
+                <th>Curso / Cargo</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- peopleUtils.js + science.js llenará aquí -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <footer class="glass-panel" style="margin-top: 14px;">
+        <p>© 2025 Innova Space Education — Laboratorio de Ciencias</p>
       </footer>
-    </div>
+    </main>
   </div>
 
   <!-- Scripts generales -->
-  <script src="/js/script.js"></script>
-  <script src="/js/roleGuard.js"></script>
+  <script src="/script.js" defer></script>
+  <script src="/js/roleGuard.js" defer></script>
 </body>
 </html>
