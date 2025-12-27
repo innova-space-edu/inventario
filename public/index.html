@@ -1097,8 +1097,9 @@
           Revisa los movimientos del sistema: ingresos, eliminaciones, reservas y préstamos.
         </p>
 
+        <!-- HISTORIAL TABLA -->
         <div class="panel-block">
-          <div class="collapsible-card" data-collapsed="true">
+          <div class="collapsible-card" data-collapsed="true" id="history-card-table">
             <div class="collapsible-header">
               <h3>Historial del sistema</h3>
               <button type="button" class="collapse-toggle" aria-expanded="false">
@@ -1151,71 +1152,195 @@
           </div>
         </div>
 
-        <!-- ANÁLISIS DE DATOS -->
-        <div class="panel-block">
-          <div class="collapsible-card" data-collapsed="true">
-            <div class="collapsible-header">
-              <h3>Análisis de datos</h3>
-              <button type="button" class="collapse-toggle" aria-expanded="false">
-                <span class="collapse-icon">⌄</span> Mostrar
-              </button>
-            </div>
+        <!-- ANÁLISIS DE DATOS (SUBDIVIDIDO EN CUADROS / VENTANAS) -->
+        <div class="panel-grid">
 
-            <div class="collapsible-body">
-              <div class="analytics-summary-grid">
-                <div class="analytics-card">
-                  <span class="analytics-label">Total de préstamos</span>
-                  <span id="analyticsTotalLoans" class="analytics-value">0</span>
-                </div>
-                <div class="analytics-card">
-                  <span class="analytics-label">Préstamos a estudiantes</span>
-                  <span id="analyticsStudentLoans" class="analytics-value">0</span>
-                </div>
-                <div class="analytics-card">
-                  <span class="analytics-label">Préstamos a funcionarios</span>
-                  <span id="analyticsStaffLoans" class="analytics-value">0</span>
-                </div>
-                <div class="analytics-card">
-                  <span class="analytics-label">Promedio días de préstamo</span>
-                  <span id="analyticsAvgLoanDays" class="analytics-value">0</span>
-                </div>
-                <div class="analytics-card">
-                  <span class="analytics-label">Sala / curso más activo</span>
-                  <span id="analyticsTopRoom" class="analytics-value">—</span>
-                </div>
-                <div class="analytics-card">
-                  <span class="analytics-label">Módulo con más movimientos</span>
-                  <span id="analyticsTopModule" class="analytics-value">—</span>
-                </div>
+          <!-- 1) RESUMEN -->
+          <div class="panel-block">
+            <div class="collapsible-card" data-collapsed="true" id="analytics-card-summary" data-analytics-section="summary">
+              <div class="collapsible-header">
+                <h3>Análisis – Resumen rápido</h3>
+                <button type="button" class="collapse-toggle" aria-expanded="false">
+                  <span class="collapse-icon">⌄</span> Mostrar
+                </button>
               </div>
 
-              <div class="analytics-charts-grid">
-                <div class="chart-card">
-                  <h4>Préstamos por tipo de persona</h4>
-                  <canvas id="chartLoansByPersonType"></canvas>
+              <div class="collapsible-body">
+                <div class="analytics-summary-grid">
+                  <div class="analytics-card">
+                    <span class="analytics-label">Total de préstamos</span>
+                    <span id="analyticsTotalLoans" class="analytics-value">0</span>
+                  </div>
+                  <div class="analytics-card">
+                    <span class="analytics-label">Préstamos a estudiantes</span>
+                    <span id="analyticsStudentLoans" class="analytics-value">0</span>
+                  </div>
+                  <div class="analytics-card">
+                    <span class="analytics-label">Préstamos a funcionarios</span>
+                    <span id="analyticsStaffLoans" class="analytics-value">0</span>
+                  </div>
+                  <div class="analytics-card">
+                    <span class="analytics-label">Promedio días de préstamo</span>
+                    <span id="analyticsAvgLoanDays" class="analytics-value">0</span>
+                  </div>
+                  <div class="analytics-card">
+                    <span class="analytics-label">Sala / curso más activo</span>
+                    <span id="analyticsTopRoom" class="analytics-value">—</span>
+                  </div>
+                  <div class="analytics-card">
+                    <span class="analytics-label">Módulo con más movimientos</span>
+                    <span id="analyticsTopModule" class="analytics-value">—</span>
+                  </div>
                 </div>
-                <div class="chart-card">
-                  <h4>Uso por sala / curso</h4>
-                  <canvas id="chartLoansByRoom"></canvas>
-                </div>
-                <div class="chart-card">
-                  <h4>Duración de los préstamos (días)</h4>
-                  <canvas id="chartLoanDuration"></canvas>
-                </div>
-                <div class="chart-card">
-                  <h4>Movimientos por módulo</h4>
-                  <canvas id="chartHistoryByModule"></canvas>
+
+                <!-- narrativa/explicación (history.js puede rellenar esto después) -->
+                <div class="analytics-narrative" id="analyticsNarrativeSummary" aria-live="polite">
+                  <p class="section-description" style="margin-top: 14px;">
+                    Aquí verás un resumen de uso: cuántos préstamos hay, quién presta más y cuáles son las salas/módulos más activos.
+                    (Esto se calcula automáticamente desde el historial.)
+                  </p>
                 </div>
               </div>
-
-              <p class="section-description">
-                Estas métricas se calculan automáticamente a partir del historial:
-                se considera cuántas veces se usa cada recurso y sala, quién pide más
-                (estudiantes o funcionarios) y cuánto tiempo tardan en devolver los materiales.
-              </p>
             </div>
           </div>
+
+          <!-- 2) DONUT: TIPO DE PERSONA -->
+          <div class="panel-block">
+            <div class="collapsible-card" data-collapsed="true" id="analytics-card-person" data-analytics-section="personType">
+              <div class="collapsible-header">
+                <h3>Análisis – Préstamos por tipo de persona</h3>
+                <button type="button" class="collapse-toggle" aria-expanded="false">
+                  <span class="collapse-icon">⌄</span> Mostrar
+                </button>
+              </div>
+
+              <div class="collapsible-body">
+                <div class="chart-card">
+                  <h4>Distribución (Estudiante / Funcionario / Desconocido)</h4>
+                  <canvas id="chartLoansByPersonType"></canvas>
+                </div>
+
+                <div class="analytics-narrative" id="analyticsNarrativePersonType" aria-live="polite">
+                  <p class="section-description">
+                    Interpretación: este gráfico muestra qué grupo está usando más recursos.
+                    Si “Desconocido” sube, conviene mejorar el registro de “tipo de persona” al prestar.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3) USO POR SALA / CURSO (SEPARADO) -->
+          <div class="panel-block">
+            <div class="collapsible-card" data-collapsed="true" id="analytics-card-room" data-analytics-section="roomUsage">
+              <div class="collapsible-header">
+                <h3>Análisis – Uso por sala / curso</h3>
+                <button type="button" class="collapse-toggle" aria-expanded="false">
+                  <span class="collapse-icon">⌄</span> Mostrar
+                </button>
+              </div>
+
+              <div class="collapsible-body">
+                <div class="chart-card">
+                  <h4>Salas / cursos con más préstamos</h4>
+                  <canvas id="chartLoansByRoom"></canvas>
+                </div>
+
+                <div class="analytics-narrative" id="analyticsNarrativeRoom" aria-live="polite">
+                  <p class="section-description">
+                    Interpretación: identifica cursos o grupos con mayor actividad para planificar mantención,
+                    reposición y priorizar inventario.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4) DURACIÓN DE PRÉSTAMOS -->
+          <div class="panel-block">
+            <div class="collapsible-card" data-collapsed="true" id="analytics-card-duration" data-analytics-section="duration">
+              <div class="collapsible-header">
+                <h3>Análisis – Duración de los préstamos</h3>
+                <button type="button" class="collapse-toggle" aria-expanded="false">
+                  <span class="collapse-icon">⌄</span> Mostrar
+                </button>
+              </div>
+
+              <div class="collapsible-body">
+                <div class="chart-card">
+                  <h4>Distribución de días (cuánto tardan en devolver)</h4>
+                  <canvas id="chartLoanDuration"></canvas>
+                </div>
+
+                <div class="analytics-narrative" id="analyticsNarrativeDuration" aria-live="polite">
+                  <p class="section-description">
+                    Interpretación: si la mayoría cae en rangos altos, conviene reforzar reglas de devolución
+                    y alertas automáticas.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 5) MOVIMIENTOS POR MÓDULO -->
+          <div class="panel-block">
+            <div class="collapsible-card" data-collapsed="true" id="analytics-card-module" data-analytics-section="moduleMoves">
+              <div class="collapsible-header">
+                <h3>Análisis – Movimientos por módulo</h3>
+                <button type="button" class="collapse-toggle" aria-expanded="false">
+                  <span class="collapse-icon">⌄</span> Mostrar
+                </button>
+              </div>
+
+              <div class="collapsible-body">
+                <div class="chart-card">
+                  <h4>Actividad por módulo (Ciencias / Computación / Biblioteca)</h4>
+                  <canvas id="chartHistoryByModule"></canvas>
+                </div>
+
+                <div class="analytics-narrative" id="analyticsNarrativeModule" aria-live="polite">
+                  <p class="section-description">
+                    Interpretación: ayuda a detectar qué módulo está moviendo más inventario y requiere mayor gestión.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 6) PANEL “EXPLICACIÓN IA” (OPCIONAL, LISTO PARA USAR) -->
+          <div class="panel-block">
+            <div class="collapsible-card" data-collapsed="true" id="analytics-card-ai" data-analytics-section="ai">
+              <div class="collapsible-header">
+                <h3>Asistente – Explicación automática</h3>
+                <button type="button" class="collapse-toggle" aria-expanded="false">
+                  <span class="collapse-icon">⌄</span> Mostrar
+                </button>
+              </div>
+
+              <div class="collapsible-body">
+                <p class="section-description">
+                  Este cuadro queda listo para que history.js (o un módulo futuro) genere una explicación “tipo informe”
+                  en base a los resultados. Si luego conectas una IA, puedes resumir patrones y recomendaciones.
+                </p>
+
+                <div id="analyticsAIReport" class="info-box" style="min-height: 90px;">
+                  <strong>Informe:</strong> (pendiente) — aquí aparecerá un resumen automático cuando lo implementemos.
+                </div>
+
+                <div class="form-actions" style="margin-top: 12px;">
+                  <button type="button" id="btnGenerateAIReport" class="btn-secondary">
+                    Generar informe (próximamente)
+                  </button>
+                  <button type="button" id="btnCopyAIReport" class="btn-ghost">
+                    Copiar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
+
       </section>
 
     </main>
@@ -1231,8 +1356,10 @@
   <!-- 3) UI -->
   <script src="/js/tabs.js" defer></script>
   <script src="/js/collapsibles.js" defer></script>
- <!-- Chart.js (antes de history.js) -->
+
+  <!-- Chart.js (antes de history.js) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
   <!-- 4) Módulos -->
   <script src="/js/science.js" defer></script>
   <script src="/js/computing.js" defer></script>
