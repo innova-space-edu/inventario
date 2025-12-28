@@ -10,6 +10,8 @@
 // - Normalización robusta action/entityType (ES/EN + variantes)
 // - Explicaciones automáticas por bloque (sin IA externa)
 // - Botones: "Copiar" y "Generar informe" (local, sin API)
+// - ✅ NUEVO: "Historial sí o sí" (cola local + auto-flush al cargar)
+// - ✅ NUEVO: indicador de cola pendiente en narrativa + AI report
 
 document.addEventListener("DOMContentLoaded", () => {
   const historyTableBody = document.querySelector("#historyTable tbody");
@@ -58,6 +60,54 @@ document.addEventListener("DOMContentLoaded", () => {
   // Cache
   let logsCache = [];
   let statsCache = null;
+
+  // ✅ Cola local: si el backend falla al registrar history desde otros módulos
+  const HISTORY_QUEUE_KEY = "inv_history_queue_v1";
+
+  function getQueuedHistoryCount() {
+    try {
+      const raw = localStorage.getItem(HISTORY_QUEUE_KEY);
+      const q = raw ? JSON.parse(raw) : [];
+      return Array.isArray(q) ? q.length : 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  async function flushHistoryQueue() {
+    // Intenta subir al backend lo pendiente
+    let queue = [];
+    try {
+      const raw = localStorage.getItem(HISTORY_QUEUE_KEY);
+      queue = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(queue) || queue.length === 0) return { flushed: 0, remaining: 0 };
+    } catch {
+      return { flushed: 0, remaining: 0 };
+    }
+
+    let flushed = 0;
+    const remaining = [];
+
+    for (const ev of queue) {
+      try {
+        const resp = await apiFetch("/api/history", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(ev),
+        });
+        if (!resp.ok) throw new Error("history post failed");
+        flushed += 1;
+      } catch {
+        remaining.push(ev);
+      }
+    }
+
+    try {
+      localStorage.setItem(HISTORY_QUEUE_KEY, JSON.stringify(remaining));
+    } catch {}
+
+    return { flushed, remaining: remaining.length };
+  }
 
   // -----------------------
   // Helpers UI
@@ -114,7 +164,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function setNarrative(el, text) {
     if (!el) return;
-    // Mantén estilo del HTML: insertamos un <p> bonito
     el.innerHTML = `<p class="section-description">${escapeHTML(text || "")}</p>`;
   }
 
@@ -154,7 +203,8 @@ document.addEventListener("DOMContentLoaded", () => {
       x.includes("nuevo") ||
       x.includes("nueva") ||
       x.includes("registr")
-    ) return "create";
+    )
+      return "create";
 
     // return / devolver / devuelto / entregado / cerrar
     if (
@@ -164,7 +214,8 @@ document.addEventListener("DOMContentLoaded", () => {
       x.includes("entreg") ||
       x.includes("cerr") ||
       x.includes("final")
-    ) return "return";
+    )
+      return "return";
 
     // update / editar / modificar / cambio
     if (
@@ -174,7 +225,8 @@ document.addEventListener("DOMContentLoaded", () => {
       x.includes("modif") ||
       x.includes("cambi") ||
       x.includes("actualiz")
-    ) return "update";
+    )
+      return "update";
 
     return x;
   }
@@ -184,11 +236,17 @@ document.addEventListener("DOMContentLoaded", () => {
     if (raw) return normalizeEntityType(raw);
 
     const d = getDataObj(log);
-    const fallback =
-      (d?.entityType || d?.entity_type || d?.tipoEntidad || d?.tipo_entidad || d?.tipo || "")
-        .toString()
-        .trim()
-        .toLowerCase();
+    const fallback = (
+      d?.entityType ||
+      d?.entity_type ||
+      d?.tipoEntidad ||
+      d?.tipo_entidad ||
+      d?.tipo ||
+      ""
+    )
+      .toString()
+      .trim()
+      .toLowerCase();
 
     return normalizeEntityType(fallback || "");
   }
@@ -198,11 +256,17 @@ document.addEventListener("DOMContentLoaded", () => {
     if (raw) return normalizeAction(raw);
 
     const d = getDataObj(log);
-    const fallback =
-      (d?.action || d?.action_type || d?.accion || d?.tipoAccion || d?.tipo_accion || "")
-        .toString()
-        .trim()
-        .toLowerCase();
+    const fallback = (
+      d?.action ||
+      d?.action_type ||
+      d?.accion ||
+      d?.tipoAccion ||
+      d?.tipo_accion ||
+      ""
+    )
+      .toString()
+      .trim()
+      .toLowerCase();
 
     return normalizeAction(fallback || "");
   }
@@ -212,10 +276,17 @@ document.addEventListener("DOMContentLoaded", () => {
     if (raw) return raw;
 
     const d = getDataObj(log);
-    const fallback =
-      (d?.entityId || d?.entity_id || d?.id || d?.loanId || d?.loan_id || d?.itemId || "")
-        .toString()
-        .trim();
+    const fallback = (
+      d?.entityId ||
+      d?.entity_id ||
+      d?.id ||
+      d?.loanId ||
+      d?.loan_id ||
+      d?.itemId ||
+      ""
+    )
+      .toString()
+      .trim();
 
     return fallback || "";
   }
@@ -290,13 +361,8 @@ document.addEventListener("DOMContentLoaded", () => {
         .toLowerCase();
 
       if (raw.includes("estud") || raw.includes("alumn")) return "estudiante";
-      if (
-        raw.includes("func") ||
-        raw.includes("doc") ||
-        raw.includes("prof") ||
-        raw.includes("staff") ||
-        raw.includes("asist")
-      ) return "funcionario";
+      if (raw.includes("func") || raw.includes("doc") || raw.includes("prof") || raw.includes("staff") || raw.includes("asist"))
+        return "funcionario";
 
       return raw || "";
     };
@@ -397,7 +463,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // -----------------------
   // Render summary
   // -----------------------
-  function renderSummary(stats) {
+  function renderSummary(stats, queueInfo = null) {
     if (elTotalLoans) elTotalLoans.textContent = String(stats.totalLoans || 0);
     if (elStudentLoans) elStudentLoans.textContent = String(stats.loansByPersonType?.estudiante || 0);
     if (elStaffLoans) elStaffLoans.textContent = String(stats.loansByPersonType?.funcionario || 0);
@@ -413,6 +479,18 @@ document.addEventListener("DOMContentLoaded", () => {
     // narrativa global
     const txt = [];
     txt.push(`Se analizaron ${stats.totalLogs || 0} movimientos del sistema.`);
+
+    const qCount = getQueuedHistoryCount();
+    if (queueInfo && (queueInfo.flushed > 0 || queueInfo.remaining >= 0)) {
+      txt.push(
+        `Cola local (historial sin conexión): se enviaron ${queueInfo.flushed} y quedan ${queueInfo.remaining} pendientes.`
+      );
+    } else if (qCount > 0) {
+      txt.push(`Cola local (historial sin conexión): hay ${qCount} eventos pendientes por sincronizar.`);
+    } else {
+      txt.push(`Cola local (historial sin conexión): 0 pendientes.`);
+    }
+
     if ((stats.totalLoans || 0) === 0) {
       txt.push(
         "Aún no se detectan préstamos (CREATE) en los logs. Si ya existen préstamos, revisa que entityType sea “loan” y action sea “create/crear/registrar”."
@@ -677,18 +755,15 @@ document.addEventListener("DOMContentLoaded", () => {
     lines.push(`• Sala/curso más activo: ${stats.topRoom || "—"}`);
     lines.push(`• Módulo más activo: ${stats.topModule || "—"}`);
 
+    const q = getQueuedHistoryCount();
+    lines.push(`• Cola local (historial sin conexión): ${q} pendiente(s)`);
+
     if ((stats.loanDurations || []).length > 0) {
       lines.push(`• Promedio de duración (con devoluciones): ${stats.avgLoanDays.toFixed(1)} días`);
       const over7 = stats.loanDurations.filter((d) => Number(d) >= 7).length;
-      lines.push(
-        `• Préstamos con duración ≥ 7 días (con devolución): ${over7} ${
-          over7 > 0 ? "→ recomendable reforzar alertas y recordatorios." : ""
-        }`
-      );
+      lines.push(`• Préstamos con duración ≥ 7 días (con devolución): ${over7} ${over7 > 0 ? "→ recomendable reforzar alertas y recordatorios." : ""}`);
     } else {
-      lines.push(
-        `• Duración: no hay devoluciones detectadas aún (RETURN/returnedAt). Cuando se registren, aparecerán promedios y rangos.`
-      );
+      lines.push(`• Duración: no hay devoluciones detectadas aún (RETURN/returnedAt). Cuando se registren, aparecerán promedios y rangos.`);
     }
 
     // Recomendaciones simples
@@ -698,6 +773,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     if ((stats.totalLoans || 0) > 0 && (stats.loanDurations || []).length === 0) {
       rec.push("Registrar devoluciones (RETURN o returnedAt) para medir tiempos reales.");
+    }
+    if (q > 0) {
+      rec.push("Revisar conexión/servidor: hay eventos en cola local pendientes por sincronizar.");
     }
     rec.push("Usar el Top de salas/cursos para planificar reposición y mantención.");
     lines.push("");
@@ -712,7 +790,6 @@ document.addEventListener("DOMContentLoaded", () => {
       await navigator.clipboard.writeText(text);
       return true;
     } catch {
-      // fallback
       try {
         const ta = document.createElement("textarea");
         ta.value = text;
@@ -748,7 +825,6 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!text.trim()) return;
 
       const ok = await copyTextToClipboard(text);
-      // feedback mínimo (sin alert fea)
       btnCopyAIReport.textContent = ok ? "Copiado ✅" : "No se pudo copiar";
       setTimeout(() => (btnCopyAIReport.textContent = "Copiar"), 900);
     });
@@ -767,9 +843,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const qs = params.length ? `?${params.join("&")}` : "";
 
     try {
+      // ✅ Primero intentamos sincronizar cola local (historial sí o sí)
+      const queueInfo = await flushHistoryQueue();
+
       const resp = await apiFetch(`/api/history${qs}`);
       if (!resp.ok) {
         console.error("Error al cargar historial:", resp.status);
+        // aun así, muestra cola en narrativa si puedes
+        if (statsCache) renderSummary(statsCache, queueInfo);
         return;
       }
 
@@ -825,7 +906,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Stats + números
       statsCache = computeStats(logsCache);
-      renderSummary(statsCache);
+      renderSummary(statsCache, queueInfo);
 
       // Si no hay collapsibles, renderiza todo
       const hasCollapsibles = document.querySelector(".collapsible-card");
@@ -837,7 +918,6 @@ document.addEventListener("DOMContentLoaded", () => {
       // Si hay un panel ya abierto por defecto, renderiza ese
       const opened = document.querySelector('.collapsible-card[data-collapsed="false"]');
       if (opened) renderChartsForCard(opened);
-
     } catch (err) {
       console.error("Error al cargar historial:", err);
     }
@@ -851,7 +931,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const card = btn.closest(".collapsible-card");
     if (!card) return;
 
-    // Espera a que collapsibles.js actualice data-collapsed
     window.setTimeout(() => {
       const isOpen = card.dataset.collapsed === "false";
       if (isOpen) renderChartsForCard(card);
