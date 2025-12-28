@@ -1779,6 +1779,15 @@
   </div>
 
   <!-- IMPORTANTE: orden de scripts -->
+  <!-- Export PDF -->
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+
+<!-- Export XLSX -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="/js/reservations.js" defer></script>
+<script src="/js/reports.js" defer></script>
+
   <!-- 1) Base global: estrellas / helpers -->
   <script src="/script.js" defer></script>
 
@@ -1793,9 +1802,6 @@
   <script src="/js/science.js" defer></script>
   <script src="/js/computing.js" defer></script>
   <script src="/js/library.js" defer></script>
-
-  <!-- ✅ NUEVO: reservas globales (tabla + validación choques) -->
-  <script src="/js/reservations.js" defer></script>
 
   <!-- ✅ Historial + reportes + analytics + export PDF/XLSX -->
   <script src="/js/history.js" defer></script>
