@@ -1,5 +1,16 @@
 // /public/js/science.js
+// =====================================================
 // Laboratorio de Ciencias – Inventario + Préstamos + Reservas + Personas (solo lectura)
+// ✅ Actualizado (FULL):
+// - Fallback de endpoints (por si tu backend tiene variaciones)
+// - Inventario: crear / editar / eliminar (con motivo opcional)
+// - Préstamos: crear / devolver (con recarga de stock) + (opcional) eliminar
+// - Reservas: crear / editar / eliminar, detección de choques (local + 409 backend)
+// - Personas: lectura desde /api/library/people, select con optgroup
+// - UX: debounce, safe helpers, formato de fecha es-CL, stock bajo resaltado,
+//       fallback de imágenes, manejo robusto de errores, logging historial
+// - Export reservas: PDF/XLSX usando window.ExportUtils (si existe)
+// =====================================================
 
 document.addEventListener("DOMContentLoaded", () => {
   // ---------- Referencias base ----------
@@ -15,12 +26,17 @@ document.addEventListener("DOMContentLoaded", () => {
   const sciQtyInput = document.getElementById("sciQuantity");
   const sciDateInput = document.getElementById("sciDate");
 
-  const scienceTableBody = document.querySelector("#scienceTable tbody");
+  const scienceTableBody =
+    document.querySelector("#scienceTable tbody") ||
+    document.querySelector("#scienceItemsTable tbody") ||
+    document.querySelector("#itemsTable tbody");
   const scienceSearchInput = document.getElementById("scienceSearch");
 
-  // Préstamos (en dashboard, si existe tu sección; si no, no rompe)
+  // Préstamos
   const loanForm = document.getElementById("scienceLoanForm");
-  const loansTableBody = document.querySelector("#scienceLoansTable tbody");
+  const loansTableBody =
+    document.querySelector("#scienceLoansTable tbody") ||
+    document.querySelector("#scienceLoanTable tbody");
   const loansSearchInput = document.getElementById("scienceLoansSearch");
   const returnForm = document.getElementById("scienceReturnForm");
   const returnIdInput = document.getElementById("scienceReturnId");
@@ -31,7 +47,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const loanTipoPersonaInput = document.getElementById("sciLoanTipoPersona");
   const peopleTableBody = document.querySelector("#sciencePeopleTable tbody");
 
-  // Reservas (dashboard)
+  // Reservas
   const resForm = document.getElementById("scienceReservationForm");
   const resId = document.getElementById("scienceReservationId");
   const resSolicitante = document.getElementById("scienceResSolicitante");
@@ -46,7 +62,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const resDateFrom = document.getElementById("scienceResDateFrom");
   const resDateTo = document.getElementById("scienceResDateTo");
-  const resTableBody = document.querySelector("#scienceReservationsTable tbody");
+  const resTableBody =
+    document.querySelector("#scienceReservationsTable tbody") ||
+    document.querySelector("#reservationsTable tbody");
 
   const btnResPDF = document.getElementById("btnExportScienceResPDF");
   const btnResXLSX = document.getElementById("btnExportScienceResXLSX");
@@ -86,6 +104,42 @@ document.addEventListener("DOMContentLoaded", () => {
     return date.toLocaleString("es-CL");
   };
 
+  const formatDateOnly = (d) => {
+    if (!d) return "";
+    const date = new Date(d);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toLocaleDateString("es-CL");
+  };
+
+  function imageFallback(imgEl) {
+    imgEl.onerror = null;
+    imgEl.src = "/img/placeholder.png";
+    imgEl.alt = "Sin imagen";
+  }
+  window.innovaImageFallback = window.innovaImageFallback || imageFallback;
+
+  async function readJSON(resp) {
+    return await resp.json().catch(() => ({}));
+  }
+
+  async function tryFetchJSON(urls, options = {}) {
+    const errors = [];
+    for (const url of urls) {
+      try {
+        const resp = await apiFetch(url, options);
+        if (resp.ok) {
+          const data = await readJSON(resp);
+          return { ok: true, url, data, resp };
+        }
+        const data = await readJSON(resp);
+        errors.push({ url, status: resp.status, data });
+      } catch (e) {
+        errors.push({ url, error: String(e) });
+      }
+    }
+    return { ok: false, errors };
+  }
+
   // ===== Historial (backup frontend) =====
   async function logHistory(entry) {
     // entry: { action, type, entityId, detail, payload? }
@@ -108,18 +162,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ================== INVENTARIO ==================
   async function loadScienceItems() {
-    try {
-      const resp = await apiFetch("/api/science/items");
-      if (!resp.ok) {
-        console.error("Error al cargar inventario de ciencias:", resp.status);
-        return;
-      }
-      const items = await resp.json();
-      scienceItems = Array.isArray(items) ? items : [];
-      renderScienceTable();
-    } catch (err) {
-      console.error("Error cargando materiales de ciencias:", err);
+    const res = await tryFetchJSON(
+      [
+        "/api/science/items",          // principal
+        "/api/science/item",           // fallback
+        "/api/labs/science/items",     // fallback
+      ],
+      { method: "GET" }
+    );
+
+    if (!res.ok) {
+      console.error("Error al cargar inventario de ciencias:", res.errors);
+      return;
     }
+
+    const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
+    scienceItems = Array.isArray(items) ? items : [];
+    renderScienceTable();
   }
 
   function getFilteredItems() {
@@ -145,8 +204,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const items = getFilteredItems();
     items.forEach((item) => {
-      const qty = Number(item.cantidad ?? item.qty ?? 0);
+      const qty = Number(item.cantidad ?? item.qty ?? item.quantity ?? 0);
       const lowStock = Number.isFinite(qty) && qty <= 2;
+
+      const photoHtml = item.photo
+        ? `<a href="${safe(item.photo)}" target="_blank" rel="noopener noreferrer">
+             <img src="${safe(item.photo)}" width="50" alt="Foto material"
+                  style="border-radius:8px;object-fit:cover;"
+                  onerror="window.innovaImageFallback && window.innovaImageFallback(this)" />
+           </a>`
+        : "";
 
       const tr = document.createElement("tr");
       tr.innerHTML = `
@@ -157,14 +224,14 @@ document.addEventListener("DOMContentLoaded", () => {
         <td>${safe(item.categoria)}</td>
         <td>
           <span style="${lowStock ? "color:#ffb4b4; font-weight:700;" : ""}">
-            ${safe(item.cantidad)}
+            ${safe(item.cantidad ?? item.qty ?? item.quantity ?? "")}
           </span>
         </td>
         <td>${safe(item.fecha)}</td>
-        <td>${item.photo ? `<img src="${item.photo}" width="50" alt="Foto material" />` : ""}</td>
+        <td>${photoHtml}</td>
         <td style="display:flex; gap:.35rem; flex-wrap:wrap;">
-          <button type="button" class="btn-ghost sci-edit-item" data-id="${item.id}">Editar</button>
-          <button type="button" class="btn-ghost sci-delete-item" data-id="${item.id}">Eliminar</button>
+          <button type="button" class="btn-ghost sci-edit-item" data-id="${safe(item.id)}">Editar</button>
+          <button type="button" class="btn-ghost sci-delete-item" data-id="${safe(item.id)}">Eliminar</button>
         </td>
       `;
 
@@ -173,28 +240,44 @@ document.addEventListener("DOMContentLoaded", () => {
       tr.querySelector(".sci-delete-item")?.addEventListener("click", async () => {
         if (!confirm("¿Seguro que deseas eliminar este material de ciencias?")) return;
 
-        try {
-          const resp = await apiFetch(`/api/science/items/${item.id}`, { method: "DELETE" });
-          if (!resp.ok) {
-            const data = await resp.json().catch(() => ({}));
-            alert(data.message || "No se pudo eliminar el material.");
-            return;
+        // motivo opcional (si tu backend lo ignora, no afecta)
+        const motivo =
+          prompt('Motivo (opcional): "daño", "pérdida", "baja", etc.')?.trim() || "";
+
+        const res = await tryFetchJSON(
+          [
+            `/api/science/items/${encodeURIComponent(item.id)}`,
+            `/api/science/item/${encodeURIComponent(item.id)}`,
+            `/api/labs/science/items/${encodeURIComponent(item.id)}`,
+          ],
+          {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ motivo }),
           }
+        );
 
-          scienceItems = scienceItems.filter((it) => it.id !== item.id);
-          renderScienceTable();
-
-          await logHistory({
-            action: "delete",
-            type: "item",
-            entityId: item.id,
-            detail: `Eliminado material "${item.nombre || ""}" (código ${item.codigo || ""})`,
-            payload: { item },
-          });
-        } catch (err) {
-          console.error("Error al eliminar material:", err);
-          alert("Ocurrió un error al eliminar el material.");
+        if (!res.ok) {
+          const msg =
+            res.errors?.[0]?.data?.message ||
+            res.errors?.[0]?.data?.error ||
+            "No se pudo eliminar el material.";
+          alert(msg);
+          return;
         }
+
+        scienceItems = scienceItems.filter((it) => String(it.id) !== String(item.id));
+        renderScienceTable();
+
+        await logHistory({
+          action: "delete",
+          type: "item",
+          entityId: item.id,
+          detail: `Eliminado material "${item.nombre || ""}" (código ${item.codigo || ""})${motivo ? ` – Motivo: ${motivo}` : ""}`,
+          payload: { item, motivo },
+        });
+
+        if (editingItemId && String(editingItemId) === String(item.id)) resetEditMode();
       });
 
       scienceTableBody.appendChild(tr);
@@ -210,7 +293,7 @@ document.addEventListener("DOMContentLoaded", () => {
     sciNameInput && (sciNameInput.value = item.nombre || "");
     sciDescInput && (sciDescInput.value = item.descripcion || "");
     sciCatSelect && (sciCatSelect.value = item.categoria || "instrumento");
-    sciQtyInput && (sciQtyInput.value = item.cantidad || "");
+    sciQtyInput && (sciQtyInput.value = item.cantidad ?? item.qty ?? "");
     sciDateInput && (sciDateInput.value = item.fecha || "");
 
     if (scienceFormSubmit) scienceFormSubmit.textContent = "Actualizar material";
@@ -225,35 +308,52 @@ document.addEventListener("DOMContentLoaded", () => {
     if (scienceFormCancelEdit) scienceFormCancelEdit.style.display = "none";
   }
 
-  scienceFormCancelEdit?.addEventListener("click", resetEditMode);
+  scienceFormCancelEdit?.addEventListener("click", (e) => {
+    e.preventDefault();
+    resetEditMode();
+  });
 
   scienceForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const formData = new FormData(scienceForm);
 
     try {
-      let resp;
+      let res;
+
       if (editingItemId) {
-        resp = await apiFetch(`/api/science/items/${encodeURIComponent(editingItemId)}`, {
-          method: "PUT",
-          body: formData,
-        });
+        res = await tryFetchJSON(
+          [
+            `/api/science/items/${encodeURIComponent(editingItemId)}`,
+            `/api/science/item/${encodeURIComponent(editingItemId)}`,
+            `/api/labs/science/items/${encodeURIComponent(editingItemId)}`,
+          ],
+          {
+            method: "PUT",
+            body: formData,
+          }
+        );
       } else {
-        resp = await apiFetch("/api/science/items", { method: "POST", body: formData });
+        res = await tryFetchJSON(
+          ["/api/science/items", "/api/science/item", "/api/labs/science/items"],
+          { method: "POST", body: formData }
+        );
       }
 
-      if (!resp.ok) {
-        const data = await resp.json().catch(() => ({}));
-        alert(data.message || "No se pudo guardar el material.");
+      if (!res.ok) {
+        const msg =
+          res.errors?.[0]?.data?.message ||
+          res.errors?.[0]?.data?.error ||
+          "No se pudo guardar el material.";
+        alert(msg);
         return;
       }
 
-      const result = await resp.json();
-      const item = result?.item;
+      const result = res.data;
+      const item = result?.item || result;
 
       if (item) {
         if (editingItemId) {
-          const idx = scienceItems.findIndex((i) => i.id === editingItemId);
+          const idx = scienceItems.findIndex((i) => String(i.id) === String(editingItemId));
           if (idx >= 0) scienceItems[idx] = item;
 
           await logHistory({
@@ -290,18 +390,24 @@ document.addEventListener("DOMContentLoaded", () => {
   // ================== PRÉSTAMOS (STOCK AUTOMÁTICO) ==================
   async function loadScienceLoans() {
     if (!loansTableBody) return;
-    try {
-      const resp = await apiFetch("/api/science/loans");
-      if (!resp.ok) {
-        console.error("Error al cargar préstamos:", resp.status);
-        return;
-      }
-      const loans = await resp.json();
-      scienceLoans = Array.isArray(loans) ? loans : [];
-      renderLoansTable();
-    } catch (err) {
-      console.error("Error cargando préstamos:", err);
+
+    const res = await tryFetchJSON(
+      [
+        "/api/science/loans",
+        "/api/science/loan",
+        "/api/labs/science/loans",
+      ],
+      { method: "GET" }
+    );
+
+    if (!res.ok) {
+      console.error("Error al cargar préstamos:", res.errors);
+      return;
     }
+
+    const loans = Array.isArray(res.data) ? res.data : res.data?.loans || [];
+    scienceLoans = Array.isArray(loans) ? loans : [];
+    renderLoansTable();
   }
 
   function getFilteredLoans() {
@@ -331,21 +437,23 @@ document.addEventListener("DOMContentLoaded", () => {
       const curso = loan.curso || loan.borrowerCourse || "";
       const observaciones = loan.observaciones || loan.notes || "";
 
+      const returnedFlag = !!(loan.returned || loan.devuelto);
+
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>${safe(loanId)}</td>
         <td>${safe(codigo)}</td>
         <td>${safe(nombre)}</td>
         <td>${safe(curso)}</td>
-        <td>${formatDate(loan.loanDate)}</td>
-        <td>${loan.returned ? "Sí" : "No"}</td>
-        <td>${formatDate(loan.returnDate)}</td>
+        <td>${formatDate(loan.loanDate || loan.fechaPrestamo || loan.fecha_prestamo)}</td>
+        <td>${returnedFlag ? "Sí" : "No"}</td>
+        <td>${formatDate(loan.returnDate || loan.fechaDevolucion || loan.fecha_devolucion)}</td>
         <td>${safe(observaciones)}</td>
         <td>
           ${
-            loan.returned
+            returnedFlag
               ? ""
-              : `<button type="button" class="btn-ghost sci-return-btn" data-id="${loanId}">
+              : `<button type="button" class="btn-ghost sci-return-btn" data-id="${safe(loanId)}">
                    Marcar devuelto
                  </button>`
           }
@@ -362,29 +470,38 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function doReturnLoan(loanId) {
-    try {
-      const resp = await apiFetch(`/api/science/return/${loanId}`, { method: "POST" });
-      if (!resp.ok) {
-        const d = await resp.json().catch(() => ({}));
-        alert(d.message || "No se pudo registrar la devolución.");
-        return;
-      }
+    if (!loanId) return;
 
-      // Backend debe incrementar stock automáticamente
-      await loadScienceLoans();
-      await loadScienceItems();
+    const res = await tryFetchJSON(
+      [
+        `/api/science/return/${encodeURIComponent(loanId)}`,
+        `/api/science/loans/${encodeURIComponent(loanId)}/return`,
+        `/api/science/loan/${encodeURIComponent(loanId)}/return`,
+        `/api/labs/science/return/${encodeURIComponent(loanId)}`,
+      ],
+      { method: "POST" }
+    );
 
-      await logHistory({
-        action: "return",
-        type: "loan",
-        entityId: loanId,
-        detail: `Devolución registrada (préstamo ${loanId})`,
-        payload: { loanId },
-      });
-    } catch (err) {
-      console.error("Error devolución:", err);
-      alert("Ocurrió un error al registrar la devolución.");
+    if (!res.ok) {
+      const msg =
+        res.errors?.[0]?.data?.message ||
+        res.errors?.[0]?.data?.error ||
+        "No se pudo registrar la devolución.";
+      alert(msg);
+      return;
     }
+
+    // Backend debe incrementar stock automáticamente
+    await loadScienceLoans();
+    await loadScienceItems();
+
+    await logHistory({
+      action: "return",
+      type: "loan",
+      entityId: loanId,
+      detail: `Devolución registrada (préstamo ${loanId})`,
+      payload: { loanId },
+    });
   }
 
   loanForm?.addEventListener("submit", async (e) => {
@@ -392,44 +509,49 @@ document.addEventListener("DOMContentLoaded", () => {
     const formData = new FormData(loanForm);
     const data = Object.fromEntries(formData.entries());
 
-    try {
-      const resp = await apiFetch("/api/science/loan", {
+    // Si usamos personas, podemos forzar consistencia
+    if (loanPersonSelect?.value) data.personaId = loanPersonSelect.value;
+
+    const res = await tryFetchJSON(
+      ["/api/science/loan", "/api/science/loans", "/api/labs/science/loan"],
+      {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
-      });
-
-      if (!resp.ok) {
-        const d = await resp.json().catch(() => ({}));
-        // Mensaje típico stock: "Stock insuficiente"
-        alert(d.message || "No se pudo registrar el préstamo.");
-        return;
       }
+    );
 
-      const result = await resp.json();
-      if (result?.loan) {
-        scienceLoans.unshift(result.loan);
-        renderLoansTable();
-
-        // recargar items para ver stock ya decrementado
-        await loadScienceItems();
-
-        await logHistory({
-          action: "create",
-          type: "loan",
-          entityId: result.loan.id,
-          detail: `Préstamo creado (ID ${result.loan.id}) para ${result.loan.nombre || ""}`,
-          payload: { loan: result.loan },
-        });
-      }
-
-      loanForm.reset();
-      loanPersonSelect && (loanPersonSelect.value = "");
-      loanTipoPersonaInput && (loanTipoPersonaInput.value = "");
-    } catch (err) {
-      console.error("Error préstamo:", err);
-      alert("Ocurrió un error al registrar el préstamo.");
+    if (!res.ok) {
+      const msg =
+        res.errors?.[0]?.data?.message ||
+        res.errors?.[0]?.data?.error ||
+        "No se pudo registrar el préstamo.";
+      alert(msg);
+      return;
     }
+
+    const result = res.data;
+    const loan = result?.loan || result;
+
+    if (loan) {
+      scienceLoans.unshift(loan);
+      renderLoansTable();
+
+      // recargar items para ver stock ya decrementado
+      await loadScienceItems();
+
+      await logHistory({
+        action: "create",
+        type: "loan",
+        entityId: loan.id,
+        detail: `Préstamo creado (ID ${loan.id}) para ${loan.nombre || loan.borrowerName || ""}`,
+        payload: { loan },
+      });
+    }
+
+    loanForm.reset();
+    if (loanPersonSelect) loanPersonSelect.value = "";
+    if (loanTipoPersonaInput) loanTipoPersonaInput.value = "";
   });
 
   returnForm?.addEventListener("submit", async (e) => {
@@ -444,7 +566,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ================== RESERVAS (CHOQUES + HISTORIAL) ==================
   function normalizeTime(t) {
-    // "08:00" ok
     return (t || "").toString().trim();
   }
 
@@ -453,7 +574,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return aStart < bEnd && bStart < aEnd;
   }
 
-  // Validación rápida en frontend (backup), el backend igual manda 409 si choca
   function hasConflictLocal(payload) {
     const date = payload.fechaUso;
     const start = normalizeTime(payload.horaInicio);
@@ -478,18 +598,22 @@ document.addEventListener("DOMContentLoaded", () => {
     if (resDateTo?.value) params.push(`dateTo=${encodeURIComponent(resDateTo.value)}`);
     const qs = params.length ? `?${params.join("&")}` : "";
 
-    try {
-      const resp = await apiFetch(`/api/science/reservations${qs}`);
-      if (!resp.ok) {
-        console.error("Error al cargar reservas:", resp.status);
-        return;
-      }
-      const data = await resp.json();
-      scienceReservations = Array.isArray(data) ? data : [];
-      renderReservationsTable();
-    } catch (err) {
-      console.error("Error cargando reservas:", err);
+    const res = await tryFetchJSON(
+      [
+        `/api/science/reservations${qs}`,
+        `/api/labs/science/reservations${qs}`,
+      ],
+      { method: "GET" }
+    );
+
+    if (!res.ok) {
+      console.error("Error al cargar reservas:", res.errors);
+      return;
     }
+
+    const data = Array.isArray(res.data) ? res.data : res.data?.reservations || [];
+    scienceReservations = Array.isArray(data) ? data : [];
+    renderReservationsTable();
   }
 
   function renderReservationsTable() {
@@ -515,8 +639,8 @@ document.addEventListener("DOMContentLoaded", () => {
           <td>${safe(r.status)}</td>
           <td>${safe(r.observaciones)}</td>
           <td style="display:flex; gap:.35rem; flex-wrap:wrap;">
-            <button type="button" class="btn-ghost sci-res-edit" data-id="${r.id}">Editar</button>
-            <button type="button" class="btn-ghost sci-res-del" data-id="${r.id}">Eliminar</button>
+            <button type="button" class="btn-ghost sci-res-edit" data-id="${safe(r.id)}">Editar</button>
+            <button type="button" class="btn-ghost sci-res-del" data-id="${safe(r.id)}">Eliminar</button>
           </td>
         `;
 
@@ -554,32 +678,49 @@ document.addEventListener("DOMContentLoaded", () => {
     if (resCancelEdit) resCancelEdit.style.display = "none";
   }
 
-  resCancelEdit?.addEventListener("click", resetReservationEdit);
+  resCancelEdit?.addEventListener("click", (e) => {
+    e.preventDefault();
+    resetReservationEdit();
+  });
 
   async function deleteReservation(id) {
-    try {
-      const resp = await apiFetch(`/api/science/reservations/${encodeURIComponent(id)}`, { method: "DELETE" });
-      if (!resp.ok) {
-        const d = await resp.json().catch(() => ({}));
-        alert(d.message || "No se pudo eliminar la reserva.");
-        return;
+    if (!id) return;
+
+    const motivo = prompt('Motivo (opcional): "anulada", "error", etc.')?.trim() || "";
+
+    const res = await tryFetchJSON(
+      [
+        `/api/science/reservations/${encodeURIComponent(id)}`,
+        `/api/labs/science/reservations/${encodeURIComponent(id)}`,
+      ],
+      {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ motivo }),
       }
-      scienceReservations = scienceReservations.filter((x) => String(x.id) !== String(id));
-      renderReservationsTable();
+    );
 
-      await logHistory({
-        action: "delete",
-        type: "reservation",
-        entityId: id,
-        detail: `Reserva eliminada (ID ${id})`,
-        payload: { reservationId: id },
-      });
-
-      resetReservationEdit();
-    } catch (err) {
-      console.error("Error eliminando reserva:", err);
-      alert("Ocurrió un error al eliminar la reserva.");
+    if (!res.ok) {
+      const msg =
+        res.errors?.[0]?.data?.message ||
+        res.errors?.[0]?.data?.error ||
+        "No se pudo eliminar la reserva.";
+      alert(msg);
+      return;
     }
+
+    scienceReservations = scienceReservations.filter((x) => String(x.id) !== String(id));
+    renderReservationsTable();
+
+    await logHistory({
+      action: "delete",
+      type: "reservation",
+      entityId: id,
+      detail: `Reserva eliminada (ID ${id})${motivo ? ` – Motivo: ${motivo}` : ""}`,
+      payload: { reservationId: id, motivo },
+    });
+
+    resetReservationEdit();
   }
 
   resForm?.addEventListener("submit", async (e) => {
@@ -595,7 +736,6 @@ document.addEventListener("DOMContentLoaded", () => {
       status: resStatus?.value || "pendiente",
     };
 
-    // Validación básica
     if (!payload.fechaUso || !payload.horaInicio || !payload.horaFin) {
       return alert("Debes indicar fecha, hora inicio y hora fin.");
     }
@@ -603,60 +743,65 @@ document.addEventListener("DOMContentLoaded", () => {
       return alert("La hora fin debe ser mayor que la hora inicio.");
     }
 
-    // Validación rápida local (backup)
     if (hasConflictLocal(payload)) {
       return alert("⚠️ Choque detectado: ya existe una reserva en ese rango horario.");
     }
 
-    try {
-      let resp;
-
-      if (editingReservationId) {
-        resp = await apiFetch(`/api/science/reservations/${encodeURIComponent(editingReservationId)}`, {
+    let res;
+    if (editingReservationId) {
+      res = await tryFetchJSON(
+        [
+          `/api/science/reservations/${encodeURIComponent(editingReservationId)}`,
+          `/api/labs/science/reservations/${encodeURIComponent(editingReservationId)}`,
+        ],
+        {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
-        });
-      } else {
-        resp = await apiFetch(`/api/science/reservations`, {
+        }
+      );
+    } else {
+      res = await tryFetchJSON(
+        ["/api/science/reservations", "/api/labs/science/reservations"],
+        {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
-        });
-      }
-
-      // choque en backend
-      if (resp.status === 409) {
-        const d = await resp.json().catch(() => ({}));
-        return alert(d.message || "⚠️ Choque de horario: ya existe una reserva en ese rango.");
-      }
-
-      if (!resp.ok) {
-        const d = await resp.json().catch(() => ({}));
-        return alert(d.message || "No se pudo guardar la reserva.");
-      }
-
-      const result = await resp.json();
-      const reservation = result?.reservation || result;
-
-      // actualizar tabla
-      await loadScienceReservations();
-
-      await logHistory({
-        action: editingReservationId ? "update" : "create",
-        type: "reservation",
-        entityId: reservation?.id || editingReservationId || "sin-id",
-        detail: editingReservationId
-          ? `Reserva actualizada (${payload.fechaUso} ${payload.horaInicio}-${payload.horaFin})`
-          : `Reserva creada (${payload.fechaUso} ${payload.horaInicio}-${payload.horaFin})`,
-        payload: { reservation },
-      });
-
-      resetReservationEdit();
-    } catch (err) {
-      console.error("Error guardando reserva:", err);
-      alert("Ocurrió un error al guardar la reserva.");
+        }
+      );
     }
+
+    // choque en backend (si alguno devolvió 409)
+    const err409 = res.ok ? null : res.errors?.find((e) => e.status === 409);
+    if (err409) {
+      return alert(err409.data?.message || "⚠️ Choque de horario: ya existe una reserva en ese rango.");
+    }
+
+    if (!res.ok) {
+      const msg =
+        res.errors?.[0]?.data?.message ||
+        res.errors?.[0]?.data?.error ||
+        "No se pudo guardar la reserva.";
+      alert(msg);
+      return;
+    }
+
+    const result = res.data;
+    const reservation = result?.reservation || result;
+
+    await loadScienceReservations();
+
+    await logHistory({
+      action: editingReservationId ? "update" : "create",
+      type: "reservation",
+      entityId: reservation?.id || editingReservationId || "sin-id",
+      detail: editingReservationId
+        ? `Reserva actualizada (${payload.fechaUso} ${payload.horaInicio}-${payload.horaFin})`
+        : `Reserva creada (${payload.fechaUso} ${payload.horaInicio}-${payload.horaFin})`,
+      payload: { reservation },
+    });
+
+    resetReservationEdit();
   });
 
   resDateFrom?.addEventListener("change", loadScienceReservations);
@@ -664,30 +809,37 @@ document.addEventListener("DOMContentLoaded", () => {
 
   btnResPDF?.addEventListener("click", () => {
     const table = document.getElementById("scienceReservationsTable");
-    window.ExportUtils?.exportTableToPDF(table, "Reservas - Laboratorio de Ciencias");
+    if (!window.ExportUtils?.exportTableToPDF) {
+      return alert("No está disponible ExportUtils.exportTableToPDF en esta página.");
+    }
+    window.ExportUtils.exportTableToPDF(table, "Reservas - Laboratorio de Ciencias");
   });
 
   btnResXLSX?.addEventListener("click", () => {
     const table = document.getElementById("scienceReservationsTable");
-    window.ExportUtils?.exportTableToXLSX(table, "reservas_ciencias.xlsx", "Reservas");
+    if (!window.ExportUtils?.exportTableToXLSX) {
+      return alert("No está disponible ExportUtils.exportTableToXLSX en esta página.");
+    }
+    window.ExportUtils.exportTableToXLSX(table, "reservas_ciencias.xlsx", "Reservas");
   });
 
   // ================== PERSONAS (compartidas con Biblioteca) ==================
   async function loadSciencePeople() {
-    try {
-      const resp = await apiFetch("/api/library/people");
-      if (!resp.ok) {
-        console.error("Error al cargar personas:", resp.status);
-        return;
-      }
-      const data = await resp.json();
-      sciencePeople = Array.isArray(data) ? data : [];
+    const res = await tryFetchJSON(
+      ["/api/library/people", "/api/people", "/api/school/people"],
+      { method: "GET" }
+    );
 
-      renderPeopleTable();
-      fillLoanPersonSelect();
-    } catch (err) {
-      console.error("Error cargando personas:", err);
+    if (!res.ok) {
+      console.error("Error al cargar personas:", res.errors);
+      return;
     }
+
+    const data = Array.isArray(res.data) ? res.data : res.data?.people || [];
+    sciencePeople = Array.isArray(data) ? data : [];
+
+    renderPeopleTable();
+    fillLoanPersonSelect();
   }
 
   function renderPeopleTable() {
@@ -711,8 +863,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     loanPersonSelect.innerHTML = '<option value="">-- Seleccionar desde lista --</option>';
 
-    const estudiantes = sciencePeople.filter((p) => (p.tipo || "").toLowerCase() === "estudiante");
-    const funcionarios = sciencePeople.filter((p) => (p.tipo || "").toLowerCase() === "funcionario");
+    const estudiantes = sciencePeople.filter(
+      (p) => (p.tipo || "").toLowerCase() === "estudiante"
+    );
+    const funcionarios = sciencePeople.filter(
+      (p) => (p.tipo || "").toLowerCase() === "funcionario"
+    );
 
     if (estudiantes.length) {
       const og = document.createElement("optgroup");
@@ -743,7 +899,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   loanPersonSelect?.addEventListener("change", () => {
     const id = loanPersonSelect.value;
-    const p = sciencePeople.find((x) => x.id === id);
+    const p = sciencePeople.find((x) => String(x.id) === String(id));
     if (!p) return;
 
     if (loanNombreInput && !loanNombreInput.value) loanNombreInput.value = p.nombre || "";
