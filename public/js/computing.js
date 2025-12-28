@@ -1,5 +1,16 @@
 // /public/js/computing.js
 // Inventario – Sala de Computación: equipos, reservas y préstamos
+//
+// ✅ ACTUALIZADO (con TODO):
+// - Historial “sí o sí”: si /api/history falla, guarda en cola local y reintenta luego.
+// - Normaliza action/entityType para que history.js lo interprete bien.
+// - Stock automático:
+//    • En préstamo (CREATE loan): descuenta stock local de forma inmediata (optimista) + recarga inventario.
+//    • En devolución (RETURN loan): repone stock local (optimista) + recarga inventario.
+// - Mantiene toda tu lógica original (inventario, reservas, préstamos, export CSV, búsquedas).
+//
+// Nota: Para stock “real” (persistente), lo ideal es que el backend actualice cantidad/estado en /api/computing/loans y /return.
+// Este JS hace “optimismo” local + recarga para quedar siempre consistente.
 
 document.addEventListener('DOMContentLoaded', () => {
   // ---------- Referencias base ----------
@@ -152,22 +163,128 @@ document.addEventListener('DOMContentLoaded', () => {
     return date.toLocaleDateString('es-CL');
   };
 
-  async function logHistory(entry) {
+  // ========================================================
+  //                 HISTORIAL “SÍ O SÍ”
+  // ========================================================
+  const HISTORY_QUEUE_KEY = 'inv_history_queue_v1';
+
+  function normalizeHistoryAction(raw) {
+    const x = (raw || '').toString().trim().toLowerCase();
+    if (!x) return '';
+    // Mantener compat con history.js (create/update/return)
+    if (x === 'create' || x === 'created' || x.includes('crear') || x.includes('registr')) return 'create';
+    if (x === 'return' || x === 'returned' || x.includes('devol') || x.includes('entreg')) return 'return';
+    if (x === 'update' || x === 'updated' || x.includes('edit') || x.includes('modif') || x.includes('actualiz')) return 'update';
+    // si te llega delete, lo dejamos como delete (history.js lo mostrará igual en tabla)
+    return x;
+  }
+
+  function normalizeHistoryEntityType(raw) {
+    const x = (raw || '').toString().trim().toLowerCase();
+    if (!x) return '';
+    if (x === 'loan' || x.includes('prest')) return 'loan';
+    if (x === 'reservation' || x.includes('reserv')) return 'reservation';
+    if (x === 'inventory' || x.includes('invent')) return 'inventory';
+    if (x === 'item' || x.includes('equipo') || x.includes('activo')) return 'inventory';
+    return x;
+  }
+
+  function queueHistoryEvent(payload) {
     try {
-      await apiFetch('/api/history', {
+      const raw = localStorage.getItem(HISTORY_QUEUE_KEY);
+      const q = raw ? JSON.parse(raw) : [];
+      const queue = Array.isArray(q) ? q : [];
+      queue.push(payload);
+      localStorage.setItem(HISTORY_QUEUE_KEY, JSON.stringify(queue));
+    } catch {
+      // si localStorage falla, no hacemos nada más (evita romper la app)
+    }
+  }
+
+  async function logHistory(entry, extraData = null) {
+    // entry: { action, type, entityId, detail }
+    const payload = {
+      lab: 'computing',
+      action: normalizeHistoryAction(entry.action),
+      entityType: normalizeHistoryEntityType(entry.type),
+      entityId: entry.entityId || '',
+      createdAt: new Date().toISOString(),
+      data: {
+        detail: entry.detail || '',
+        ...(extraData && typeof extraData === 'object' ? extraData : {}),
+      },
+    };
+
+    try {
+      const resp = await apiFetch('/api/history', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          lab: 'computing',
-          action: entry.action,
-          entityType: entry.type,
-          entityId: entry.entityId,
-          data: { detail: entry.detail },
-        }),
+        body: JSON.stringify(payload),
       });
+      if (!resp.ok) throw new Error('history post failed');
     } catch (err) {
-      console.warn('No se pudo registrar historial (computing):', err);
+      // ✅ si falla, va a cola local (history.js la sincroniza al cargar)
+      queueHistoryEvent(payload);
+      console.warn('Historial en cola local (computing):', err);
     }
+  }
+
+  // ========================================================
+  //                   STOCK AUTOMÁTICO (UI)
+  // ========================================================
+  function getItemKeyCandidates(item) {
+    return {
+      id: item?.id != null ? String(item.id) : '',
+      idEquip: item?.idEquip != null ? String(item.idEquip) : '',
+      codigo: item?.codigo != null ? String(item.codigo) : '',
+    };
+  }
+
+  function findItemIndexByAny({ id = '', idEquip = '', codigo = '' }) {
+    const idS = (id || '').toString().trim();
+    const idEquipS = (idEquip || '').toString().trim();
+    const codS = (codigo || '').toString().trim().toLowerCase();
+
+    return computingItems.findIndex((it) => {
+      const k = getItemKeyCandidates(it);
+      if (idS && k.id && k.id === idS) return true;
+      if (idS && k.idEquip && k.idEquip === idS) return true;
+      if (idEquipS && k.idEquip && k.idEquip === idEquipS) return true;
+      if (codS && k.codigo && k.codigo.toLowerCase() === codS) return true;
+      return false;
+    });
+  }
+
+  function adjustItemQuantityOptimistic({ id, idEquip, codigo, delta }) {
+    const idx = findItemIndexByAny({ id, idEquip, codigo });
+    if (idx < 0) return false;
+    const item = computingItems[idx];
+    const current = Number(item.cantidad ?? item.quantity ?? 0);
+    if (Number.isNaN(current)) return false;
+    let next = current + Number(delta || 0);
+    if (Number.isNaN(next)) return false;
+    if (next < 0) next = 0;
+    item.cantidad = next;
+    computingItems[idx] = item;
+    return true;
+  }
+
+  function getLoanItemIdentity(loanOrFormDataObj) {
+    // Soporta distintos nombres
+    const id = loanOrFormDataObj?.itemId || loanOrFormDataObj?.id || loanOrFormDataObj?.loanItemId || loanOrFormDataObj?.idEquip || loanOrFormDataObj?.item_id || '';
+    const idEquip = loanOrFormDataObj?.idEquip || loanOrFormDataObj?.itemId || '';
+    const codigo = loanOrFormDataObj?.codigo || loanOrFormDataObj?.itemCode || loanOrFormDataObj?.code || loanOrFormDataObj?.loanCodigo || '';
+    return { id: id ? String(id) : '', idEquip: idEquip ? String(idEquip) : '', codigo: codigo ? String(codigo) : '' };
+  }
+
+  function canLoanItemNow(ident) {
+    // si encontramos item, debe tener stock > 0
+    const idx = findItemIndexByAny(ident);
+    if (idx < 0) return true; // si no existe en cache, no bloqueamos (evita falsos negativos)
+    const item = computingItems[idx];
+    const qty = Number(item.cantidad ?? item.quantity ?? 0);
+    if (Number.isNaN(qty)) return true;
+    return qty > 0;
   }
 
   // ========================================================
@@ -312,6 +429,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   })();
+
   // ========================================================
   //                    INVENTARIO
   // ========================================================
@@ -492,12 +610,16 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       computingItems = computingItems.filter((it) => it.id !== id);
       renderComputingTable();
-      await logHistory({
-        action: 'delete',
-        type: 'item',
-        entityId: id,
-        detail: `Equipo/activo de computación eliminado (ID ${id})`,
-      });
+
+      await logHistory(
+        {
+          action: 'delete',
+          type: 'inventory',
+          entityId: id,
+          detail: `Equipo/activo de computación eliminado (ID ${id})`,
+        },
+        { kind: 'item_delete', itemId: id }
+      );
     } catch (err) {
       console.error('Error al eliminar equipo/activo de computación:', err);
       alert('Ocurrió un error al eliminar el equipo.');
@@ -511,13 +633,10 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         let resp;
         if (editingItemId) {
-          resp = await apiFetch(
-            `/api/computing/items/${encodeURIComponent(editingItemId)}`,
-            {
-              method: 'PUT',
-              body: formData,
-            }
-          );
+          resp = await apiFetch(`/api/computing/items/${encodeURIComponent(editingItemId)}`, {
+            method: 'PUT',
+            body: formData,
+          });
         } else {
           resp = await apiFetch('/api/computing/items', {
             method: 'POST',
@@ -535,20 +654,28 @@ document.addEventListener('DOMContentLoaded', () => {
           if (editingItemId) {
             const idx = computingItems.findIndex((i) => i.id === editingItemId);
             if (idx >= 0) computingItems[idx] = item;
-            await logHistory({
-              action: 'update',
-              type: 'item',
-              entityId: item.id,
-              detail: `Equipo/activo de computación actualizado (ID ${item.id})`,
-            });
+
+            await logHistory(
+              {
+                action: 'update',
+                type: 'inventory',
+                entityId: item.id,
+                detail: `Equipo/activo de computación actualizado (ID ${item.id})`,
+              },
+              { kind: 'item_update', itemId: item.id, codigo: item.codigo || '' }
+            );
           } else {
             computingItems.push(item);
-            await logHistory({
-              action: 'create',
-              type: 'item',
-              entityId: item.id,
-              detail: `Equipo/activo de computación creado (ID ${item.id})`,
-            });
+
+            await logHistory(
+              {
+                action: 'create',
+                type: 'inventory',
+                entityId: item.id,
+                detail: `Equipo/activo de computación creado (ID ${item.id})`,
+              },
+              { kind: 'item_create', itemId: item.id, codigo: item.codigo || '' }
+            );
           }
           renderComputingTable();
         }
@@ -561,10 +688,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (computingSearchInput) {
-    computingSearchInput.addEventListener(
-      'input',
-      debounce(() => renderComputingTable(), 200)
-    );
+    computingSearchInput.addEventListener('input', debounce(() => renderComputingTable(), 200));
   }
 
   // ============================
@@ -598,18 +722,14 @@ document.addEventListener('DOMContentLoaded', () => {
         'Fecha compra',
         'Última actualización',
         'Descripción',
-        'Foto'
+        'Foto',
       ];
 
       const lines = [];
 
-      // Cabecera
-      const headerLine = headers
-        .map((h) => `"${h.replace(/"/g, '""')}"`)
-        .join(';'); // <-- separador ; para Excel Chile
+      const headerLine = headers.map((h) => `"${h.replace(/"/g, '""')}"`).join(';');
       lines.push(headerLine);
 
-      // Filas de datos
       itemsToExport.forEach((item) => {
         const rowArr = [
           safe(item.id),
@@ -634,10 +754,7 @@ document.addEventListener('DOMContentLoaded', () => {
           safe(item.photo || ''),
         ];
 
-        const line = rowArr
-          .map((value) => `"${value.replace(/"/g, '""')}"`)
-          .join(';'); // <-- separador ;
-
+        const line = rowArr.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(';');
         lines.push(line);
       });
 
@@ -711,14 +828,21 @@ document.addEventListener('DOMContentLoaded', () => {
         if (result && result.reservation) {
           computingReservations.unshift(result.reservation);
           renderReservationsTable();
-          await logHistory({
-            action: 'create',
-            type: 'reservation',
-            entityId: result.reservation.id,
-            detail: `Reserva de sala de computación creada para ${
-              result.reservation.solicitante || ''
-            }`,
-          });
+
+          await logHistory(
+            {
+              action: 'create',
+              type: 'reservation',
+              entityId: result.reservation.id,
+              detail: `Reserva de sala de computación creada para ${result.reservation.solicitante || ''}`,
+            },
+            {
+              kind: 'reservation_create',
+              curso: result.reservation.curso || '',
+              fecha: result.reservation.fechaUso || result.reservation.fecha || '',
+              horario: result.reservation.horario || '',
+            }
+          );
         }
         reservationForm.reset();
       } catch (err) {
@@ -727,6 +851,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
   // ========================================================
   //     PRÉSTAMOS – BÚSQUEDA EN INVENTARIO (ID / CÓDIGO)
   // ========================================================
@@ -745,9 +870,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (codigo) {
-      item = computingItems.find(
-        (it) => it.codigo && String(it.codigo).toLowerCase() === codigo.toLowerCase()
-      );
+      item = computingItems.find((it) => it.codigo && String(it.codigo).toLowerCase() === codigo.toLowerCase());
     }
 
     return item || null;
@@ -762,9 +885,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const item = findComputingItemByIdOrCode(idVal, codeVal);
 
     if (!item) {
-      if (loanItemInfo) {
-        loanItemInfo.textContent = 'Equipo no encontrado en inventario.';
-      }
+      if (loanItemInfo) loanItemInfo.textContent = 'Equipo no encontrado en inventario.';
       return;
     }
 
@@ -772,28 +893,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (loanCodigoInput) loanCodigoInput.value = item.codigo || '';
 
     if (loanItemInfo) {
-      const texto = [
-        item.descripcion || item.detalleTipo || '',
-        item.marca || '',
-        item.modelo || '',
-        item.ubicacion || '',
-      ]
+      const texto = [item.descripcion || item.detalleTipo || '', item.marca || '', item.modelo || '', item.ubicacion || '']
         .filter(Boolean)
         .join(' – ');
       loanItemInfo.textContent = texto || 'Equipo encontrado.';
     }
   }
 
-  if (loanCodigoInput) {
-    ['change', 'blur'].forEach((ev) => {
-      loanCodigoInput.addEventListener(ev, handleLoanInventoryLookup);
-    });
-  }
-  if (loanItemIdInput) {
-    ['change', 'blur'].forEach((ev) => {
-      loanItemIdInput.addEventListener(ev, handleLoanInventoryLookup);
-    });
-  }
+  if (loanCodigoInput) ['change', 'blur'].forEach((ev) => loanCodigoInput.addEventListener(ev, handleLoanInventoryLookup));
+  if (loanItemIdInput) ['change', 'blur'].forEach((ev) => loanItemIdInput.addEventListener(ev, handleLoanInventoryLookup));
 
   // ========================================================
   //                    PRÉSTAMOS DE EQUIPOS
@@ -816,8 +924,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function isLoanOverdue(loan) {
-    const baseDate =
-      loan.dueDate || loan.loanDate || loan.fechaPrestamo || loan.fecha_prestamo;
+    const baseDate = loan.dueDate || loan.loanDate || loan.fechaPrestamo || loan.fecha_prestamo;
     if (!baseDate) return false;
     const d = new Date(baseDate);
     if (Number.isNaN(d.getTime())) return false;
@@ -846,22 +953,13 @@ document.addEventListener('DOMContentLoaded', () => {
         <td>${formatDateTime(loan.loanDate || loan.fechaPrestamo || loan.fecha_prestamo)}</td>
         <td>${
           loan.returnDate || loan.fechaDevolucion || loan.fecha_devolucion
-            ? formatDateTime(
-                loan.returnDate ||
-                  loan.fechaDevolucion ||
-                  loan.fecha_devolucion
-              )
+            ? formatDateTime(loan.returnDate || loan.fechaDevolucion || loan.fecha_devolucion)
             : ''
         }</td>
         <td>${returnedFlag ? 'Sí' : overdue ? 'No (vencido)' : 'No'}</td>
-        <td>
-          ${
-            returnedFlag
-              ? ''
-              : '<button type="button" class="comp-return-loan">Marcar devuelto</button>'
-          }
-        </td>
+        <td>${returnedFlag ? '' : '<button type="button" class="comp-return-loan">Marcar devuelto</button>'}</td>
       `;
+
       const btn = tr.querySelector('.comp-return-loan');
       if (btn) {
         btn.addEventListener('click', async () => {
@@ -920,26 +1018,36 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function doReturnLoan(loanId) {
+    // Antes de pegarle al backend, tratamos de rescatar identidad del item desde cache de loans
+    const loan = computingLoans.find((l) => String(l.id) === String(loanId)) || null;
+    const ident = loan ? getLoanItemIdentity(loan) : { id: '', idEquip: '', codigo: '' };
+
     try {
-      const resp = await apiFetch(
-        `/api/computing/loans/${encodeURIComponent(loanId)}/return`,
-        {
-          method: 'POST',
-        }
-      );
+      const resp = await apiFetch(`/api/computing/loans/${encodeURIComponent(loanId)}/return`, {
+        method: 'POST',
+      });
       if (!resp.ok) {
         const d = await resp.json().catch(() => ({}));
         alert(d.message || 'No se pudo registrar la devolución.');
         return;
       }
+
+      // ✅ Stock optimista: repone 1
+      adjustItemQuantityOptimistic({ ...ident, delta: +1 });
+      renderComputingTable();
+
       await loadComputingLoans();
       await loadComputingItems();
-      await logHistory({
-        action: 'update',
-        type: 'loan',
-        entityId: loanId,
-        detail: `Préstamo de computación ${loanId} marcado como devuelto`,
-      });
+
+      await logHistory(
+        {
+          action: 'return',
+          type: 'loan',
+          entityId: loanId,
+          detail: `Préstamo de computación ${loanId} marcado como devuelto`,
+        },
+        { kind: 'loan_return', ...ident }
+      );
     } catch (err) {
       console.error('Error al marcar devolución de préstamo de computación:', err);
       alert('Ocurrió un error al registrar la devolución.');
@@ -951,6 +1059,19 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       const formData = new FormData(loanForm);
       const data = Object.fromEntries(formData.entries());
+
+      // ✅ Validación de stock (si el item existe en cache)
+      const ident = getLoanItemIdentity({
+        itemId: data.itemId || data.idEquip || data.loanItemId || '',
+        idEquip: data.idEquip || data.itemId || '',
+        codigo: data.codigo || data.itemCode || data.loanCodigo || '',
+      });
+
+      if (!canLoanItemNow(ident)) {
+        alert('Este equipo no tiene stock disponible (cantidad = 0).');
+        return;
+      }
+
       try {
         const resp = await apiFetch('/api/computing/loans', {
           method: 'POST',
@@ -967,15 +1088,30 @@ document.addEventListener('DOMContentLoaded', () => {
           computingLoans.unshift(result.loan);
           renderLoansTable();
           renderDebtorsList();
+
+          // ✅ Stock optimista: descuenta 1 (usa data del loan real si viene mejor)
+          const ident2 = getLoanItemIdentity(result.loan) || ident;
+          adjustItemQuantityOptimistic({ ...ident2, delta: -1 });
+          renderComputingTable();
+
           await loadComputingItems();
-          await logHistory({
-            action: 'create',
-            type: 'loan',
-            entityId: result.loan.id,
-            detail: `Préstamo de computación creado para ${
-              result.loan.persona || result.loan.nombre || ''
-            }`,
-          });
+
+          await logHistory(
+            {
+              action: 'create',
+              type: 'loan',
+              entityId: result.loan.id,
+              detail: `Préstamo de computación creado para ${result.loan.persona || result.loan.nombre || ''}`,
+            },
+            {
+              kind: 'loan_create',
+              tipoPersona: result.loan.tipoPersona || data.tipoPersona || '',
+              persona: result.loan.persona || result.loan.nombre || data.persona || data.nombre || '',
+              curso: result.loan.curso || data.curso || '',
+              loanDate: result.loan.loanDate || result.loan.fechaPrestamo || data.loanDate || data.fechaPrestamo || '',
+              ...ident2,
+            }
+          );
         }
         loanForm.reset();
       } catch (err) {
