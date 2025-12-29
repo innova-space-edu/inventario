@@ -14,12 +14,12 @@
 
   <!-- Librerías para exportar: PDF / XLSX -->
   <!-- (Las usaremos desde /js/history.js o /js/reports.js) -->
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
 
   <!-- Chart.js (para analytics) -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
 </head>
 
 <body class="body-space" data-page="dashboard">
@@ -1447,167 +1447,221 @@
           reservas (con validación de choques), y reportes para Dirección / UTP (pantalla + PDF/XLSX).
         </p>
 
-        <!-- CONTROLES DE REPORTE -->
-        <div class="panel-block">
-          <div class="collapsible-card" data-collapsed="true" id="reports-card-controls">
-            <div class="collapsible-header">
-              <h3>Reportes (Dirección / UTP)</h3>
-              <button type="button" class="collapse-toggle" aria-expanded="false">
-                <span class="collapse-icon">⌄</span> Mostrar
-              </button>
+        <!-- ✅ NUEVO: HUB UNIFICADO (sin eliminar nada: todo está dentro, con los mismos IDs) -->
+        <div class="history-hub card" id="historyHub">
+          <div class="history-hub-head">
+            <div>
+              <h3 class="card-title">Centro de Historial</h3>
+              <p class="card-subtitle">Auditoría + reportes + análisis, todo en una sola ventana.</p>
             </div>
 
-            <div class="collapsible-body">
-              <div class="filters-row">
-                <label>
-                  Período
-                  <select id="reportRange">
-                    <option value="7">Últimos 7 días</option>
-                    <option value="30" selected>Últimos 30 días</option>
-                    <option value="90">Últimos 90 días</option>
-                    <option value="365">Último año</option>
-                    <option value="custom">Personalizado</option>
-                  </select>
-                </label>
+            <div class="history-hub-actions">
+              <!-- Mantengo tus controles globales existentes (IDs iguales) -->
+              <select id="historyLabFilter" title="Filtrar por módulo">
+                <option value="all">Todos los módulos</option>
+                <option value="science">Laboratorio de Ciencias</option>
+                <option value="computing">Sala de Computación</option>
+                <option value="library">Biblioteca</option>
+                <option value="reservations">Reservas</option>
+              </select>
 
-                <label>
-                  Desde
-                  <input type="date" id="reportFrom" />
-                </label>
+              <select id="historyLimit" title="Cantidad de registros">
+                <option value="50">Últimos 50</option>
+                <option value="100" selected>Últimos 100</option>
+                <option value="200">Últimos 200</option>
+                <option value="500">Últimos 500</option>
+              </select>
+            </div>
+          </div>
 
-                <label>
-                  Hasta
-                  <input type="date" id="reportTo" />
-                </label>
+          <div class="history-hub-body">
+            <!-- MENU IZQUIERDA -->
+            <aside class="history-menu" role="tablist" aria-label="Opciones historial">
+              <button class="history-menu-item is-active" type="button" data-history-view="audit">🧾 Auditoría completa</button>
+              <button class="history-menu-item" type="button" data-history-view="reportes">📄 Reportes Dirección/UTP</button>
+              <button class="history-menu-item" type="button" data-history-view="reservas">📅 Reservas (vista)</button>
 
-                <label>
-                  Módulo
-                  <select id="reportModule">
-                    <option value="all" selected>Todos</option>
-                    <option value="science">Ciencias</option>
-                    <option value="computing">Computación</option>
-                    <option value="library">Biblioteca</option>
-                    <option value="reservations">Reservas</option>
-                  </select>
-                </label>
+              <div class="history-menu-sep">ANÁLISIS</div>
+              <button class="history-menu-item" type="button" data-history-view="summary">⚡ Resumen rápido</button>
+              <button class="history-menu-item" type="button" data-history-view="personType">👥 Préstamos por tipo</button>
+              <button class="history-menu-item" type="button" data-history-view="room">🏫 Uso por sala/curso</button>
+              <button class="history-menu-item" type="button" data-history-view="duration">⏱️ Duración préstamos</button>
+              <button class="history-menu-item" type="button" data-history-view="module">🧩 Movimientos por módulo</button>
 
-                <div class="form-actions" style="gap:10px;">
-                  <button type="button" id="btnRunReport" class="btn-primary">Generar reporte</button>
-                  <button type="button" id="btnExportReportPDF" class="btn-secondary">Descargar PDF</button>
-                  <button type="button" id="btnExportReportXLSX" class="btn-secondary">Descargar XLSX</button>
+              <div class="history-menu-sep">ASISTENTE</div>
+              <button class="history-menu-item" type="button" data-history-view="assistant">🤖 Explicación automática</button>
+            </aside>
+
+            <!-- CONTENIDO DERECHA -->
+            <section class="history-content">
+              <!-- AUDITORÍA -->
+              <div class="history-view is-active" data-view="audit">
+                <div class="panel-block">
+                  <div class="collapsible-card" data-collapsed="false" id="history-card-table">
+                    <div class="collapsible-header">
+                      <h3>Historial del sistema (auditoría completa)</h3>
+                      <button type="button" class="collapse-toggle" aria-expanded="true">
+                        <span class="collapse-icon">⌄</span> Mostrar
+                      </button>
+                    </div>
+
+                    <div class="collapsible-body">
+                      <div class="filters-row">
+                        <!-- OJO: historyLabFilter + historyLimit ya están arriba (mismos IDs). Mantengo el resto aquí. -->
+                        <label>
+                          Tipo de acción
+                          <select id="historyActionFilter">
+                            <option value="all" selected>Todas</option>
+                            <option value="create">Ingreso/Creación</option>
+                            <option value="update">Edición</option>
+                            <option value="delete">Eliminación</option>
+                            <option value="loan">Préstamo</option>
+                            <option value="return">Devolución</option>
+                            <option value="reserve">Reserva</option>
+                            <option value="cancel_reserve">Cancelación reserva</option>
+                          </select>
+                        </label>
+
+                        <label>
+                          Buscar
+                          <input type="text" id="historySearch" placeholder="Código, persona, curso, detalle..." />
+                        </label>
+
+                        <div class="form-actions" style="gap:10px;">
+                          <button type="button" id="btnExportHistoryPDF" class="btn-secondary">PDF</button>
+                          <button type="button" id="btnExportHistoryXLSX" class="btn-secondary">XLSX</button>
+                        </div>
+                      </div>
+
+                      <div class="table-wrapper">
+                        <table id="historyTable" class="inventory-table">
+                          <thead>
+                            <tr>
+                              <th>Fecha</th>
+                              <th>Módulo</th>
+                              <th>Acción</th>
+                              <th>Tipo</th>
+                              <th>ID entidad</th>
+                              <th>Código</th>
+                              <th>Usuario</th>
+                              <th>Tipo persona</th>
+                              <th>Curso / Sala</th>
+                              <th>Cantidad</th>
+                              <th>Stock antes</th>
+                              <th>Stock después</th>
+                              <th>Detalle</th>
+                              <th>IP/Dispositivo</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <!-- history.js llenará aquí -->
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <p class="section-description" style="margin-top:12px;">
+                        ✅ Este historial es el “libro” del sistema: todo movimiento se guarda aquí (sí o sí).
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div id="reportStatus" class="info-box" style="margin-top:12px; display:none;"></div>
-            </div>
-          </div>
-        </div>
+              <!-- REPORTES -->
+              <div class="history-view" data-view="reportes">
+                <div class="panel-block">
+                  <div class="collapsible-card" data-collapsed="false" id="reports-card-controls">
+                    <div class="collapsible-header">
+                      <h3>Reportes (Dirección / UTP)</h3>
+                      <button type="button" class="collapse-toggle" aria-expanded="true">
+                        <span class="collapse-icon">⌄</span> Mostrar
+                      </button>
+                    </div>
 
-        <!-- HISTORIAL TABLA (BONITO + FILTROS) -->
-        <div class="panel-block">
-          <div class="collapsible-card" data-collapsed="true" id="history-card-table">
-            <div class="collapsible-header">
-              <h3>Historial del sistema (auditoría completa)</h3>
-              <button type="button" class="collapse-toggle" aria-expanded="false">
-                <span class="collapse-icon">⌄</span> Mostrar
-              </button>
-            </div>
+                    <div class="collapsible-body">
+                      <div class="filters-row">
+                        <label>
+                          Período
+                          <select id="reportRange">
+                            <option value="7">Últimos 7 días</option>
+                            <option value="30" selected>Últimos 30 días</option>
+                            <option value="90">Últimos 90 días</option>
+                            <option value="365">Último año</option>
+                            <option value="custom">Personalizado</option>
+                          </select>
+                        </label>
 
-            <div class="collapsible-body">
-              <div class="filters-row">
-                <label>
-                  Módulo
-                  <select id="historyLabFilter">
-                    <option value="all">Todos los módulos</option>
-                    <option value="science">Laboratorio de Ciencias</option>
-                    <option value="computing">Sala de Computación</option>
-                    <option value="library">Biblioteca</option>
-                    <option value="reservations">Reservas</option>
-                  </select>
-                </label>
+                        <label>
+                          Desde
+                          <input type="date" id="reportFrom" />
+                        </label>
 
-                <label>
-                  Tipo de acción
-                  <select id="historyActionFilter">
-                    <option value="all" selected>Todas</option>
-                    <option value="create">Ingreso/Creación</option>
-                    <option value="update">Edición</option>
-                    <option value="delete">Eliminación</option>
-                    <option value="loan">Préstamo</option>
-                    <option value="return">Devolución</option>
-                    <option value="reserve">Reserva</option>
-                    <option value="cancel_reserve">Cancelación reserva</option>
-                  </select>
-                </label>
+                        <label>
+                          Hasta
+                          <input type="date" id="reportTo" />
+                        </label>
 
-                <label>
-                  Buscar
-                  <input type="text" id="historySearch" placeholder="Código, persona, curso, detalle..." />
-                </label>
+                        <label>
+                          Módulo
+                          <select id="reportModule">
+                            <option value="all" selected>Todos</option>
+                            <option value="science">Ciencias</option>
+                            <option value="computing">Computación</option>
+                            <option value="library">Biblioteca</option>
+                            <option value="reservations">Reservas</option>
+                          </select>
+                        </label>
 
-                <label>
-                  Cantidad de registros
-                  <select id="historyLimit">
-                    <option value="50">Últimos 50</option>
-                    <option value="100" selected>Últimos 100</option>
-                    <option value="200">Últimos 200</option>
-                    <option value="500">Últimos 500</option>
-                  </select>
-                </label>
+                        <div class="form-actions" style="gap:10px;">
+                          <button type="button" id="btnRunReport" class="btn-primary">Generar reporte</button>
+                          <button type="button" id="btnExportReportPDF" class="btn-secondary">Descargar PDF</button>
+                          <button type="button" id="btnExportReportXLSX" class="btn-secondary">Descargar XLSX</button>
+                        </div>
+                      </div>
 
-                <div class="form-actions" style="gap:10px;">
-                  <button type="button" id="btnExportHistoryPDF" class="btn-secondary">PDF</button>
-                  <button type="button" id="btnExportHistoryXLSX" class="btn-secondary">XLSX</button>
+                      <div id="reportStatus" class="info-box" style="margin-top:12px; display:none;"></div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div class="table-wrapper">
-                <table id="historyTable" class="inventory-table">
-                  <thead>
-                    <tr>
-                      <th>Fecha</th>
-                      <th>Módulo</th>
-                      <th>Acción</th>
-                      <th>Tipo</th>
-                      <th>ID entidad</th>
-                      <th>Código</th>
-                      <th>Usuario</th>
-                      <th>Tipo persona</th>
-                      <th>Curso / Sala</th>
-                      <th>Cantidad</th>
-                      <th>Stock antes</th>
-                      <th>Stock después</th>
-                      <th>Detalle</th>
-                      <th>IP/Dispositivo</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <!-- history.js llenará aquí -->
-                  </tbody>
-                </table>
+              <!-- RESERVAS (reusa tu tabla global existente; NO elimina nada) -->
+              <div class="history-view" data-view="reservas">
+                <h3 style="margin: 4px 0 10px;">Reservas (tabla global)</h3>
+                <p class="section-description">
+                  Vista rápida de la tabla de reservas del sistema (se gestiona en el módulo “Reservas”).
+                </p>
+                <div class="table-wrapper">
+                  <!-- Reutilizamos la misma tabla (mismos IDs) mostrando un "espejo" opcional.
+                       Si prefieres no duplicar, puedes dejar esto vacío y solo poner un enlace. -->
+                  <table class="inventory-table" aria-label="Reservas (vista espejo)">
+                    <thead>
+                      <tr>
+                        <th>ID</th>
+                        <th>Módulo</th>
+                        <th>Espacio</th>
+                        <th>Solicitante</th>
+                        <th>Curso/Grupo</th>
+                        <th>Fecha</th>
+                        <th>Inicio</th>
+                        <th>Término</th>
+                        <th>Recursos</th>
+                        <th>Obs.</th>
+                        <th>Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody id="reservasMirrorBody">
+                      <!-- (Opcional) Si quieres, reservations.js puede copiar filas aquí.
+                           Si no lo usas, no rompe nada. -->
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
-              <p class="section-description" style="margin-top:12px;">
-                ✅ Este historial es el “libro” del sistema: todo movimiento se guarda aquí (sí o sí).
-              </p>
-            </div>
-          </div>
-        </div>
+              <!-- SUMMARY -->
+              <div class="history-view" data-view="summary">
+                <h3 style="margin: 4px 0 10px;">Análisis – Resumen rápido</h3>
 
-        <!-- ANÁLISIS DE DATOS (SUBDIVIDIDO EN CUADROS / VENTANAS) -->
-        <div class="panel-grid">
-
-          <!-- 1) RESUMEN -->
-          <div class="panel-block">
-            <div class="collapsible-card" data-collapsed="true" id="analytics-card-summary" data-analytics-section="summary">
-              <div class="collapsible-header">
-                <h3>Análisis – Resumen rápido</h3>
-                <button type="button" class="collapse-toggle" aria-expanded="false">
-                  <span class="collapse-icon">⌄</span> Mostrar
-                </button>
-              </div>
-
-              <div class="collapsible-body">
                 <div class="analytics-summary-grid">
                   <div class="analytics-card">
                     <span class="analytics-label">Total préstamos</span>
@@ -1641,20 +1695,11 @@
                   </p>
                 </div>
               </div>
-            </div>
-          </div>
 
-          <!-- 2) DONUT: TIPO DE PERSONA -->
-          <div class="panel-block">
-            <div class="collapsible-card" data-collapsed="true" id="analytics-card-person" data-analytics-section="personType">
-              <div class="collapsible-header">
-                <h3>Análisis – Préstamos por tipo de persona</h3>
-                <button type="button" class="collapse-toggle" aria-expanded="false">
-                  <span class="collapse-icon">⌄</span> Mostrar
-                </button>
-              </div>
+              <!-- PERSON TYPE -->
+              <div class="history-view" data-view="personType">
+                <h3 style="margin: 4px 0 10px;">Análisis – Préstamos por tipo de persona</h3>
 
-              <div class="collapsible-body">
                 <div class="chart-card">
                   <h4>Distribución (Estudiante / Funcionario / Desconocido)</h4>
                   <canvas id="chartLoansByPersonType"></canvas>
@@ -1666,20 +1711,11 @@
                   </p>
                 </div>
               </div>
-            </div>
-          </div>
 
-          <!-- 3) USO POR SALA / CURSO -->
-          <div class="panel-block">
-            <div class="collapsible-card" data-collapsed="true" id="analytics-card-room" data-analytics-section="roomUsage">
-              <div class="collapsible-header">
-                <h3>Análisis – Uso por sala / curso</h3>
-                <button type="button" class="collapse-toggle" aria-expanded="false">
-                  <span class="collapse-icon">⌄</span> Mostrar
-                </button>
-              </div>
+              <!-- ROOM -->
+              <div class="history-view" data-view="room">
+                <h3 style="margin: 4px 0 10px;">Análisis – Uso por sala / curso</h3>
 
-              <div class="collapsible-body">
                 <div class="chart-card">
                   <h4>Salas / cursos con más actividad</h4>
                   <canvas id="chartLoansByRoom"></canvas>
@@ -1691,20 +1727,11 @@
                   </p>
                 </div>
               </div>
-            </div>
-          </div>
 
-          <!-- 4) DURACIÓN DE PRÉSTAMOS -->
-          <div class="panel-block">
-            <div class="collapsible-card" data-collapsed="true" id="analytics-card-duration" data-analytics-section="duration">
-              <div class="collapsible-header">
-                <h3>Análisis – Duración de préstamos</h3>
-                <button type="button" class="collapse-toggle" aria-expanded="false">
-                  <span class="collapse-icon">⌄</span> Mostrar
-                </button>
-              </div>
+              <!-- DURATION -->
+              <div class="history-view" data-view="duration">
+                <h3 style="margin: 4px 0 10px;">Análisis – Duración de préstamos</h3>
 
-              <div class="collapsible-body">
                 <div class="chart-card">
                   <h4>Distribución de días (demora en devolución)</h4>
                   <canvas id="chartLoanDuration"></canvas>
@@ -1716,20 +1743,11 @@
                   </p>
                 </div>
               </div>
-            </div>
-          </div>
 
-          <!-- 5) MOVIMIENTOS POR MÓDULO -->
-          <div class="panel-block">
-            <div class="collapsible-card" data-collapsed="true" id="analytics-card-module" data-analytics-section="moduleMoves">
-              <div class="collapsible-header">
-                <h3>Análisis – Movimientos por módulo</h3>
-                <button type="button" class="collapse-toggle" aria-expanded="false">
-                  <span class="collapse-icon">⌄</span> Mostrar
-                </button>
-              </div>
+              <!-- MODULE -->
+              <div class="history-view" data-view="module">
+                <h3 style="margin: 4px 0 10px;">Análisis – Movimientos por módulo</h3>
 
-              <div class="collapsible-body">
                 <div class="chart-card">
                   <h4>Actividad por módulo (incluye reservas)</h4>
                   <canvas id="chartHistoryByModule"></canvas>
@@ -1741,20 +1759,11 @@
                   </p>
                 </div>
               </div>
-            </div>
-          </div>
 
-          <!-- 6) PANEL “EXPLICACIÓN IA” -->
-          <div class="panel-block">
-            <div class="collapsible-card" data-collapsed="true" id="analytics-card-ai" data-analytics-section="ai">
-              <div class="collapsible-header">
-                <h3>Asistente – Explicación automática</h3>
-                <button type="button" class="collapse-toggle" aria-expanded="false">
-                  <span class="collapse-icon">⌄</span> Mostrar
-                </button>
-              </div>
+              <!-- ASSISTANT -->
+              <div class="history-view" data-view="assistant">
+                <h3 style="margin: 4px 0 10px;">Asistente – Explicación automática</h3>
 
-              <div class="collapsible-body">
                 <p class="section-description">
                   Cuadro listo para generar una explicación estilo informe desde los datos del reporte/historial.
                 </p>
@@ -1768,9 +1777,8 @@
                   <button type="button" id="btnCopyAIReport" class="btn-ghost">Copiar</button>
                 </div>
               </div>
-            </div>
+            </section>
           </div>
-
         </div>
 
       </section>
@@ -1778,16 +1786,7 @@
     </main>
   </div>
 
-  <!-- IMPORTANTE: orden de scripts -->
-  <!-- Export PDF -->
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
-
-<!-- Export XLSX -->
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="/js/reservations.js" defer></script>
-<script src="/js/reports.js" defer></script>
-
+  <!-- IMPORTANTE: orden de scripts (sin duplicados) -->
   <!-- 1) Base global: estrellas / helpers -->
   <script src="/script.js" defer></script>
 
@@ -1802,9 +1801,34 @@
   <script src="/js/science.js" defer></script>
   <script src="/js/computing.js" defer></script>
   <script src="/js/library.js" defer></script>
+  <script src="/js/reservations.js" defer></script>
 
   <!-- ✅ Historial + reportes + analytics + export PDF/XLSX -->
   <script src="/js/history.js" defer></script>
   <script src="/js/reports.js" defer></script>
+
+  <!-- ✅ Mini CSS inline SOLO si aún no agregaste estilos del Hub en app.css.
+       Si YA los agregaste en app.css, puedes borrar este bloque sin afectar funciones. -->
+  <style>
+    .history-hub{ padding:16px; }
+    .history-hub-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:14px; }
+    .history-hub-actions{ display:flex; gap:10px; flex-wrap:wrap; }
+    .history-hub-body{ display:grid; grid-template-columns: 280px 1fr; gap:14px; min-height:520px; }
+    .history-menu{ border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:10px; background: rgba(10, 14, 35, .35); }
+    .history-menu-item{
+      width:100%; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.03); color:#eaf1ff; text-align:left; margin-bottom:8px; cursor:pointer;
+      transition: transform .12s ease, background .12s ease, border-color .12s ease;
+    }
+    .history-menu-item:hover{ transform: translateY(-1px); background: rgba(255,255,255,.05); }
+    .history-menu-item.is-active{ background: rgba(53,226,255,.10); border-color: rgba(53,226,255,.35); }
+    .history-menu-sep{ margin:10px 6px; font-size:12px; opacity:.75; letter-spacing:.12em; }
+    .history-content{ border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:14px; background: rgba(10, 14, 35, .25); overflow:auto; }
+    .history-view{ display:none; }
+    .history-view.is-active{ display:block; }
+    @media (max-width: 980px){
+      .history-hub-body{ grid-template-columns: 1fr; }
+    }
+  </style>
 </body>
 </html>
