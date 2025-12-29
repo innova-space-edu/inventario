@@ -1,6 +1,6 @@
 // /public/js/history.js
 // Historial + análisis en tab "Historial".
-// Espera GET /api/history?lab=science|computing|library&limit=100
+// Espera GET /api/history?lab=science|computing|library|reservations&limit=100
 // Respuesta: array de logs. Campos típicos aceptados:
 // { lab/module, action/action_type, entityType/entity_type, entityId/entity_id, user/created_by, createdAt/created_at, data/details/payload }
 //
@@ -10,12 +10,20 @@
 // - Normalización robusta action/entityType (ES/EN + variantes)
 // - Explicaciones automáticas por bloque (sin IA externa)
 // - Botones: "Copiar" y "Generar informe" (local, sin API)
-// - ✅ NUEVO: "Historial sí o sí" (cola local + auto-flush al cargar)
-// - ✅ NUEVO: indicador de cola pendiente en narrativa + AI report
+// - ✅ "Historial sí o sí" (cola local + auto-flush al cargar)
+// - ✅ Indicador de cola pendiente en narrativa + AI report
+//
+// ✅ ACTUALIZADO (sin quitar funciones):
+// - Tabla HTML ahora tiene 14 columnas: se renderiza completo (no 7)
+// - Filtros: lab + action + search (si existen en index) + limit
+// - Mejor inferencia de campos: código, tipoPersona, curso/sala, cantidad, stock antes/después, ip/device
+// - Soporta lab "reservations" también (y “reservas”)
 
 document.addEventListener("DOMContentLoaded", () => {
   const historyTableBody = document.querySelector("#historyTable tbody");
   const labFilter = document.getElementById("historyLabFilter");
+  const actionFilter = document.getElementById("historyActionFilter");
+  const searchInput = document.getElementById("historySearch");
   const limitFilter = document.getElementById("historyLimit");
 
   // --- IDs reales en tu HTML (Resumen rápido) ---
@@ -32,7 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const cvLoanDuration = document.getElementById("chartLoanDuration");
   const cvHistoryByModule = document.getElementById("chartHistoryByModule");
 
-  // --- Narrativas reales en tu HTML (✅ estos SÍ existen en tu index) ---
+  // --- Narrativas reales en tu HTML ---
   const elNarrativeSummary = document.getElementById("analyticsNarrativeSummary");
   const elNarrativePersonType = document.getElementById("analyticsNarrativePersonType");
   const elNarrativeRoom = document.getElementById("analyticsNarrativeRoom");
@@ -59,6 +67,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Cache
   let logsCache = [];
+  let logsFilteredCache = [];
   let statsCache = null;
 
   // ✅ Cola local: si el backend falla al registrar history desde otros módulos
@@ -137,7 +146,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!data) return "";
     try {
       const str = JSON.stringify(data);
-      return str.length > 180 ? str.slice(0, 180) + "..." : str;
+      return str.length > 220 ? str.slice(0, 220) + "..." : str;
     } catch {
       return safeText(data);
     }
@@ -146,10 +155,10 @@ document.addEventListener("DOMContentLoaded", () => {
   function normalizeLab(v) {
     const lab = (v || "").toString().trim().toLowerCase();
     if (!lab) return "sin-módulo";
-    // normaliza tildes comunes
     if (lab === "computación" || lab === "computacion") return "computing";
     if (lab === "ciencias") return "science";
     if (lab === "biblioteca") return "library";
+    if (lab === "reservas" || lab === "reserva" || lab === "reservation" || lab === "reservations") return "reservations";
     return lab;
   }
 
@@ -158,6 +167,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (x === "computing") return "Sala de Computación";
     if (x === "science") return "Laboratorio de Ciencias";
     if (x === "library") return "Biblioteca";
+    if (x === "reservations") return "Reservas";
     if (x === "sin-módulo") return "Sin módulo";
     return x.charAt(0).toUpperCase() + x.slice(1);
   }
@@ -179,11 +189,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const x = (raw || "").toString().trim().toLowerCase();
     if (!x) return "";
 
-    // préstamos
     if (x === "loan" || x.includes("prest") || x.includes("prést")) return "loan";
-    // reservas
     if (x === "reservation" || x.includes("reserv")) return "reservation";
-    // inventario
     if (x === "inventory" || x.includes("invent")) return "inventory";
 
     return x;
@@ -193,7 +200,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const x = (raw || "").toString().trim().toLowerCase();
     if (!x) return "";
 
-    // create / crear / alta
     if (
       x === "create" ||
       x === "created" ||
@@ -206,7 +212,6 @@ document.addEventListener("DOMContentLoaded", () => {
     )
       return "create";
 
-    // return / devolver / devuelto / entregado / cerrar
     if (
       x === "return" ||
       x === "returned" ||
@@ -217,7 +222,6 @@ document.addEventListener("DOMContentLoaded", () => {
     )
       return "return";
 
-    // update / editar / modificar / cambio
     if (
       x === "update" ||
       x === "updated" ||
@@ -227,6 +231,16 @@ document.addEventListener("DOMContentLoaded", () => {
       x.includes("actualiz")
     )
       return "update";
+
+    if (x === "delete" || x === "deleted" || x.includes("elimin") || x.includes("borr")) return "delete";
+
+    if (x.includes("cancel") && x.includes("reserv")) return "cancel_reserve";
+
+    // si viene “loan” como acción (algunos backends)
+    if (x === "loan" || x.includes("prest")) return "loan";
+
+    // si viene “reserve” como acción
+    if (x === "reserve" || (x.includes("reserv") && !x.includes("cancel"))) return "reserve";
 
     return x;
   }
@@ -283,6 +297,7 @@ document.addEventListener("DOMContentLoaded", () => {
       d?.loanId ||
       d?.loan_id ||
       d?.itemId ||
+      d?.item_id ||
       ""
     )
       .toString()
@@ -294,7 +309,6 @@ document.addEventListener("DOMContentLoaded", () => {
   function inferCreatedAt(log) {
     const raw = log.createdAt || log.created_at || null;
     if (raw) return raw;
-
     const d = getDataObj(log);
     return d?.createdAt || d?.created_at || d?.fecha || d?.date || null;
   }
@@ -312,6 +326,136 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 
+  function inferUser(log) {
+    return (
+      log.user ||
+      log.user_email ||
+      log.performed_by ||
+      log.created_by ||
+      log.createdBy ||
+      log.performedBy ||
+      ""
+    );
+  }
+
+  function inferCode(log) {
+    const d = getDataObj(log);
+    return (
+      log.code ||
+      log.codigo ||
+      d?.codigo ||
+      d?.code ||
+      d?.itemCode ||
+      d?.item_code ||
+      d?.bookCode ||
+      d?.book_code ||
+      ""
+    );
+  }
+
+  function inferPersonType(log) {
+    const d = getDataObj(log);
+    const raw = (
+      d?.tipoPersona ||
+      d?.tipo_persona ||
+      d?.personType ||
+      d?.person_type ||
+      d?.rol ||
+      d?.role ||
+      ""
+    )
+      .toString()
+      .trim()
+      .toLowerCase();
+
+    if (!raw) return "";
+    if (raw.includes("estud") || raw.includes("alumn")) return "estudiante";
+    if (raw.includes("func") || raw.includes("doc") || raw.includes("prof") || raw.includes("staff") || raw.includes("asist"))
+      return "funcionario";
+    return raw;
+  }
+
+  function inferCursoSala(log) {
+    const d = getDataObj(log);
+    const lab = normalizeLab(log.lab || log.module || d?.lab || d?.module || "");
+    // reservas suelen tener "space"/"sala"
+    const space = (d?.space || d?.espacio || d?.sala || d?.room || d?.classroom || "").toString().trim();
+    const curso = (d?.curso || d?.course || d?.grupo || d?.group || d?.location || d?.ubicacion || d?.ubicación || "").toString().trim();
+    if (lab === "reservations") return space || curso || "";
+    return curso || space || "";
+  }
+
+  function inferCantidad(log) {
+    const d = getDataObj(log);
+    const n =
+      d?.cantidad ??
+      d?.qty ??
+      d?.quantity ??
+      d?.amount ??
+      d?.units ??
+      log.cantidad ??
+      log.qty ??
+      "";
+    const val = Number(n);
+    return Number.isFinite(val) ? val : "";
+  }
+
+  function inferStockBeforeAfter(log) {
+    const d = getDataObj(log);
+    const before =
+      d?.stockBefore ??
+      d?.stock_before ??
+      d?.stockAntes ??
+      d?.stock_antes ??
+      d?.beforeStock ??
+      d?.before_stock ??
+      "";
+    const after =
+      d?.stockAfter ??
+      d?.stock_after ??
+      d?.stockDespues ??
+      d?.stock_despues ??
+      d?.afterStock ??
+      d?.after_stock ??
+      "";
+    const b = Number(before);
+    const a = Number(after);
+    return {
+      before: Number.isFinite(b) ? b : (before === 0 ? 0 : ""),
+      after: Number.isFinite(a) ? a : (after === 0 ? 0 : ""),
+    };
+  }
+
+  function inferIPDevice(log) {
+    const d = getDataObj(log);
+    const ip =
+      log.ip ||
+      d?.ip ||
+      d?.ipAddress ||
+      d?.ip_address ||
+      "";
+    const dev =
+      log.device ||
+      d?.device ||
+      d?.userAgent ||
+      d?.user_agent ||
+      "";
+    const out = [ip, dev].filter(Boolean).join(" | ");
+    return out;
+  }
+
+  function prettyAction(action) {
+    const a = normalizeAction(action);
+    if (a === "create") return "Ingreso/Creación";
+    if (a === "update") return "Edición";
+    if (a === "delete") return "Eliminación";
+    if (a === "loan") return "Préstamo";
+    if (a === "return") return "Devolución";
+    if (a === "reserve") return "Reserva";
+    if (a === "cancel_reserve") return "Cancelación reserva";
+    return action || a || "";
+  }
+
   // -----------------------
   // Stats
   // -----------------------
@@ -326,49 +470,14 @@ document.addEventListener("DOMContentLoaded", () => {
     let topRoomCount = 0;
 
     const getRoomFromLog = (log) => {
-      const d = getDataObj(log);
-      if (!d) return "";
-      return (
-        d.curso ||
-        d.room ||
-        d.sala ||
-        d.ubicacion ||
-        d.ubicación ||
-        d.grupo ||
-        d.location ||
-        d.classroom ||
-        d.course ||
-        ""
-      )
-        .toString()
-        .trim();
+      const room = inferCursoSala(log);
+      return (room || "").toString().trim();
     };
 
-    const getPersonTypeFromLog = (log) => {
-      const d = getDataObj(log);
-      if (!d) return "";
-      const raw = (
-        d.tipoPersona ||
-        d.tipo_persona ||
-        d.personType ||
-        d.person_type ||
-        d.rol ||
-        d.role ||
-        ""
-      )
-        .toString()
-        .trim()
-        .toLowerCase();
-
-      if (raw.includes("estud") || raw.includes("alumn")) return "estudiante";
-      if (raw.includes("func") || raw.includes("doc") || raw.includes("prof") || raw.includes("staff") || raw.includes("asist"))
-        return "funcionario";
-
-      return raw || "";
-    };
+    const getPersonTypeFromLog = (log) => inferPersonType(log);
 
     logs.forEach((log) => {
-      const lab = normalizeLab(log.lab || log.module);
+      const lab = normalizeLab(log.lab || log.module || getDataObj(log)?.lab || getDataObj(log)?.module);
       const action = inferAction(log);
       const entityType = inferEntityType(log);
       const entityId = inferEntityId(log);
@@ -408,7 +517,6 @@ document.addEventListener("DOMContentLoaded", () => {
           if (!rec.returned || createdAt > rec.returned) rec.returned = createdAt;
         }
 
-        // returnedAt explícito dentro de data
         const returnedAtRaw = inferReturnedAt(log);
         if (returnedAtRaw) {
           const r = new Date(returnedAtRaw);
@@ -476,7 +584,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (elTopRoom) elTopRoom.textContent = stats.topRoom || "—";
     if (elTopModule) elTopModule.textContent = stats.topModule || "—";
 
-    // narrativa global
     const txt = [];
     txt.push(`Se analizaron ${stats.totalLogs || 0} movimientos del sistema.`);
 
@@ -604,7 +711,6 @@ document.addEventListener("DOMContentLoaded", () => {
     ensureCanvasHeight(cvLoansByRoom);
     chartLoansByRoom = destroyChart(chartLoansByRoom);
 
-    // Top 8 + Otros
     const entries = Object.entries(stats.loansByRoom || {}).sort((a, b) => b[1] - a[1]);
     const top = entries.slice(0, 8);
     const rest = entries.slice(8);
@@ -691,7 +797,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const entries = Object.entries(stats.movementsByModule || {}).sort((a, b) => b[1] - a[1]);
 
-    // Top 6 + Otros
     const top = entries.slice(0, 6);
     const rest = entries.slice(6);
 
@@ -705,10 +810,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const total = data.reduce((a, b) => a + b, 0);
     if (total > 0) {
-      setNarrative(
-        elNarrativeModule,
-        `Movimientos por módulo (Top + Otros). Módulo más activo: ${stats.topModule || "—"}.`
-      );
+      setNarrative(elNarrativeModule, `Movimientos por módulo (Top + Otros). Módulo más activo: ${stats.topModule || "—"}.`);
     } else {
       setNarrative(elNarrativeModule, "No hay movimientos suficientes para mostrar distribución por módulo.");
     }
@@ -721,7 +823,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Lazy: renderiza SOLO lo del card abierto
   function renderChartsForCard(card) {
     if (!statsCache || !card) return;
     if (typeof Chart === "undefined") return;
@@ -761,23 +862,23 @@ document.addEventListener("DOMContentLoaded", () => {
     if ((stats.loanDurations || []).length > 0) {
       lines.push(`• Promedio de duración (con devoluciones): ${stats.avgLoanDays.toFixed(1)} días`);
       const over7 = stats.loanDurations.filter((d) => Number(d) >= 7).length;
-      lines.push(`• Préstamos con duración ≥ 7 días (con devolución): ${over7} ${over7 > 0 ? "→ recomendable reforzar alertas y recordatorios." : ""}`);
+      lines.push(
+        `• Préstamos con duración ≥ 7 días (con devolución): ${over7} ${
+          over7 > 0 ? "→ recomendable reforzar alertas y recordatorios." : ""
+        }`
+      );
     } else {
-      lines.push(`• Duración: no hay devoluciones detectadas aún (RETURN/returnedAt). Cuando se registren, aparecerán promedios y rangos.`);
+      lines.push(
+        `• Duración: no hay devoluciones detectadas aún (RETURN/returnedAt). Cuando se registren, aparecerán promedios y rangos.`
+      );
     }
 
-    // Recomendaciones simples
     const rec = [];
-    if ((stats.loansByPersonType?.desconocido || 0) > 0) {
-      rec.push("Asegurar que el formulario envíe tipoPersona (estudiante/funcionario).");
-    }
-    if ((stats.totalLoans || 0) > 0 && (stats.loanDurations || []).length === 0) {
-      rec.push("Registrar devoluciones (RETURN o returnedAt) para medir tiempos reales.");
-    }
-    if (q > 0) {
-      rec.push("Revisar conexión/servidor: hay eventos en cola local pendientes por sincronizar.");
-    }
+    if ((stats.loansByPersonType?.desconocido || 0) > 0) rec.push("Asegurar que el formulario envíe tipoPersona (estudiante/funcionario).");
+    if ((stats.totalLoans || 0) > 0 && (stats.loanDurations || []).length === 0) rec.push("Registrar devoluciones (RETURN o returnedAt) para medir tiempos reales.");
+    if (q > 0) rec.push("Revisar conexión/servidor: hay eventos en cola local pendientes por sincronizar.");
     rec.push("Usar el Top de salas/cursos para planificar reposición y mantención.");
+
     lines.push("");
     lines.push("✅ Recomendaciones:");
     rec.forEach((r) => lines.push(`- ${r}`));
@@ -831,7 +932,124 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // -----------------------
-  // Load history
+  // Filtrado local (UI)
+  // -----------------------
+  function applyLocalFilters(logs) {
+    let out = Array.isArray(logs) ? logs.slice() : [];
+
+    const labVal = labFilter ? normalizeLab(labFilter.value) : "all";
+    if (labVal && labVal !== "all") {
+      out = out.filter((l) => normalizeLab(l.lab || l.module || getDataObj(l)?.lab || getDataObj(l)?.module) === labVal);
+    }
+
+    const actVal = actionFilter ? (actionFilter.value || "all") : "all";
+    if (actVal && actVal !== "all") {
+      out = out.filter((l) => inferAction(l) === actVal);
+    }
+
+    const q = (searchInput?.value || "").toString().trim().toLowerCase();
+    if (q) {
+      out = out.filter((l) => {
+        const d = getDataObj(l);
+        const hay = [
+          safeText(inferCreatedAt(l)),
+          safeText(l.lab || l.module || d?.lab || d?.module),
+          safeText(l.action || l.action_type || d?.action || d?.accion),
+          safeText(l.entityType || l.entity_type || d?.entityType || d?.tipoEntidad),
+          safeText(inferEntityId(l)),
+          safeText(inferCode(l)),
+          safeText(inferUser(l)),
+          safeText(inferPersonType(l)),
+          safeText(inferCursoSala(l)),
+          safeText(inferCantidad(l)),
+          safeText(d?.detalle || d?.detail || d?.descripcion || d?.description || ""),
+          safeText(formatDetails(d)),
+        ]
+          .join(" ")
+          .toLowerCase();
+        return hay.includes(q);
+      });
+    }
+
+    // orden desc por fecha
+    out.sort((a, b) => {
+      const da = new Date(inferCreatedAt(a) || 0).getTime();
+      const db = new Date(inferCreatedAt(b) || 0).getTime();
+      return db - da;
+    });
+
+    return out;
+  }
+
+  // -----------------------
+  // Render tabla (14 columnas)
+  // -----------------------
+  function renderHistoryTable(logs) {
+    historyTableBody.innerHTML = "";
+
+    const rows = Array.isArray(logs) ? logs : [];
+    if (!rows.length) {
+      const emptyRow = document.createElement("tr");
+      emptyRow.innerHTML = `
+        <td colspan="14" style="text-align:center; opacity:0.8;">
+          No hay movimientos registrados para los filtros seleccionados.
+        </td>
+      `;
+      historyTableBody.appendChild(emptyRow);
+      return;
+    }
+
+    rows.forEach((log) => {
+      const d = getDataObj(log) || {};
+
+      const labRaw = safeText(log.lab || log.module || d.lab || d.module || "");
+      const lab = prettyLab(labRaw);
+
+      const actionRaw = safeText(log.action || log.action_type || d.action || d.accion || "");
+      const actionPretty = prettyAction(actionRaw);
+
+      const entityTypeRaw = safeText(log.entityType || log.entity_type || d.entityType || d.tipoEntidad || "");
+      const entityTypeNorm = normalizeEntityType(entityTypeRaw);
+      const tipo = entityTypeNorm || entityTypeRaw;
+
+      const entityId = safeText(inferEntityId(log));
+      const codigo = safeText(inferCode(log));
+      const usuario = safeText(inferUser(log));
+
+      const tipoPersona = safeText(inferPersonType(log));
+      const cursoSala = safeText(inferCursoSala(log));
+
+      const cantidad = inferCantidad(log);
+      const { before, after } = inferStockBeforeAfter(log);
+
+      const detalle = formatDetails(d);
+      const ipDev = safeText(inferIPDevice(log));
+
+      const createdAt = formatDate(inferCreatedAt(log));
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${escapeHTML(createdAt)}</td>
+        <td>${escapeHTML(lab)}</td>
+        <td>${escapeHTML(actionPretty)}</td>
+        <td>${escapeHTML(tipo)}</td>
+        <td>${escapeHTML(entityId)}</td>
+        <td>${escapeHTML(codigo)}</td>
+        <td>${escapeHTML(usuario)}</td>
+        <td>${escapeHTML(tipoPersona)}</td>
+        <td>${escapeHTML(cursoSala)}</td>
+        <td>${escapeHTML(cantidad === "" ? "" : String(cantidad))}</td>
+        <td>${escapeHTML(before === "" ? "" : String(before))}</td>
+        <td>${escapeHTML(after === "" ? "" : String(after))}</td>
+        <td>${escapeHTML(detalle)}</td>
+        <td>${escapeHTML(ipDev)}</td>
+      `;
+      historyTableBody.appendChild(tr);
+    });
+  }
+
+  // -----------------------
+  // Load history (backend + cola local)
   // -----------------------
   async function loadHistory() {
     const lab = labFilter ? labFilter.value : "all";
@@ -843,13 +1061,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const qs = params.length ? `?${params.join("&")}` : "";
 
     try {
-      // ✅ Primero intentamos sincronizar cola local (historial sí o sí)
+      // ✅ Primero sincroniza cola local (historial sí o sí)
       const queueInfo = await flushHistoryQueue();
 
       const resp = await apiFetch(`/api/history${qs}`);
       if (!resp.ok) {
         console.error("Error al cargar historial:", resp.status);
-        // aun así, muestra cola en narrativa si puedes
+        // si ya hay stats, al menos actualiza narrativa con cola
         if (statsCache) renderSummary(statsCache, queueInfo);
         return;
       }
@@ -859,68 +1077,43 @@ document.addEventListener("DOMContentLoaded", () => {
 
       logsCache = logs;
 
-      // Tabla
-      historyTableBody.innerHTML = "";
+      // aplica filtros UI (action/search) sobre lo que viene del backend
+      logsFilteredCache = applyLocalFilters(logsCache);
 
-      logsCache
-        .slice()
-        .sort((a, b) => {
-          const da = new Date(inferCreatedAt(a) || 0).getTime();
-          const db = new Date(inferCreatedAt(b) || 0).getTime();
-          return db - da;
-        })
-        .forEach((log) => {
-          const tr = document.createElement("tr");
+      // tabla
+      renderHistoryTable(logsFilteredCache);
 
-          const labText = safeText(log.lab || log.module || "");
-          const actionText = safeText(log.action || log.action_type || "");
-          const entityType = safeText(log.entityType || log.entity_type || "");
-          const entityId = safeText(log.entityId || log.entity_id || "");
-          const user = safeText(log.user || log.user_email || log.performed_by || log.created_by || "");
-
-          const createdAt = formatDate(inferCreatedAt(log));
-          const details = formatDetails(log.data || log.details || log.payload || log.meta);
-
-          tr.innerHTML = `
-            <td>${escapeHTML(createdAt)}</td>
-            <td>${escapeHTML(labText)}</td>
-            <td>${escapeHTML(actionText)}</td>
-            <td>${escapeHTML(entityType)}</td>
-            <td>${escapeHTML(entityId)}</td>
-            <td>${escapeHTML(user)}</td>
-            <td>${escapeHTML(details)}</td>
-          `;
-
-          historyTableBody.appendChild(tr);
-        });
-
-      if (!historyTableBody.children.length) {
-        const emptyRow = document.createElement("tr");
-        emptyRow.innerHTML = `
-          <td colspan="7" style="text-align:center; opacity:0.8;">
-            No hay movimientos registrados para los filtros seleccionados.
-          </td>
-        `;
-        historyTableBody.appendChild(emptyRow);
-      }
-
-      // Stats + números
-      statsCache = computeStats(logsCache);
+      // stats SIEMPRE desde logs filtrados (más coherente con vista)
+      statsCache = computeStats(logsFilteredCache);
       renderSummary(statsCache, queueInfo);
 
-      // Si no hay collapsibles, renderiza todo
+      // si no hay collapsibles, renderiza todo
       const hasCollapsibles = document.querySelector(".collapsible-card");
       if (!hasCollapsibles) {
         renderChartsAll(statsCache);
         return;
       }
 
-      // Si hay un panel ya abierto por defecto, renderiza ese
+      // si hay un panel abierto por defecto, renderiza ese
       const opened = document.querySelector('.collapsible-card[data-collapsed="false"]');
       if (opened) renderChartsForCard(opened);
     } catch (err) {
       console.error("Error al cargar historial:", err);
     }
+  }
+
+  // Refiltrado sin volver al backend
+  function refreshFromCacheOnly() {
+    if (!Array.isArray(logsCache)) return;
+    logsFilteredCache = applyLocalFilters(logsCache);
+    renderHistoryTable(logsFilteredCache);
+
+    statsCache = computeStats(logsFilteredCache);
+    renderSummary(statsCache);
+
+    // si hay algún panel abierto, refresca su chart
+    const opened = document.querySelector('.collapsible-card[data-collapsed="false"]');
+    if (opened) renderChartsForCard(opened);
   }
 
   // Hook: al abrir un panel, renderiza SOLO lo del panel abierto
@@ -939,6 +1132,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (labFilter) labFilter.addEventListener("change", loadHistory);
   if (limitFilter) limitFilter.addEventListener("change", loadHistory);
+
+  // filtros UI locales (no piden al backend)
+  if (actionFilter) actionFilter.addEventListener("change", refreshFromCacheOnly);
+  if (searchInput) {
+    let t = null;
+    searchInput.addEventListener("input", () => {
+      window.clearTimeout(t);
+      t = window.setTimeout(refreshFromCacheOnly, 120);
+    });
+  }
 
   loadHistory();
 });
